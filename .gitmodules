@@ -1,0 +1,3 @@
+[submodule "libs/mmdetection"]
+	path = libs/mmdetection
+	url = https://github.com/Hung304-WBLEM/mmdetection.git
