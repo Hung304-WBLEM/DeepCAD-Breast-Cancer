@@ -1,0 +1,6 @@
+{
+	"DATA": {
+		"root": "/home/cougarnet.uh.edu/hqvo2/Projects/Breast_Cancer/data",
+		"processed_CBIS_DDSM": "processed_data" 
+	}
+}
