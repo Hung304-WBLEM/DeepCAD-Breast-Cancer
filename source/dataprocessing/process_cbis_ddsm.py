@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import mmcv
 import pandas
+import warnings
 
 from config.cfg_loader import proj_paths_json
 from pycocotools import mask as coco_api_mask
@@ -52,6 +53,11 @@ def get_info_lesion(df, ROI_ID):
 
 
 def convert_ddsm_to_coco(out_file, data_root, annotation_filename):
+    save_path = os.path.join(data_root, out_file)
+    if os.path.exists(save_path):
+        warnings.warn(f"{save_path} has already existed")
+        return
+
     images = []
     annotations = []
     obj_count = 0
@@ -127,6 +133,45 @@ def convert_ddsm_to_coco(out_file, data_root, annotation_filename):
     mmcv.dump(coco_format_json, os.path.join(data_root, out_file))
 
 
+def read_annotation_json(json_file):
+    data = mmcv.load(json_file)
+
+    categories = data['categories']
+
+    img_annotations = []
+
+    for img_data in data['images']:
+        img_id = img_data['id']
+
+        annotations = [
+            annotation for annotation in data['annotations'] if annotation['id'] == img_id]
+
+        img_annotations.append((img_data, annotations))
+
+    return img_annotations, categories
+
+
+def save_detection_gt_for_eval(data_root, detection_gt_root):
+    img_annotations, categories = read_annotation_json(json_file=os.path.join(
+        data_root, 'annotation_coco_with_classes.json'))
+
+    print(len(img_annotations))
+    for img, anns in mmcv.track_iter_progress(img_annotations):
+        print(img['file_name'], len(anns))
+        img_filename, _ = os.path.splitext(os.path.basename(img['file_name']))
+
+        save_path = os.path.join(
+            detection_gt_root, f'{img_filename}.txt')
+        if os.path.exists(save_path):
+            continue
+        with open(save_path, 'w') as f:
+            for ann in anns:
+                x, y, w, h = (str(el) for el in ann['bbox'])
+                c = [el['name']
+                     for el in categories if el['id'] == ann['category_id']][0]
+                f.write(' '.join((c, x, y, w, h, '\n')))
+
+
 if __name__ == '__main__':
     data_root = proj_paths_json['DATA']['root']
     processed_cbis_ddsm_root = os.path.join(
@@ -145,3 +190,22 @@ if __name__ == '__main__':
     convert_ddsm_to_coco(out_file='annotation_coco_with_classes.json',
                          data_root=mass_test_root,
                          annotation_filename='mass_case_description_test_set.csv')
+
+    experiment_root = proj_paths_json['EXPERIMENT']['root']
+    processed_cbis_ddsm_detection_gt_root = os.path.join(
+        experiment_root,
+        proj_paths_json['EXPERIMENT']['mmdet_processed_CBIS_DDSM']['root'],
+        proj_paths_json['EXPERIMENT']['mmdet_processed_CBIS_DDSM']['det_gt'])
+    train_det_gt_root = os.path.join(
+        processed_cbis_ddsm_detection_gt_root, 'train')
+    test_det_gt_root = os.path.join(
+        processed_cbis_ddsm_detection_gt_root, 'test')
+    if not os.path.exists(train_det_gt_root):
+        os.makedirs(train_det_gt_root, exist_ok=True)
+    if not os.path.exists(test_det_gt_root):
+        os.makedirs(test_det_gt_root, exist_ok=True)
+
+    # save_detection_gt_for_eval(
+    #     data_root=mass_train_root, detection_gt_root=train_det_gt_root)
+    save_detection_gt_for_eval(
+        data_root=mass_test_root, detection_gt_root=test_det_gt_root)
