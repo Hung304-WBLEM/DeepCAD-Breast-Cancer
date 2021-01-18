@@ -1,3 +1,6 @@
 [submodule "libs/mmdetection"]
 	path = libs/mmdetection
 	url = https://github.com/Hung304-WBLEM/mmdetection.git
+[submodule "libs/Object-Detection-Metrics"]
+	path = libs/Object-Detection-Metrics
+	url = https://github.com/Hung304-WBLEM/Object-Detection-Metrics.git
