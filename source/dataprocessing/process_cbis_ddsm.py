@@ -129,7 +129,7 @@ def convert_ddsm_to_coco(out_file, data_root, annotation_filename):
     coco_format_json = dict(
         images=images,
         annotations=annotations,
-        categories=[{'id': 0, 'name': 'malignant'}, {'id': 1, 'name': 'benign'}])
+        categories=[{'id': 0, 'name': 'malignant','supercategory': 'malignant'}, {'id': 1, 'name': 'benign', 'supercategory': 'benign'}])
     mmcv.dump(coco_format_json, os.path.join(data_root, out_file))
 
 
@@ -191,21 +191,21 @@ if __name__ == '__main__':
                          data_root=mass_test_root,
                          annotation_filename='mass_case_description_test_set.csv')
 
-    experiment_root = proj_paths_json['EXPERIMENT']['root']
-    processed_cbis_ddsm_detection_gt_root = os.path.join(
-        experiment_root,
-        proj_paths_json['EXPERIMENT']['mmdet_processed_CBIS_DDSM']['root'],
-        proj_paths_json['EXPERIMENT']['mmdet_processed_CBIS_DDSM']['det_gt'])
-    train_det_gt_root = os.path.join(
-        processed_cbis_ddsm_detection_gt_root, 'train')
-    test_det_gt_root = os.path.join(
-        processed_cbis_ddsm_detection_gt_root, 'test')
-    if not os.path.exists(train_det_gt_root):
-        os.makedirs(train_det_gt_root, exist_ok=True)
-    if not os.path.exists(test_det_gt_root):
-        os.makedirs(test_det_gt_root, exist_ok=True)
+    # experiment_root = proj_paths_json['EXPERIMENT']['root']
+    # processed_cbis_ddsm_detection_gt_root = os.path.join(
+    #     experiment_root,
+    #     proj_paths_json['EXPERIMENT']['mmdet_processed_CBIS_DDSM']['root'],
+    #     proj_paths_json['EXPERIMENT']['mmdet_processed_CBIS_DDSM']['det_gt'])
+    # train_det_gt_root = os.path.join(
+    #     processed_cbis_ddsm_detection_gt_root, 'train')
+    # test_det_gt_root = os.path.join(
+    #     processed_cbis_ddsm_detection_gt_root, 'test')
+    # if not os.path.exists(train_det_gt_root):
+    #     os.makedirs(train_det_gt_root, exist_ok=True)
+    # if not os.path.exists(test_det_gt_root):
+    #     os.makedirs(test_det_gt_root, exist_ok=True)
 
     # save_detection_gt_for_eval(
     #     data_root=mass_train_root, detection_gt_root=train_det_gt_root)
-    save_detection_gt_for_eval(
-        data_root=mass_test_root, detection_gt_root=test_det_gt_root)
+    # save_detection_gt_for_eval(
+    #     data_root=mass_test_root, detection_gt_root=test_det_gt_root)

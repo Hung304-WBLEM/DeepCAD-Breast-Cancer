@@ -3,6 +3,7 @@ import os
 import glob
 import numpy as np
 import warnings
+import math
 
 from mmdet.apis import init_detector, inference_detector
 from config.cfg_loader import proj_paths_json
@@ -13,6 +14,7 @@ from evaluation.eval_mmdet_models import get_best_ckpt
 
 def get_predictions(config_file, checkpoint_file, data_root, data_json, save_root):
     model = init_detector(config_file, checkpoint_file, device='cuda:0')
+    print(model)
 
     img_annotations, categories = read_annotation_json(
         os.path.join(data_root, data_json))
@@ -22,9 +24,9 @@ def get_predictions(config_file, checkpoint_file, data_root, data_json, save_roo
         file_name, _ = os.path.splitext(os.path.basename(img['file_name']))
         save_path = os.path.join(save_root, f"{file_name}.txt")
 
-        # if os.path.exists(save_path):
-        #     warnings.warn(f"{save_path} has already existed! Skip!")
-        #     continue
+        if os.path.exists(save_path):
+            warnings.warn(f"{save_path} has already existed! Skip!")
+            continue
 
         result = inference_detector(model, img_path)
         print('result', result)
@@ -43,11 +45,11 @@ def get_predictions(config_file, checkpoint_file, data_root, data_json, save_roo
         ]
         labels = np.concatenate(labels)
 
-        # with open(save_path, 'w') as f:
-        #     for bbox, label in zip(bboxes, labels):
-        #         x1, y1, x2, y2, s = (str(el) for el in bbox)
-        #         c = [el['name'] for el in categories if el['id'] == label][0]
-        #         f.write(' '.join((c, s, x1, y1, x2, y2, '\n')))
+        with open(save_path, 'w') as f:
+            for bbox, label in zip(bboxes, labels):
+                x1, y1, x2, y2, s = (str(el) for el in bbox)
+                c = [el['name'] for el in categories if el['id'] == label][0]
+                f.write(' '.join((c, s, x1, y1, x2, y2, '\n')))
 
         break
 
@@ -59,6 +61,9 @@ if __name__ == '__main__':
 
     for config in glob.glob(os.path.join(mmdet_root, 'configs', 'ddsm', '*.py')):
         config_name, _ = os.path.splitext(os.path.basename(config))
+
+        if config_name != 'faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm':
+            continue
         print(config_name)
 
         config_file = os.path.join(

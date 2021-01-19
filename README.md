@@ -2,6 +2,7 @@
 
 ## Install Dependencies
 ### Install mmdetection
+```
 conda create -n mmdet
 conda activate mmdet
 
@@ -16,9 +17,11 @@ cd mmdetection
 pip install -r requirements/build.txt
 pip install -v -e .  # or "python setup.py develop"
 pip install Pillow==7.0.0
+```
 
 
 ### Install cocoapi
+```
 cd ..
 
 git clone https://github.com/cocodataset/cocoapi.git
@@ -28,3 +31,11 @@ make -j20 install
 * Add this line to ~/.bashrc 'export PYTHONPATH="${PYTHONPATH}:/home/cougarnet.uh.edu/hqvo2/Projects/Breast_Cancer/libs/cocoapi/PythonAPI/"'
 
 python setup.py build_ext --inplace
+
+* For MatlabAPI, follow the link in the file README.txt of the forked COCOAPI repository
+```
+
+### Install python packages
+```
+pip install pandas
+```

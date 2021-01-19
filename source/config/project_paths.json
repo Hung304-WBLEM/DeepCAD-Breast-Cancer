@@ -1,14 +1,14 @@
 {
     "DATA": {
-	"root": "/home/cougarnet.uh.edu/hqvo2/Projects/Breast_Cancer/data",
+	"root": "/home/hqvo2/Projects/Breast_Cancer/data",
 	"processed_CBIS_DDSM": "processed_data",
         "methodist_data": "methodist_data"
     },
     "LIB": {
-	"mmdet": "/home/cougarnet.uh.edu/hqvo2/Projects/Breast_Cancer/libs/mmdetection"
+	"mmdet": "/home/hqvo2/Projects/Breast_Cancer/libs/mmdetection"
     },
     "EXPERIMENT": {
-	"root": "/home/cougarnet.uh.edu/hqvo2/Projects/Breast_Cancer/experiments",
+	"root": "/home/hqvo2/Projects/Breast_Cancer/experiments",
 	"mmdet_processed_CBIS_DDSM": {
 	    "root": "mmdet_processed_data",
 	    "det_gt": "detection_groundtruth"
