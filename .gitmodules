@@ -4,3 +4,6 @@
 [submodule "libs/Object-Detection-Metrics"]
 	path = libs/Object-Detection-Metrics
 	url = https://github.com/Hung304-WBLEM/Object-Detection-Metrics.git
+[submodule "libs/cocoapi"]
+	path = libs/cocoapi
+	url = https://github.com/Hung304-WBLEM/cocoapi.git
