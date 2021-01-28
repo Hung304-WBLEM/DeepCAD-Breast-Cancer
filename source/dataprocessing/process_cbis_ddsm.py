@@ -168,9 +168,6 @@ def get_patches_data(mass_shape_root, mass_margins_root, data_root, annotation_f
 
                 break
 
-            mass_shape = rslt_df['mass shape'].to_numpy()[0]
-            mass_margins = rslt_df['mass margins'].to_numpy()[0]
-
             mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
             seg_poly = mask2polygon(mask_arr)
             seg_area = area(mask_arr)
@@ -182,22 +179,26 @@ def get_patches_data(mass_shape_root, mass_margins_root, data_root, annotation_f
 
             lesion_patch = img[y_min:(y_max+1), x_min:(x_max+1)]
 
-            if not isinstance(mass_shape, str):
-                continue
-            if not isinstance(mass_margins, str):
-                continue
+            mass_shape = rslt_df['mass shape'].to_numpy()[0]
+            if isinstance(mass_shape, str):
+                mass_shape_save_path = os.path.join(
+                    mass_shape_root, mass_shape)
+                save_mass_shape_lesion_path = os.path.join(
+                    mass_shape_save_path,  f'{filename}_{roi_idx}.png')
+                if not os.path.exists(save_mass_shape_lesion_path):
+                    os.makedirs(mass_shape_save_path, exist_ok=True)
+                    cv2.imwrite(save_mass_shape_lesion_path, lesion_patch)
 
-            mass_shape_save_path = os.path.join(mass_shape_root, mass_shape)
-            mass_margins_save_path = os.path.join(
-                mass_margins_root, mass_margins)
+            mass_margins = rslt_df['mass margins'].to_numpy()[0]
+            if isinstance(mass_margins, str):
+                mass_margins_save_path = os.path.join(
+                    mass_margins_root, mass_margins)
 
-            os.makedirs(mass_shape_save_path, exist_ok=True)
-            os.makedirs(mass_margins_save_path, exist_ok=True)
-
-            cv2.imwrite(os.path.join(
-                mass_shape_save_path,  f'{filename}_{roi_idx}.png'), lesion_patch)
-            cv2.imwrite(os.path.join(
-                mass_margins_save_path,  f'{filename}_{roi_idx}.png'), lesion_patch)
+                save_mass_margins_lesion_path = os.path.join(
+                    mass_margins_save_path,  f'{filename}_{roi_idx}.png')
+                if not os.path.exists(save_mass_margins_lesion_path):
+                    os.makedirs(mass_margins_save_path, exist_ok=True)
+                    cv2.imwrite(save_mass_margins_lesion_path, lesion_patch)
 
 
 def read_annotation_json(json_file):
@@ -239,6 +240,54 @@ def save_detection_gt_for_eval(data_root, detection_gt_root):
                 f.write(' '.join((c, x, y, w, h, '\n')))
 
 
+def cbis_ddsm_statistic(mass_root, calc_root):
+    number_mass_train_images = len(
+        glob.glob(os.path.join(mass_root, 'train', 'Mass-Training*')))
+    number_mass_test_images = len(
+        glob.glob(os.path.join(mass_root, 'test', 'Mass-Test*')))
+    number_calc_train_images = len(
+        glob.glob(os.path.join(calc_root, 'train', 'Calc-Training*')))
+    number_calc_test_images = len(
+        glob.glob(os.path.join(calc_root, 'test', 'Calc-Test*')))
+
+    total_mass_images = number_mass_train_images + number_mass_test_images
+    total_calc_images = number_calc_train_images + number_calc_test_images
+
+    print('*'*50)
+    string = 'Processed CBIS-DDSM stats'
+    print('*'*((50 - len(string))//2), string, '*'*((50-len(string))//2))
+    print('*'*50)
+
+    print('Total numbers of mass images:', total_mass_images)
+    print('\tMass training images:', number_mass_train_images)
+    print('\tMass test images:', number_mass_test_images)
+
+    print('Total numbers of calc images:', total_calc_images)
+    print('\tCalcification training images:', number_calc_train_images)
+    print('\tCalcification test images:', number_calc_test_images)
+    print()
+
+    feature_count = dict()
+    for feature in glob.glob(os.path.join(mass_root, 'cls', '*')):
+        feature_name = os.path.basename(feature)
+        if feature_name not in feature_count:
+            feature_count[feature_name] = dict()
+
+        for fold_idx, fold in enumerate(['train', 'val']):
+            for feat_cls in glob.glob(os.path.join(feature, fold, '*')):
+                feat_cls_name = os.path.basename(feat_cls)
+                if feat_cls_name not in feature_count[feature_name]:
+                    feature_count[feature_name][feat_cls_name] = [0, 0, 0]
+
+                feature_count[feature_name][feat_cls_name][fold_idx] += len(
+                    glob.glob(os.path.join(feat_cls, '*.png')))
+
+    for feature_name, feature_clss in feature_count.items():
+        print('*'*25, 'Feature name:', feature_name, '*'*25)
+        for feat_cls, cnt in feature_clss.items():
+            print('%40s %s' % (feat_cls, ' '.join('%03s' % i for i in cnt)))
+
+
 if __name__ == '__main__':
     data_root = proj_paths_json['DATA']['root']
     processed_cbis_ddsm_root = os.path.join(
@@ -263,10 +312,13 @@ if __name__ == '__main__':
                          data_root=mass_test_root,
                          annotation_filename='mass_case_description_test_set.csv')
 
-    get_patches_data(os.path.join(mass_shape_root, 'train'), os.path.join(mass_margins_root, 'train'),
-                     data_root=mass_train_root, annotation_filename='mass_case_description_train_set.csv')
-    get_patches_data(os.path.join(mass_shape_root, 'val'), os.path.join(mass_margins_root, 'val'),
-                     data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv')
+    cbis_ddsm_statistic(mass_root=os.path.join(processed_cbis_ddsm_root, 'mass'),
+                        calc_root=os.path.join(processed_cbis_ddsm_root, 'calc'))
+
+    # get_patches_data(os.path.join(mass_shape_root, 'train'), os.path.join(mass_margins_root, 'train'),
+    #                  data_root=mass_train_root, annotation_filename='mass_case_description_train_set.csv')
+    # get_patches_data(os.path.join(mass_shape_root, 'val'), os.path.join(mass_margins_root, 'val'),
+    #                  data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv')
 
     # experiment_root = proj_paths_json['EXPERIMENT']['root']
     # processed_cbis_ddsm_detection_gt_root = os.path.join(

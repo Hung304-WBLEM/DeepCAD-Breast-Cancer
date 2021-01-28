@@ -5,7 +5,7 @@
 	"CBIS_DDSM_lesions": {
 	    "mass_shape_root": "mass/cls/mass_shape",
 	    "mass_margins_root": "mass/cls/mass_margins"
-	}
+	},
         "methodist_data": "methodist_data"
     },
     "LIB": {
