@@ -5,6 +5,7 @@ import cv2
 import mmcv
 import pandas
 import warnings
+import math
 
 from config.cfg_loader import proj_paths_json
 from pycocotools import mask as coco_api_mask
@@ -129,8 +130,74 @@ def convert_ddsm_to_coco(out_file, data_root, annotation_filename):
     coco_format_json = dict(
         images=images,
         annotations=annotations,
-        categories=[{'id': 0, 'name': 'malignant','supercategory': 'malignant'}, {'id': 1, 'name': 'benign', 'supercategory': 'benign'}])
+        categories=[{'id': 0, 'name': 'malignant', 'supercategory': 'malignant'}, {'id': 1, 'name': 'benign', 'supercategory': 'benign'}])
     mmcv.dump(coco_format_json, os.path.join(data_root, out_file))
+
+
+def get_patches_data(mass_shape_root, mass_margins_root, data_root, annotation_filename):
+    '''
+    '''
+    df = pandas.read_csv(os.path.join(data_root, annotation_filename))
+
+    for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
+        filename = os.path.basename(dir_path)
+        img_path = os.path.join(dir_path, filename + '.png')
+        if not os.path.exists(img_path):
+            continue
+
+        img = mmcv.imread(img_path)
+
+        for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+            while True:
+                roi_idx += 1
+
+                rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
+
+                if len(rslt_df) == 0:
+                    print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
+                    continue
+
+                label = rslt_df['pathology'].to_numpy()[0]
+                if label == 'MALIGNANT':
+                    cat_id = 0
+                elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
+                    cat_id = 1
+                else:
+                    raise ValueError(
+                        f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
+
+                break
+
+            mass_shape = rslt_df['mass shape'].to_numpy()[0]
+            mass_margins = rslt_df['mass margins'].to_numpy()[0]
+
+            mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
+            seg_poly = mask2polygon(mask_arr)
+            seg_area = area(mask_arr)
+
+            flat_seg_poly = [el for sublist in seg_poly for el in sublist]
+            px = flat_seg_poly[::2]
+            py = flat_seg_poly[1::2]
+            x_min, y_min, x_max, y_max = (min(px), min(py), max(px), max(py))
+
+            lesion_patch = img[y_min:(y_max+1), x_min:(x_max+1)]
+
+            if not isinstance(mass_shape, str):
+                continue
+            if not isinstance(mass_margins, str):
+                continue
+
+            mass_shape_save_path = os.path.join(mass_shape_root, mass_shape)
+            mass_margins_save_path = os.path.join(
+                mass_margins_root, mass_margins)
+
+            os.makedirs(mass_shape_save_path, exist_ok=True)
+            os.makedirs(mass_margins_save_path, exist_ok=True)
+
+            cv2.imwrite(os.path.join(
+                mass_shape_save_path,  f'{filename}_{roi_idx}.png'), lesion_patch)
+            cv2.imwrite(os.path.join(
+                mass_margins_save_path,  f'{filename}_{roi_idx}.png'), lesion_patch)
 
 
 def read_annotation_json(json_file):
@@ -180,6 +247,11 @@ if __name__ == '__main__':
     mass_train_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'train')
     mass_test_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'test')
 
+    mass_shape_root = os.path.join(
+        processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_shape_root'])
+    mass_margins_root = os.path.join(
+        processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_margins_root'])
+
     convert_npz_to_png(data_path=mass_train_root)
     convert_npz_to_png(data_path=mass_test_root)
 
@@ -190,6 +262,11 @@ if __name__ == '__main__':
     convert_ddsm_to_coco(out_file='annotation_coco_with_classes.json',
                          data_root=mass_test_root,
                          annotation_filename='mass_case_description_test_set.csv')
+
+    get_patches_data(os.path.join(mass_shape_root, 'train'), os.path.join(mass_margins_root, 'train'),
+                     data_root=mass_train_root, annotation_filename='mass_case_description_train_set.csv')
+    get_patches_data(os.path.join(mass_shape_root, 'val'), os.path.join(mass_margins_root, 'val'),
+                     data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv')
 
     # experiment_root = proj_paths_json['EXPERIMENT']['root']
     # processed_cbis_ddsm_detection_gt_root = os.path.join(
