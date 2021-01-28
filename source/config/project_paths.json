@@ -2,6 +2,10 @@
     "DATA": {
 	"root": "/home/hqvo2/Projects/Breast_Cancer/data",
 	"processed_CBIS_DDSM": "processed_data",
+	"CBIS_DDSM_lesions": {
+	    "mass_shape_root": "mass/cls/mass_shape",
+	    "mass_margins_root": "mass/cls/mass_margins"
+	}
         "methodist_data": "methodist_data"
     },
     "LIB": {
