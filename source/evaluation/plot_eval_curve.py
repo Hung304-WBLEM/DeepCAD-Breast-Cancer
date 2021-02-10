@@ -7,6 +7,7 @@ import argparse
 import numpy as np
 
 from utils.fileio import json
+from sklearn.metrics import auc
 matplotlib.use('Agg')
 
 
@@ -60,6 +61,8 @@ def detection_prec_rec(gt_bboxes_list, pred_bboxes_list, iou_thres):
 
     precision_values = []
     recall_values = []
+    false_pos_per_img_values = []
+    images_set = set()
 
     true_pos = 0
     false_pos = 0
@@ -95,18 +98,23 @@ def detection_prec_rec(gt_bboxes_list, pred_bboxes_list, iou_thres):
         else:
             false_pos += 1
 
+        images_set.add(img_id)
+
         precision_values.append(true_pos/(true_pos+false_pos))
         recall_values.append(true_pos/(total_pos))
+        false_pos_per_img_values.append(false_pos/len(images_set))
 
     for idx in range(0, len(precision_values)-1):
         precision_values[idx] = max(precision_values[idx+1:])
+        false_pos_per_img_values[idx] = min(false_pos_per_img_values[idx+1:])
 
+    # Compute Average Precision
     ap = sum([(recall_values[r] - recall_values[r-1])*precision_values[r]
               for r in range(1, len(precision_values))])
     ap = round(ap, 2)
     print('Average Precision:', ap)
 
-    return precision_values, recall_values, ap
+    return precision_values, recall_values, false_pos_per_img_values, ap
 
 
 def detection_loose_prec_rec(gt_bboxes_list, pred_bboxes_list):
@@ -126,6 +134,8 @@ def detection_loose_prec_rec(gt_bboxes_list, pred_bboxes_list):
 
     precision_values = []
     recall_values = []
+    false_pos_per_img_values = []
+    images_set = set()
 
     true_pos = 0
     false_pos = 0
@@ -158,35 +168,41 @@ def detection_loose_prec_rec(gt_bboxes_list, pred_bboxes_list):
         else:
             false_pos += 1
 
+        images_set.add(img_id)
+
         precision_values.append(true_pos/(true_pos+false_pos))
         recall_values.append(true_pos/(total_pos))
+        false_pos_per_img_values.append(false_pos/len(images_set))
 
     for idx in range(0, len(precision_values)-1):
         precision_values[idx] = max(precision_values[idx+1:])
+        false_pos_per_img_values[idx] = min(false_pos_per_img_values[idx+1:])
 
+    # Compute Average Precision
     ap = sum([(recall_values[r] - recall_values[r-1])*precision_values[r]
               for r in range(1, len(precision_values))])
     ap = round(ap, 2)
     print('Average Precision:', ap)
 
-    return precision_values, recall_values, ap
+    return precision_values, recall_values, false_pos_per_img_values, ap
 
 
-def plot_prec_rec_true_pos_metric(_save_path, _gt_bboxes_json, _pred_bboxes_json, _category_id, _bbox_select):
+def plot_prec_rec_true_pos_metric(_save_path, _gt_bboxes_json, _pred_bboxes_json, _category_name, _category_id, _bbox_select):
     gt_bboxes_list, pred_bboxes_list = \
         get_bboxes_lists(gt_bboxes_json=_gt_bboxes_json,
                          pred_bboxes_json=_pred_bboxes_json,
                          category_id=_category_id, bbox_select=_bbox_select)
 
-    iou75_prec, iou75_rec, iou75_ap = detection_prec_rec(
+    iou75_prec, iou75_rec, iou75_fp_img, iou75_ap = detection_prec_rec(
         gt_bboxes_list, pred_bboxes_list, iou_thres=0.75)
-    iou50_prec, iou50_rec, iou50_ap = detection_prec_rec(
+    iou50_prec, iou50_rec, iou50_fp_img, iou50_ap = detection_prec_rec(
         gt_bboxes_list, pred_bboxes_list, iou_thres=0.5)
-    iou25_prec, iou25_rec, iou25_ap = detection_prec_rec(
+    iou25_prec, iou25_rec, iou25_fp_img, iou25_ap = detection_prec_rec(
         gt_bboxes_list, pred_bboxes_list, iou_thres=0.25)
-    center_prec, center_rec, center_ap = detection_loose_prec_rec(
+    center_prec, center_rec, center_fp_img, center_ap = detection_loose_prec_rec(
         gt_bboxes_list, pred_bboxes_list)
 
+    # Draw Precision-Recall curves
     fig = plt.figure()
     plt.plot(iou75_rec, iou75_prec,
              label=f"IoU=0.75 (AUC={iou75_ap})", color="blue")
@@ -204,10 +220,31 @@ def plot_prec_rec_true_pos_metric(_save_path, _gt_bboxes_json, _pred_bboxes_json
     plt.legend()
     plt.grid(True)
 
-    plt.savefig(_save_path)
+    plt.savefig(os.path.join(
+        _save_path, f'precision-recall_curve_{_category_name}_{_bbox_select}_cmp_tp_metrics.png'))
     plt.close()
 
-    return iou50_ap, iou25_ap, center_ap
+    # Draw FROC curves
+    fig = plt.figure()
+    plt.plot(iou75_fp_img, iou75_rec,
+             label=f"IoU=0.75", color="blue")
+    plt.plot(iou50_fp_img, iou50_rec,
+             label=f"IoU=0.5", color="orange")
+    plt.plot(iou25_fp_img, iou25_rec,
+             label=f"IoU=0.25", color="green")
+    plt.plot(center_fp_img, center_rec,
+             label=f"center", color="red")
+
+    plt.xlabel('Number of false positive marks per image')
+    plt.ylabel('Sensitivity')
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig(os.path.join(
+        _save_path, f'froc_curve_{_category_name}_{_bbox_select}_cmp_tp_metrics.png'))
+    plt.close()
+
+    return iou75_ap, iou50_ap, iou25_ap, center_ap
 
 
 def get_bboxes_lists(gt_bboxes_json, pred_bboxes_json, category_id, bbox_select='all'):
@@ -295,10 +332,11 @@ if __name__ == '__main__':
 
     ap_values = []
     for class_name, class_id in classes.items():
-        iou50_ap, iou25_ap, center_ap = plot_prec_rec_true_pos_metric(os.path.join(args.save_path, f'plot_cmp_tp_metrics_{class_name}.png'), args.gt_bboxes_json,
-                                                                      args.pred_bboxes_json, class_id, args.bbox_select)
-        ap_values.append([class_name, class_id, iou50_ap, iou25_ap, center_ap])
+        iou75_ap, iou50_ap, iou25_ap, center_ap = plot_prec_rec_true_pos_metric(args.save_path, args.gt_bboxes_json,
+                                                                                args.pred_bboxes_json, class_name, class_id, args.bbox_select)
+        ap_values.append([class_name, class_id, iou75_ap,
+                          iou50_ap, iou25_ap, center_ap])
 
-    maps = np.mean(np.array([ret[2:] for ret in ap_values]), axis=1)
+    maps = np.mean(np.array([ret[2:] for ret in ap_values]), axis=0)
     print(ap_values)
     print(maps)
