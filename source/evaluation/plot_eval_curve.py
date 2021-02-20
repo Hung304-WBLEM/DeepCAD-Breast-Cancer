@@ -72,12 +72,12 @@ def all_classes_detection_prec_rec(gt_categories, _gt_bboxes_json, _pred_bboxes_
             pred_bboxes_list) for pred_bbox in img_pred_bboxes]
         pred_bboxes = sorted(
             pred_bboxes, key=lambda x: x[1][4], reverse=True)
-        print('#Pred boxes:', len(pred_bboxes))
+        # print('#Pred boxes:', len(pred_bboxes))
 
         matched = [[False for gt_bbox in gt_bboxes]
                    for gt_bboxes in gt_bboxes_list]
         total_pos = sum([len(gt_bboxes) for gt_bboxes in gt_bboxes_list])
-        print('#Gt boxes:', total_pos)
+        # print('#Gt boxes:', total_pos)
 
         for img_id, pred_bbox in pred_bboxes:
 
@@ -114,7 +114,7 @@ def all_classes_detection_prec_rec(gt_categories, _gt_bboxes_json, _pred_bboxes_
         ap = sum([(recall_values[r] - recall_values[r-1])*precision_values[r]
                   for r in range(1, len(precision_values))])
         ap = round(ap, 2)
-        print('Average Precision:', ap)
+        # print('Average Precision:', ap)
 
         return precision_values, recall_values, false_pos_per_img_values, ap
 
@@ -168,12 +168,12 @@ def all_classes_detection_loose_prec_rec(gt_categories, _gt_bboxes_json, _pred_b
             pred_bboxes_list) for pred_bbox in img_pred_bboxes]
         pred_bboxes = sorted(
             pred_bboxes, key=lambda x: x[1][4], reverse=True)
-        print('#Pred boxes:', len(pred_bboxes))
+        # print('#Pred boxes:', len(pred_bboxes))
 
         matched = [[False for gt_bbox in gt_bboxes]
                    for gt_bboxes in gt_bboxes_list]
         total_pos = sum([len(gt_bboxes) for gt_bboxes in gt_bboxes_list])
-        print('#Gt boxes:', total_pos)
+        # print('#Gt boxes:', total_pos)
 
         for img_id, pred_bbox in pred_bboxes:
 
@@ -207,7 +207,7 @@ def all_classes_detection_loose_prec_rec(gt_categories, _gt_bboxes_json, _pred_b
         ap = sum([(recall_values[r] - recall_values[r-1])*precision_values[r]
                   for r in range(1, len(precision_values))])
         ap = round(ap, 2)
-        print('Average Precision:', ap)
+        # print('Average Precision:', ap)
 
         return precision_values, recall_values, false_pos_per_img_values, ap
 
@@ -325,7 +325,7 @@ def get_bboxes_lists(gt_bboxes_json, pred_bboxes_json, category_id, bbox_select=
     gt_bboxes_list = []
     pred_bboxes_list = []
 
-    print('#test images:', len(gt_json['images']))
+    # print('#test images:', len(gt_json['images']))
     for image in gt_json['images']:
         image_id = image['id']
 
@@ -382,7 +382,7 @@ if __name__ == '__main__':
     vars_dict = vars(args)
 
     gt_json = json.read(args.gt_bboxes_json)
-    print('Ground-Truth Categories:', gt_json['categories'])
+    # print('Ground-Truth Categories:', gt_json['categories'])
     gt_categories = gt_json['categories']
 
     iou75_eval_log, iou75_eval_plot = all_classes_detection_prec_rec(
@@ -415,3 +415,9 @@ if __name__ == '__main__':
                                iou50_eval_plot,
                                iou25_eval_plot,
                                center_eval_plot)
+
+    json.write({'categories': gt_categories,
+                'center': center_eval_log,
+                'iou25': iou25_eval_log,
+                'iou50': iou50_eval_log,
+                'iou75': iou75_eval_log}, os.path.join(args.save_path, 'eval_log.json'))
