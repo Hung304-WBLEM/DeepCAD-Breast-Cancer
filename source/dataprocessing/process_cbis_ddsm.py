@@ -9,6 +9,7 @@ import math
 
 from config.cfg_loader import proj_paths_json
 from pycocotools import mask as coco_api_mask
+from utils.detectutil import bbox_util
 
 
 def convert_npz_to_png(data_path):
@@ -53,7 +54,7 @@ def get_info_lesion(df, ROI_ID):
     return rslt_df
 
 
-def convert_ddsm_to_coco(out_file, data_root, annotation_filename):
+def convert_ddsm_to_coco(categories, out_file, data_root, annotation_filename, extend_bb_ratio=None, keep_org_boxes=False):
     save_path = os.path.join(data_root, out_file)
     if os.path.exists(save_path):
         warnings.warn(f"{save_path} has already existed")
@@ -105,6 +106,7 @@ def convert_ddsm_to_coco(out_file, data_root, annotation_filename):
 
             mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
             seg_poly = mask2polygon(mask_arr)
+            seg_poly = [[el + 0.5 for el in poly] for poly in seg_poly]
             seg_area = area(mask_arr)
 
             flat_seg_poly = [el for sublist in seg_poly for el in sublist]
@@ -112,25 +114,59 @@ def convert_ddsm_to_coco(out_file, data_root, annotation_filename):
             py = flat_seg_poly[1::2]
             x_min, y_min, x_max, y_max = (min(px), min(py), max(px), max(py))
 
-            seg_poly = [[el + 0.5 for el in poly] for poly in seg_poly]
+            if extend_bb_ratio is None:
+                data_anno = dict(
+                    image_id=idx,
+                    id=obj_count,
+                    category_id=cat_id,
+                    bbox=[x_min, y_min, x_max - x_min, y_max - y_min],
+                    area=seg_area,
+                    segmentation=seg_poly,
+                    iscrowd=0)
 
-            data_anno = dict(
-                image_id=idx,
-                id=obj_count,
-                category_id=cat_id,
-                bbox=[x_min, y_min, x_max - x_min, y_max - y_min],
-                area=seg_area,
-                segmentation=seg_poly,
-                iscrowd=0)
+                annotations.append(data_anno)
 
-            annotations.append(data_anno)
+                obj_count += 1
+            elif extend_bb_ratio is not None:
+                if keep_org_boxes:
+                    data_anno = dict(
+                        image_id=idx,
+                        id=obj_count,
+                        category_id=cat_id,
+                        bbox=[x_min, y_min, x_max - x_min, y_max - y_min],
+                        area=seg_area,
+                        segmentation=seg_poly,
+                        iscrowd=0)
 
-            obj_count += 1
+                    annotations.append(data_anno)
+
+                    obj_count += 1
+
+                ext_x_min, ext_y_min, ext_x_max, ext_y_max = \
+                    bbox_util.extendBB(org_img_size=mask_arr.shape[:2], \
+                                       left=x_min, \
+                                       top=y_min, \
+                                       right=x_max, \
+                                       bottom=y_max, \
+                                       ratio=extend_bb_ratio)
+                data_anno = dict(
+                    image_id=idx,
+                    id=obj_count,
+                    category_id=cat_id,
+                    bbox=[ext_x_min, ext_y_min, ext_x_max -
+                          ext_x_min, ext_y_max - ext_y_min],
+                    area=seg_area,
+                    segmentation=seg_poly,
+                    iscrowd=0)
+
+                annotations.append(data_anno)
+
+                obj_count += 1
 
     coco_format_json = dict(
         images=images,
         annotations=annotations,
-        categories=[{'id': 0, 'name': 'malignant', 'supercategory': 'malignant'}, {'id': 1, 'name': 'benign', 'supercategory': 'benign'}])
+        categories=categories)
     mmcv.dump(coco_format_json, os.path.join(data_root, out_file))
 
 
@@ -293,33 +329,120 @@ if __name__ == '__main__':
     processed_cbis_ddsm_root = os.path.join(
         data_root, proj_paths_json['DATA']['processed_CBIS_DDSM'])
 
+    ################################################################
+    ######################## MASS LESIONS ##########################
+    ################################################################
+
+    ################# Process Mass Lesions Mammogram ################
     mass_train_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'train')
     mass_test_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'test')
-
-    mass_shape_root = os.path.join(
-        processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_shape_root'])
-    mass_margins_root = os.path.join(
-        processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_margins_root'])
 
     convert_npz_to_png(data_path=mass_train_root)
     convert_npz_to_png(data_path=mass_test_root)
 
-    convert_ddsm_to_coco(out_file='annotation_coco_with_classes.json',
+    categories = [{'id': 0, 'name': 'malignant-mass', 'supercategory': 'mass'}, {'id': 1, 'name': 'benign-mass', 'supercategory': 'mass'}]
+
+    # Default bbox size
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
                          data_root=mass_train_root,
                          annotation_filename='mass_case_description_train_set.csv')
 
-    convert_ddsm_to_coco(out_file='annotation_coco_with_classes.json',
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
                          data_root=mass_test_root,
                          annotation_filename='mass_case_description_test_set.csv')
 
-    cbis_ddsm_statistic(mass_root=os.path.join(processed_cbis_ddsm_root, 'mass'),
-                        calc_root=os.path.join(processed_cbis_ddsm_root, 'calc'))
+    # Extend bbox size by 0.3
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes_extend_bbox_0.3.json',
+                         data_root=mass_train_root,
+                         annotation_filename='mass_case_description_train_set.csv',
+                         extend_bb_ratio=0.3)
+
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes_extend_bbox_0.3.json',
+                         data_root=mass_test_root,
+                         annotation_filename='mass_case_description_test_set.csv',
+                         extend_bb_ratio=0.3)
+
+    # Extend bbox size by 0.2
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes_extend_bbox_0.2.json',
+                         data_root=mass_train_root,
+                         annotation_filename='mass_case_description_train_set.csv',
+                         extend_bb_ratio=0.2)
+
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes_extend_bbox_0.2.json',
+                         data_root=mass_test_root,
+                         annotation_filename='mass_case_description_test_set.csv',
+                         extend_bb_ratio=0.2)
+
+    # Extend bbox size by 0.1
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes_extend_bbox_0.1.json',
+    #                      data_root=mass_train_root,
+    #                      annotation_filename='mass_case_description_train_set.csv',
+    #                      extend_bb_ratio=0.1)
+
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes_extend_bbox_0.1.json',
+    #                      data_root=mass_test_root,
+    #                      annotation_filename='mass_case_description_test_set.csv',
+    #                      extend_bb_ratio=0.1)
+
+    # Extend bbox size by 0.2 and keep original bbox
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
+                         data_root=mass_train_root,
+                         annotation_filename='mass_case_description_train_set.csv',
+                         extend_bb_ratio=0.2, keep_org_boxes=True)
+
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
+                         data_root=mass_test_root,
+                         annotation_filename='mass_case_description_test_set.csv',
+                         extend_bb_ratio=0.2, keep_org_boxes=True)
+
+    ############## Extract Lesion Patches ##############
+    # mass_shape_root = os.path.join(
+    #     processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_shape_root'])
+    # mass_margins_root = os.path.join(
+    #     processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_margins_root'])
 
     # get_patches_data(os.path.join(mass_shape_root, 'train'), os.path.join(mass_margins_root, 'train'),
     #                  data_root=mass_train_root, annotation_filename='mass_case_description_train_set.csv')
     # get_patches_data(os.path.join(mass_shape_root, 'val'), os.path.join(mass_margins_root, 'val'),
     #                  data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv')
 
+    ################################################################
+    ##################### CALCIFICATION LESIONS ####################
+    ################################################################
+
+    ################# Process Calcification Lesions Mammogram ################
+    calc_train_root = os.path.join(processed_cbis_ddsm_root, 'calc', 'train')
+    calc_test_root = os.path.join(processed_cbis_ddsm_root, 'calc', 'test')
+
+    convert_npz_to_png(data_path=calc_train_root)
+    convert_npz_to_png(data_path=calc_test_root)
+
+    categories = [{'id': 0, 'name': 'malignant-calc', 'supercategory': 'calcification'}, {'id': 1, 'name': 'benign-calc', 'supercategory': 'calcification'}]
+
+    # Default bbox size
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=calc_train_root,
+                         annotation_filename='calc_case_description_train_set.csv')
+
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=calc_test_root,
+                         annotation_filename='calc_case_description_test_set.csv')
+
+    ############# Save detection ground-truth for evaluation ##############
+    ### using https://github.com/rafaelpadilla/Object-Detection-Metrics ###
+    #######################################################################
     # experiment_root = proj_paths_json['EXPERIMENT']['root']
     # processed_cbis_ddsm_detection_gt_root = os.path.join(
     #     experiment_root,
@@ -338,3 +461,7 @@ if __name__ == '__main__':
     #     data_root=mass_train_root, detection_gt_root=train_det_gt_root)
     # save_detection_gt_for_eval(
     #     data_root=mass_test_root, detection_gt_root=test_det_gt_root)
+
+    # Statistics of CBIS-DDSM
+    cbis_ddsm_statistic(mass_root=os.path.join(processed_cbis_ddsm_root, 'mass'),
+                        calc_root=os.path.join(processed_cbis_ddsm_root, 'calc'))
