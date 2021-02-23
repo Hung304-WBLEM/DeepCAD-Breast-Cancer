@@ -3,8 +3,20 @@
 	"root": "/home/hqvo2/Projects/Breast_Cancer/data",
 	"processed_CBIS_DDSM": "processed_data",
 	"CBIS_DDSM_lesions": {
-	    "mass_shape_root": "mass/cls/mass_shape",
-	    "mass_margins_root": "mass/cls/mass_margins"
+	    "mass_feats": {
+		"mass_shape": "mass/cls/mass_shape",
+		"mass_shape_rare": "mass/cls/mass_shape_rare_feats_omitted",
+		"mass_margins": "mass/cls/mass_margins",
+		"mass_margins_rare": "mass/cls/mass_margins_rare_feats_omitted",
+		"mass_pathology": "mass/cls/mass_pathology"
+	    },
+	    "calcification_feats": {
+		"calc_type": "calc/cls/calc_type",
+		"calc_type_rare": "calc/cls/calc_type_rare_feats_omitted",
+		"calc_margins": "calc/cls/calc_dist",
+		"calc_margins_rare": "calc/cls/calc_dist_rare_feats_omitted",
+		"calc_pathology": "calc/cls/calc_pathology"
+	    }
 	},
         "methodist_data": "methodist_data"
     },
@@ -16,6 +28,17 @@
 	"mmdet_processed_CBIS_DDSM": {
 	    "root": "mmdet_processed_data",
 	    "det_gt": "detection_groundtruth"
+	},
+	"CBIS_DDSM_feats_cls": {
+	    "root": "cbis_ddsm_features_classification",
+	    "mass_feats": {
+		"mass_shape": "mass_feats/mass_shape",
+		"mass_margins": "mass_feats/mass_margins"
+	    },
+	    "calcification_feats": {
+		"calc_type": "calc_feats/calc_type",
+		"calc_dist": "calc_feats/calc_dist"
+	    }
 	},
 	"mmdet_methodist": {
 	    "root": "mmdet_methodist_data"

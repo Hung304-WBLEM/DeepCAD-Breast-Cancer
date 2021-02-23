@@ -4,11 +4,14 @@ import numpy as np
 import cv2
 import mmcv
 import pandas
+import pandas as pd
 import warnings
 import math
+import shutil
 
 from config.cfg_loader import proj_paths_json
 from pycocotools import mask as coco_api_mask
+from sklearn.model_selection import StratifiedShuffleSplit
 from utils.detectutil import bbox_util
 
 
@@ -237,6 +240,89 @@ def get_patches_data(mass_shape_root, mass_margins_root, data_root, annotation_f
                     cv2.imwrite(save_mass_margins_lesion_path, lesion_patch)
 
 
+def get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type):
+    df = pandas.read_csv(os.path.join(data_root, annotation_filename))
+
+    if lesion_type == 'mass':
+        # remove rows with NA value in some columns
+        for key in ['mass shape', 'mass margins']:
+            df = df[df[key].notna()]
+        print('Len mass data (NA removed):', len(df))
+
+        # remove all combined features whose names will contain underscore.
+        df = df[~df['mass shape'].str.contains('-')]
+        print('Len mass data (Mass shape combined features removed):', len(df))
+
+        df = df[~df['mass margins'].str.contains('-')]
+        print('Len mass data (Mass margins combined features remove):', len(df))
+    elif lesion_type == 'calc':
+        # remove rows with NA value in some columns
+        for key in ['calc type', 'calc distribution']:
+            df = df[df[key].notna()]
+        print('Len calc data (NA removed):', len(df))
+
+        # remove all combined features whose names will contain underscore.
+        df = df[~df['calc type'].str.contains('-')]
+        print('Len calc data (Calc type combined features removed):', len(df))
+
+        df = df[~df['calc distribution'].str.contains('-')]
+        print('Len calc data (Calc distribution combined features remove):', len(df))
+
+
+    for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
+        filename = os.path.basename(dir_path)
+        img_path = os.path.join(dir_path, filename + '.png')
+        if not os.path.exists(img_path):
+            continue
+
+        img = mmcv.imread(img_path)
+
+        for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+            while True:
+                if roi_idx == 100: # assume no mammamogram contains at most 100
+                    break
+                roi_idx += 1
+
+                rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
+
+                if len(rslt_df) == 0:
+                    print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
+                    continue
+
+                label = rslt_df['pathology'].to_numpy()[0]
+                if label == 'MALIGNANT':
+                    cat_id = 0
+                elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
+                    cat_id = 1
+                else:
+                    raise ValueError(
+                        f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
+
+                break
+
+            if roi_idx == 100:
+                print(f'ROI features contain NA or combined type: {filename}')
+                break
+
+            mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
+            seg_poly = mask2polygon(mask_arr)
+            seg_area = area(mask_arr)
+
+            flat_seg_poly = [el for sublist in seg_poly for el in sublist]
+            px = flat_seg_poly[::2]
+            py = flat_seg_poly[1::2]
+            x_min, y_min, x_max, y_max = (min(px), min(py), max(px), max(py))
+
+            lesion_patch = img[y_min:(y_max+1), x_min:(x_max+1)]
+
+            if cat_id == 0:
+                save_path = os.path.join(save_root, 'MALIGNANT')
+            elif cat_id == 1:
+                save_path = os.path.join(save_root, 'BENIGN')
+
+            os.makedirs(save_path, exist_ok=True)
+            cv2.imwrite(os.path.join(save_path, f'{filename}_{roi_idx}.png'), lesion_patch)
+
 def read_annotation_json(json_file):
     data = mmcv.load(json_file)
 
@@ -323,6 +409,150 @@ def cbis_ddsm_statistic(mass_root, calc_root):
         for feat_cls, cnt in feature_clss.items():
             print('%40s %s' % (feat_cls, ' '.join('%03s' % i for i in cnt)))
 
+@DeprecationWarning
+def split_data():
+    mass_train_csv = '/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/train/mass_case_description_train_set.csv'
+    calc_train_csv = '/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train/calc_case_description_train_set.csv'
+
+    mass_data = pd.read_csv(mass_train_csv)
+    calc_data = pd.read_csv(calc_train_csv)
+
+    ################
+    # MASS LESIONS #
+    ################
+    print(mass_data.keys())
+    print('Len mass data (original):', len(mass_data))
+
+    # remove rows with NA value in some columns
+    for key in ['mass shape', 'mass margins']:
+        mass_data = mass_data[mass_data[key].notna()]
+    print('Len mass data (NA removed):', len(mass_data))
+
+    # remove all combined features whose names will contain underscore.
+    mass_data = mass_data[~mass_data['mass shape'].str.contains('-')]
+    print('Len mass data (Mass shape combined features removed):', len(mass_data))
+
+    mass_data = mass_data[~mass_data['mass margins'].str.contains('-')]
+    print('Len mass data (Mass margins combined features remove):', len(mass_data))
+
+    # replace 'benign_without_callback' with 'benign'
+    mass_data['pathology'].replace({"BENIGN_WITHOUT_CALLBACK": "BENIGN"}, inplace=True)
+
+    # stratified split based on 'pathology'
+    mass_split = StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=42)
+    
+    for train_index, test_index in mass_split.split(mass_data, mass_data['pathology']):
+        strat_mass_train_set = mass_data.reindex(index=train_index)
+        strat_mass_test_set = mass_data.reindex(index=test_index)
+    
+    # check frequency of some features
+    test_keys = ['breast_density', 'left or right breast', 'image view', 'mass shape', 'mass margins', 'pathology']
+    for key in test_keys:
+        print('-'*50)
+        print(key)
+        print('-'*50)
+        print(mass_data[key].value_counts() / len(mass_data))
+        print(strat_mass_train_set[key].value_counts() / len(strat_mass_train_set))
+        print(strat_mass_test_set[key].value_counts() / len(strat_mass_test_set))
+
+    ################
+    # CALC LESIONS #
+    ################
+    print(calc_data.keys())
+    print('Len calc data (original):', len(calc_data))
+
+    # remove rows with NA value in some columns
+    for key in ['calc type', 'calc distribution']:
+        calc_data = calc_data[calc_data[key].notna()]
+    print('Len calc data (NA removed):', len(calc_data))
+
+    # remove all combined features whose names will contain underscore.
+    calc_data = calc_data[~calc_data['calc type'].str.contains('-')]
+    print('Len calc data (Calc type combined features removed):', len(calc_data))
+
+    calc_data = calc_data[~calc_data['calc distribution'].str.contains('-')]
+    print('Len calc data (Calc distribution combined features remove):', len(calc_data))
+
+    # replace 'benign_without_callback' with 'benign'
+    calc_data['pathology'].replace({"BENIGN_WITHOUT_CALLBACK": "BENIGN"}, inplace=True)
+
+    # stratified split based on 'pathology'
+    calc_split = StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=42)
+    
+    for train_index, test_index in calc_split.split(calc_data, calc_data['pathology']):
+        strat_calc_train_set = calc_data.reindex(index=train_index)
+        strat_calc_test_set = calc_data.reindex(index=test_index)
+    
+    # check frequency of some features
+    test_keys = ['breast density', 'left or right breast', 'image view', 'calc type', 'calc distribution', 'pathology']
+    for key in test_keys:
+        print('-'*50)
+        print(key)
+        print('-'*50)
+        print(calc_data[key].value_counts() / len(calc_data))
+        print(strat_calc_train_set[key].value_counts() / len(strat_calc_train_set))
+        print(strat_calc_test_set[key].value_counts() / len(strat_calc_test_set))
+
+def split_train_val(train_save_root, val_save_root, categories, data_root, annotation_filename):
+    df = pd.read_csv(os.path.join(data_root, annotation_filename))
+
+    split_info = dict()
+    split_info['img_name'] = []
+    split_info['pathology'] = []
+
+    for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
+        filename = os.path.basename(dir_path)
+        img_path = os.path.join(dir_path, filename + '.png')
+        if not os.path.exists(img_path):
+            continue
+
+        for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+            while True:
+                roi_idx += 1
+
+                rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
+
+                if len(rslt_df) == 0:
+                    print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
+                    continue
+
+                label = rslt_df['pathology'].to_numpy()[0]
+                if label == 'MALIGNANT':
+                    cat_id = 0
+                elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
+                    cat_id = 1
+                else:
+                    raise ValueError(
+                        f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
+
+                break
+
+        for cat in categories:
+            if cat['id'] == cat_id:
+                cat_name = cat['name']
+        split_info['img_name'].append(filename)
+        split_info['pathology'].append(cat_name)
+
+    split_info_df = pd.DataFrame(split_info)
+
+    split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    for train_index, test_index in split.split(split_info_df, split_info_df['pathology']):
+        strat_train_set = split_info_df.reindex(index=train_index)
+        strat_test_set = split_info_df.reindex(index=test_index)
+
+    print(split_info_df['pathology'].value_counts()/len(split_info_df))
+    print(strat_train_set['pathology'].value_counts()/len(strat_train_set))
+    print(strat_test_set['pathology'].value_counts()/len(strat_test_set))
+
+    for dirname in strat_train_set['img_name']:
+        source = os.path.join(data_root, dirname)
+        destination = os.path.join(train_save_root, dirname)
+        shutil.copytree(source, destination)
+
+    for dirname in strat_test_set['img_name']:
+        source = os.path.join(data_root, dirname)
+        destination = os.path.join(val_save_root, dirname)
+        shutil.copytree(source, destination)
 
 if __name__ == '__main__':
     data_root = proj_paths_json['DATA']['root']
@@ -336,11 +566,21 @@ if __name__ == '__main__':
     ################# Process Mass Lesions Mammogram ################
     mass_train_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'train')
     mass_test_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'test')
+    mass_train_train_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'train_train')
+    mass_train_val_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'train_val')
 
     convert_npz_to_png(data_path=mass_train_root)
     convert_npz_to_png(data_path=mass_test_root)
 
     categories = [{'id': 0, 'name': 'malignant-mass', 'supercategory': 'mass'}, {'id': 1, 'name': 'benign-mass', 'supercategory': 'mass'}]
+
+    # Split train val
+    # categories = [{'id': 0, 'name': 'malignant-mass', 'supercategory': 'mass'}, {'id': 1, 'name': 'benign-mass', 'supercategory': 'mass'}]
+    # split_train_val(train_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/train_train', \
+    #                 val_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/train_val', \
+    #                 categories=categories, \
+    #                 data_root=mass_train_root, \
+    #                 annotation_filename='mass_case_description_train_set.csv')
 
     # Default bbox size
     convert_ddsm_to_coco(categories=categories,
@@ -353,57 +593,54 @@ if __name__ == '__main__':
                          data_root=mass_test_root,
                          annotation_filename='mass_case_description_test_set.csv')
 
-    # Extend bbox size by 0.3
     convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes_extend_bbox_0.3.json',
-                         data_root=mass_train_root,
-                         annotation_filename='mass_case_description_train_set.csv',
-                         extend_bb_ratio=0.3)
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=mass_train_train_root,
+                         annotation_filename='mass_case_description_train_set.csv')
 
     convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes_extend_bbox_0.3.json',
-                         data_root=mass_test_root,
-                         annotation_filename='mass_case_description_test_set.csv',
-                         extend_bb_ratio=0.3)
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=mass_train_val_root,
+                         annotation_filename='mass_case_description_train_set.csv')
 
-    # Extend bbox size by 0.2
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes_extend_bbox_0.2.json',
-                         data_root=mass_train_root,
-                         annotation_filename='mass_case_description_train_set.csv',
-                         extend_bb_ratio=0.2)
+    # Extend bbox size by 0.1, 0.2, 0.3
+    for ratio in [0.1, 0.2, 0.3]:
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+                            data_root=mass_train_root,
+                            annotation_filename='mass_case_description_train_set.csv',
+                            extend_bb_ratio=ratio)
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes_extend_bbox_0.2.json',
-                         data_root=mass_test_root,
-                         annotation_filename='mass_case_description_test_set.csv',
-                         extend_bb_ratio=0.2)
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+                            data_root=mass_test_root,
+                            annotation_filename='mass_case_description_test_set.csv',
+                            extend_bb_ratio=ratio)
 
-    # Extend bbox size by 0.1
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+                            data_root=mass_train_train_root,
+                            annotation_filename='mass_case_description_train_set.csv',
+                            extend_bb_ratio=ratio)
+
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+                            data_root=mass_train_val_root,
+                            annotation_filename='mass_case_description_train_set.csv',
+                            extend_bb_ratio=ratio)
+
+    # # Extend bbox size by 0.2 and keep original bbox
     # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes_extend_bbox_0.1.json',
+    #                      out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
     #                      data_root=mass_train_root,
     #                      annotation_filename='mass_case_description_train_set.csv',
-    #                      extend_bb_ratio=0.1)
+    #                      extend_bb_ratio=0.2, keep_org_boxes=True)
 
     # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes_extend_bbox_0.1.json',
+    #                      out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
     #                      data_root=mass_test_root,
     #                      annotation_filename='mass_case_description_test_set.csv',
-    #                      extend_bb_ratio=0.1)
-
-    # Extend bbox size by 0.2 and keep original bbox
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
-                         data_root=mass_train_root,
-                         annotation_filename='mass_case_description_train_set.csv',
-                         extend_bb_ratio=0.2, keep_org_boxes=True)
-
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
-                         data_root=mass_test_root,
-                         annotation_filename='mass_case_description_test_set.csv',
-                         extend_bb_ratio=0.2, keep_org_boxes=True)
+    #                      extend_bb_ratio=0.2, keep_org_boxes=True)
 
     ############## Extract Lesion Patches ##############
     # mass_shape_root = os.path.join(
@@ -416,6 +653,13 @@ if __name__ == '__main__':
     # get_patches_data(os.path.join(mass_shape_root, 'val'), os.path.join(mass_margins_root, 'val'),
     #                  data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv')
 
+    # split lesion patches based on pathology
+    mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
+
+    get_lesions_pathology(os.path.join(mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    get_lesions_pathology(os.path.join(mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
+
     ################################################################
     ##################### CALCIFICATION LESIONS ####################
     ################################################################
@@ -423,11 +667,22 @@ if __name__ == '__main__':
     ################# Process Calcification Lesions Mammogram ################
     calc_train_root = os.path.join(processed_cbis_ddsm_root, 'calc', 'train')
     calc_test_root = os.path.join(processed_cbis_ddsm_root, 'calc', 'test')
+    calc_train_train_root = os.path.join(processed_cbis_ddsm_root, 'calc', 'train_train')
+    calc_train_val_root = os.path.join(processed_cbis_ddsm_root, 'calc', 'train_val')
 
     convert_npz_to_png(data_path=calc_train_root)
     convert_npz_to_png(data_path=calc_test_root)
 
     categories = [{'id': 0, 'name': 'malignant-calc', 'supercategory': 'calcification'}, {'id': 1, 'name': 'benign-calc', 'supercategory': 'calcification'}]
+
+    # Split train-val
+    # categories = [{'id': 0, 'name': 'malignant-calc', 'supercategory': 'calcification'}, {'id': 1, 'name': 'benign-calc', 'supercategory': 'calcification'}]
+    # split_train_val(train_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train_train', \
+    #                 val_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train_val', \
+    #                 categories=categories, \
+    #                 data_root=calc_train_root, \
+    #                 annotation_filename='calc_case_description_train_set.csv')
+
 
     # Default bbox size
     convert_ddsm_to_coco(categories=categories,
@@ -439,6 +694,59 @@ if __name__ == '__main__':
                          out_file='annotation_coco_with_classes.json',
                          data_root=calc_test_root,
                          annotation_filename='calc_case_description_test_set.csv')
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=calc_train_train_root,
+                         annotation_filename='calc_case_description_train_set.csv')
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=calc_train_val_root,
+                         annotation_filename='calc_case_description_train_set.csv')
+
+    # Extend bbox size by 0.1, 0.2, 0.3
+    for ratio in [0.1, 0.2, 0.3]:
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+                            data_root=calc_train_root,
+                            annotation_filename='calc_case_description_train_set.csv',
+                            extend_bb_ratio=ratio)
+
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+                            data_root=calc_test_root,
+                            annotation_filename='calc_case_description_test_set.csv',
+                            extend_bb_ratio=ratio)
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+                            data_root=calc_train_train_root,
+                            annotation_filename='calc_case_description_train_set.csv',
+                            extend_bb_ratio=ratio)
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+                            data_root=calc_train_val_root,
+                            annotation_filename='calc_case_description_train_set.csv',
+                            extend_bb_ratio=ratio)
+
+    # # Extend bbox size by 0.2 and keep original bbox
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
+    #                      data_root=calc_train_root,
+    #                      annotation_filename='calc_case_description_train_set.csv',
+    #                      extend_bb_ratio=0.2, keep_org_boxes=True)
+
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
+    #                      data_root=calc_test_root,
+    #                      annotation_filename='calc_case_description_test_set.csv',
+    #                      extend_bb_ratio=0.2, keep_org_boxes=True)
+
+    ############ EXTRACT LESION PATCHES ##############
+    # split lesion patches based on pathology
+    calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calcification_feats']['calc_pathology'])
+
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
 
     ############# Save detection ground-truth for evaluation ##############
     ### using https://github.com/rafaelpadilla/Object-Detection-Metrics ###
@@ -465,3 +773,4 @@ if __name__ == '__main__':
     # Statistics of CBIS-DDSM
     cbis_ddsm_statistic(mass_root=os.path.join(processed_cbis_ddsm_root, 'mass'),
                         calc_root=os.path.join(processed_cbis_ddsm_root, 'calc'))
+
