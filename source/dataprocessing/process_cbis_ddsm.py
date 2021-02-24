@@ -173,10 +173,38 @@ def convert_ddsm_to_coco(categories, out_file, data_root, annotation_filename, e
     mmcv.dump(coco_format_json, os.path.join(data_root, out_file))
 
 
-def get_patches_data(mass_shape_root, mass_margins_root, data_root, annotation_filename):
+def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_root, annotation_filename, lesion_type):
     '''
+    1) If lesion type is 'mass', we have 3 features: Mass Shape, Mass Margins, Breast Density Lesion-Level, Breast Density Image-Level
+    2) Else if lesion type is 'calcification', we have 3 features: Calc Type, Calc Distribution, Breast Density Lesion-Level, Breast Density Image-Level
     '''
+
     df = pandas.read_csv(os.path.join(data_root, annotation_filename))
+
+    if lesion_type == 'mass':
+        # remove rows with NA value in some columns
+        for key in ['mass shape', 'mass margins']:
+            df = df[df[key].notna()]
+        print('Len mass data (NA removed):', len(df))
+
+        # remove all combined features whose names will contain underscore.
+        df = df[~df['mass shape'].str.contains('-')]
+        print('Len mass data (Mass shape combined features removed):', len(df))
+
+        df = df[~df['mass margins'].str.contains('-')]
+        print('Len mass data (Mass margins combined features remove):', len(df))
+    elif lesion_type == 'calc':
+        # remove rows with NA value in some columns
+        for key in ['calc type', 'calc distribution']:
+            df = df[df[key].notna()]
+        print('Len calc data (NA removed):', len(df))
+
+        # remove all combined features whose names will contain underscore.
+        df = df[~df['calc type'].str.contains('-')]
+        print('Len calc data (Calc type combined features removed):', len(df))
+
+        df = df[~df['calc distribution'].str.contains('-')]
+        print('Len calc data (Calc distribution combined features remove):', len(df))
 
     for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
         filename = os.path.basename(dir_path)
@@ -189,6 +217,8 @@ def get_patches_data(mass_shape_root, mass_margins_root, data_root, annotation_f
         for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
             while True:
                 roi_idx += 1
+                if roi_idx == 100: # assume no mammamogram contains at most 100
+                    break
 
                 rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
 
@@ -207,6 +237,10 @@ def get_patches_data(mass_shape_root, mass_margins_root, data_root, annotation_f
 
                 break
 
+            if roi_idx == 100:
+                print(f'ROI features contain NA or combined type: {filename}')
+                break
+
             mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
             seg_poly = mask2polygon(mask_arr)
             seg_area = area(mask_arr)
@@ -218,26 +252,78 @@ def get_patches_data(mass_shape_root, mass_margins_root, data_root, annotation_f
 
             lesion_patch = img[y_min:(y_max+1), x_min:(x_max+1)]
 
-            mass_shape = rslt_df['mass shape'].to_numpy()[0]
-            if isinstance(mass_shape, str):
-                mass_shape_save_path = os.path.join(
-                    mass_shape_root, mass_shape)
-                save_mass_shape_lesion_path = os.path.join(
-                    mass_shape_save_path,  f'{filename}_{roi_idx}.png')
-                if not os.path.exists(save_mass_shape_lesion_path):
-                    os.makedirs(mass_shape_save_path, exist_ok=True)
-                    cv2.imwrite(save_mass_shape_lesion_path, lesion_patch)
+            if lesion_type == 'mass':
+                mass_shape = rslt_df['mass shape'].to_numpy()[0]
+                if isinstance(mass_shape, str):
+                    mass_shape_save_path = os.path.join(
+                        feat1_root, mass_shape)
+                    save_mass_shape_lesion_path = os.path.join(
+                        mass_shape_save_path,  f'{filename}_{roi_idx}.png')
+                    if not os.path.exists(save_mass_shape_lesion_path):
+                        os.makedirs(mass_shape_save_path, exist_ok=True)
+                        cv2.imwrite(save_mass_shape_lesion_path, lesion_patch)
 
-            mass_margins = rslt_df['mass margins'].to_numpy()[0]
-            if isinstance(mass_margins, str):
-                mass_margins_save_path = os.path.join(
-                    mass_margins_root, mass_margins)
+                mass_margins = rslt_df['mass margins'].to_numpy()[0]
+                if isinstance(mass_margins, str):
+                    mass_margins_save_path = os.path.join(
+                        feat2_root, mass_margins)
 
-                save_mass_margins_lesion_path = os.path.join(
-                    mass_margins_save_path,  f'{filename}_{roi_idx}.png')
-                if not os.path.exists(save_mass_margins_lesion_path):
-                    os.makedirs(mass_margins_save_path, exist_ok=True)
-                    cv2.imwrite(save_mass_margins_lesion_path, lesion_patch)
+                    save_mass_margins_lesion_path = os.path.join(
+                        mass_margins_save_path,  f'{filename}_{roi_idx}.png')
+                    if not os.path.exists(save_mass_margins_lesion_path):
+                        os.makedirs(mass_margins_save_path, exist_ok=True)
+                        cv2.imwrite(save_mass_margins_lesion_path, lesion_patch)
+
+                mass_density = rslt_df['breast_density'].to_numpy()[0]
+                if isinstance(mass_density, np.int64):
+                    mass_density_save_path = os.path.join(feat3_root, str(mass_density))
+                    save_mass_density_lesion_path = os.path.join(mass_density_save_path, f'{filename}_{roi_idx}.png')
+                    if not os.path.exists(save_mass_density_lesion_path):
+                        os.makedirs(mass_density_save_path, exist_ok=True)
+                        cv2.imwrite(save_mass_density_lesion_path, lesion_patch)
+
+                    mass_density_img_save_path = os.path.join(feat4_root, str(mass_density))
+                    save_mass_density_img_path = os.path.join(mass_density_img_save_path, f'{filename}.png')
+                    if not os.path.exists(save_mass_density_img_path):
+                        os.makedirs(mass_density_img_save_path, exist_ok=True)
+                        cv2.imwrite(save_mass_density_img_path, img)
+
+            elif lesion_type == 'calc':
+                calc_type = rslt_df['calc type'].to_numpy()[0]
+                if isinstance(calc_type, str):
+                    calc_type_save_path = os.path.join(
+                        feat1_root, calc_type)
+                    save_calc_type_lesion_path = os.path.join(
+                        calc_type_save_path,  f'{filename}_{roi_idx}.png')
+                    if not os.path.exists(save_calc_type_lesion_path):
+                        os.makedirs(calc_type_save_path, exist_ok=True)
+                        cv2.imwrite(save_calc_type_lesion_path, lesion_patch)
+
+                calc_dist = rslt_df['calc distribution'].to_numpy()[0]
+                if isinstance(calc_dist, str):
+                    calc_dist_save_path = os.path.join(
+                        feat2_root, calc_dist)
+
+                    save_calc_dist_lesion_path = os.path.join(
+                        calc_dist_save_path,  f'{filename}_{roi_idx}.png')
+                    if not os.path.exists(save_calc_dist_lesion_path):
+                        os.makedirs(calc_dist_save_path, exist_ok=True)
+                        cv2.imwrite(save_calc_dist_lesion_path, lesion_patch)
+
+                calc_density = rslt_df['breast density'].to_numpy()[0]
+                if isinstance(calc_density, np.int64):
+                    calc_density_save_path = os.path.join(feat3_root, str(calc_density))
+
+                    save_calc_density_lesion_path = os.path.join(calc_density_save_path, f'{filename}_{roi_idx}.png')
+                    if not os.path.exists(save_calc_density_lesion_path):
+                        os.makedirs(calc_density_save_path, exist_ok=True)
+                        cv2.imwrite(save_calc_density_lesion_path, lesion_patch)
+
+                    calc_density_img_save_path = os.path.join(feat4_root, str(calc_density))
+                    save_calc_density_img_path = os.path.join(calc_density_img_save_path, f'{filename}.png')
+                    if not os.path.exists(save_calc_density_img_path):
+                        os.makedirs(calc_density_img_save_path, exist_ok=True)
+                        cv2.imwrite(save_calc_density_img_path, img)
 
 
 def get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type):
@@ -322,6 +408,7 @@ def get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type
 
             os.makedirs(save_path, exist_ok=True)
             cv2.imwrite(os.path.join(save_path, f'{filename}_{roi_idx}.png'), lesion_patch)
+
 
 def read_annotation_json(json_file):
     data = mmcv.load(json_file)
@@ -629,36 +716,38 @@ if __name__ == '__main__':
                             annotation_filename='mass_case_description_train_set.csv',
                             extend_bb_ratio=ratio)
 
-    # # Extend bbox size by 0.2 and keep original bbox
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
-    #                      data_root=mass_train_root,
-    #                      annotation_filename='mass_case_description_train_set.csv',
-    #                      extend_bb_ratio=0.2, keep_org_boxes=True)
-
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes_extend_bbox_0.2_aug.json',
-    #                      data_root=mass_test_root,
-    #                      annotation_filename='mass_case_description_test_set.csv',
-    #                      extend_bb_ratio=0.2, keep_org_boxes=True)
-
     ############## Extract Lesion Patches ##############
-    # mass_shape_root = os.path.join(
-    #     processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_shape_root'])
-    # mass_margins_root = os.path.join(
-    #     processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_margins_root'])
+    # split lesion patches based on: mass shape, mass margins, breast density
+    mass_shape_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_shape_comb_feats_omit'])
+    mass_margins_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_margins_comb_feats_omit'])
+    mass_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_lesion'])
+    mass_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_image'])
 
-    # get_patches_data(os.path.join(mass_shape_root, 'train'), os.path.join(mass_margins_root, 'train'),
-    #                  data_root=mass_train_root, annotation_filename='mass_case_description_train_set.csv')
-    # get_patches_data(os.path.join(mass_shape_root, 'val'), os.path.join(mass_margins_root, 'val'),
-    #                  data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv')
+    for split in ['train', 'val', 'test']:
+        if split == 'train':
+            data_root = mass_train_train_root
+            annotation_filename = 'mass_case_description_train_set.csv'
+        elif split == 'val':
+            data_root = mass_train_val_root
+            annotation_filename = 'mass_case_description_train_set.csv'
+        elif split == 'test':
+            data_root = mass_test_root
+            annotation_filename = 'mass_case_description_test_set.csv'
+        get_lesions_feature(feat1_root=os.path.join(mass_shape_comb_feats_omit_root, split),
+                            feat2_root=os.path.join(mass_margins_comb_feats_omit_root, split),
+                            feat3_root=os.path.join(mass_breast_density_lesion_root, split),
+                            feat4_root=os.path.join(mass_breast_density_image_root, split),
+                            data_root=data_root,
+                            annotation_filename=annotation_filename,
+                            lesion_type='mass')
+
 
     # split lesion patches based on pathology
-    mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
+    # mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
 
-    get_lesions_pathology(os.path.join(mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
-    get_lesions_pathology(os.path.join(mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
-    get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
+    # get_lesions_pathology(os.path.join(mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    # get_lesions_pathology(os.path.join(mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    # get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
 
     ################################################################
     ##################### CALCIFICATION LESIONS ####################
@@ -741,12 +830,37 @@ if __name__ == '__main__':
     #                      extend_bb_ratio=0.2, keep_org_boxes=True)
 
     ############ EXTRACT LESION PATCHES ##############
-    # split lesion patches based on pathology
-    calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calcification_feats']['calc_pathology'])
+    # split lesion patches based on: mass shape, mass margins, breast density
+    calc_type_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_type_comb_feats_omit'])
+    calc_dist_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_dist_comb_feats_omit'])
+    calc_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_lesion'])
+    calc_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_image'])
 
-    get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
-    get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
-    get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
+    for split in ['train', 'val', 'test']:
+        if split == 'train':
+            data_root = calc_train_train_root
+            annotation_filename = 'calc_case_description_train_set.csv'
+        elif split == 'val':
+            data_root = calc_train_val_root
+            annotation_filename = 'calc_case_description_train_set.csv'
+        elif split == 'test':
+            data_root = calc_test_root
+            annotation_filename = 'calc_case_description_test_set.csv'
+        get_lesions_feature(feat1_root=os.path.join(calc_type_comb_feats_omit_root, split),
+                            feat2_root=os.path.join(calc_dist_comb_feats_omit_root, split),
+                            feat3_root=os.path.join(calc_breast_density_lesion_root, split),
+                            feat4_root=os.path.join(calc_breast_density_image_root, split),
+                            data_root=data_root,
+                            annotation_filename=annotation_filename,
+                            lesion_type='calc')
+
+
+    # split lesion patches based on pathology
+    # calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calcification_feats']['calc_pathology'])
+
+    # get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    # get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    # get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
 
     ############# Save detection ground-truth for evaluation ##############
     ### using https://github.com/rafaelpadilla/Object-Detection-Metrics ###

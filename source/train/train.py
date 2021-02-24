@@ -251,10 +251,10 @@ if __name__ == '__main__':
     data_root = proj_paths_json['DATA']['root']
     processed_cbis_ddsm_root = os.path.join(
         data_root, proj_paths_json['DATA']['processed_CBIS_DDSM'])
-    if args.dataset in ['mass_pathology', 'mass_shape', 'mass_shape_rare', 'mass_margins', 'mass_margins_rare']:
+    if args.dataset in ['mass_pathology', 'mass_shape_comb_feats_omit', 'mass_margins_comb_feats_omit', 'mass_breast_density_lesion', 'mass_breast_density_image']:
         data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats'][args.dataset])
-    elif args.dataset in ['calc_pathology', 'calc_type', 'calc_type_rare', 'calc_margins', 'calc_margins_rare']:
+    elif args.dataset in ['calc_pathology', 'calc_type_comb_feats_omit', 'calc_dist_comb_feats_omit', 'calc_breast_density_lesion', 'calc_breast_density_image']:
         data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calcification_feats'][args.dataset])
 
@@ -392,27 +392,30 @@ if __name__ == '__main__':
     # plot confusion matrix
     cm = confusion_matrix(labels.cpu(), preds.argmax(dim=1).cpu())
 
+    classes = os.listdir(os.path.join(data_dir, 'test'))
+
     plt.figure(figsize=(5, 5))
-    plot_confusion_matrix(cm, ['BENIGN', 'MALIGNANT'])
+    plot_confusion_matrix(cm, classes)
     plt.savefig(os.path.join(save_path, 'confusion_matrix.png'))
     plt.close()
 
     plt.figure(figsize=(5, 5))
-    norm_cm = plot_confusion_matrix(cm, ['BENIGN', 'MALIGNANT'], normalize=True)
+    norm_cm = plot_confusion_matrix(cm, classes, normalize=True)
     plt.savefig(os.path.join(save_path, 'norm_confusion_matrix.png'))
     plt.close()
 
-    # draw precision recall curve
-    plt.figure(figsize=(5, 5))
-    pr, rec, ap = plot_precision_recall_curve(labels.cpu(), softmaxs[:, 1].cpu())
-    plt.savefig(os.path.join(save_path, 'pr_curve.png'))
-    plt.close()
-    
-    # draw roc curve
-    plt.figure(figsize=(5, 5))
-    fpr, tpr, auc = plot_roc_curve(labels.cpu(), softmaxs[:, 1].cpu())
-    plt.savefig(os.path.join(save_path, 'roc_curve.png'))
-    plt.close()
+    if args.dataset in ['mass_pathology', 'calc_pathology']:
+        # draw precision recall curve
+        plt.figure(figsize=(5, 5))
+        pr, rec, ap = plot_precision_recall_curve(labels.cpu(), softmaxs[:, 1].cpu())
+        plt.savefig(os.path.join(save_path, 'pr_curve.png'))
+        plt.close()
+
+        # draw roc curve
+        plt.figure(figsize=(5, 5))
+        fpr, tpr, auc = plot_roc_curve(labels.cpu(), softmaxs[:, 1].cpu())
+        plt.savefig(os.path.join(save_path, 'roc_curve.png'))
+        plt.close()
 
     plot_data = {'confusion_matrix': cm, 'norm_confusion_matrix': norm_cm, 'precision': pr, 'recall': rec, 'ap': ap, 'fpr': fpr, 'tpr': tpr, 'auc': auc}
 

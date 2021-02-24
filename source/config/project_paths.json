@@ -4,17 +4,17 @@
 	"processed_CBIS_DDSM": "processed_data",
 	"CBIS_DDSM_lesions": {
 	    "mass_feats": {
-		"mass_shape": "mass/cls/mass_shape",
-		"mass_shape_rare": "mass/cls/mass_shape_rare_feats_omitted",
-		"mass_margins": "mass/cls/mass_margins",
-		"mass_margins_rare": "mass/cls/mass_margins_rare_feats_omitted",
+		"mass_shape_comb_feats_omit": "mass/cls/mass_shape_comb_feats_omit",
+		"mass_margins_comb_feats_omit": "mass/cls/mass_margins_comb_feats_omit",
+		"mass_breast_density_lesion": "mass/cls/mass_breast_density_lesion",
+		"mass_breast_density_image": "mass/cls/mass_breast_density_image",
 		"mass_pathology": "mass/cls/mass_pathology"
 	    },
-	    "calcification_feats": {
-		"calc_type": "calc/cls/calc_type",
-		"calc_type_rare": "calc/cls/calc_type_rare_feats_omitted",
-		"calc_margins": "calc/cls/calc_dist",
-		"calc_margins_rare": "calc/cls/calc_dist_rare_feats_omitted",
+	    "calc_feats": {
+		"calc_type_comb_feats_omit": "calc/cls/calc_type_comb_feats_omit",
+		"calc_dist_comb_feats_omit": "calc/cls/calc_dist_comb_feats_omit",
+		"calc_breast_density_lesion": "calc/cls/calc_breast_density_lesion",
+		"calc_breast_density_image": "calc/cls/calc_breast_density_image",
 		"calc_pathology": "calc/cls/calc_pathology"
 	    }
 	},
