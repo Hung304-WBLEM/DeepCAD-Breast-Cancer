@@ -1,5 +1,3 @@
-from __future__ import print_function
-from __future__ import division
 from config.cfg_loader import proj_paths_json
 from torchvision import datasets, models, transforms
 from test import get_all_preds, plot_confusion_matrix, plot_precision_recall_curve, plot_roc_curve
