@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import pickle
 
 from sklearn.metrics import confusion_matrix
-from test import get_all_preds, plot_confusion_matrix, plot_precision_recall_curve, plot_roc_curve
+from sklearn.preprocessing import label_binarize
+from test import plot_confusion_matrix, plot_precision_recall_curve, plot_roc_curve
 from dataprocessing.process_cbis_ddsm import get_info_lesion
 from config.cfg_loader import proj_paths_json
 from skimage import io, transform
@@ -22,6 +23,7 @@ from torch import nn
 from torchvision import models, transforms, utils
 from torch.utils.data import Dataset, DataLoader
 from train import set_parameter_requires_grad
+from datasets import Features_Pathology_Dataset
 from PIL import Image
 matplotlib.use('Agg')
 
@@ -46,7 +48,7 @@ class Pathology_Model(nn.Module):
             self.fc2 = nn.Linear(512, 2)
 
 
-    def forward(self, image, vector_data, training=True):
+    def forward(self, image, vector_data, training):
         x1 = self.cnn(image)
         x2 = vector_data
 
@@ -57,87 +59,6 @@ class Pathology_Model(nn.Module):
         x = F.dropout(x, p=0.5, training=training)
         x = self.fc2(x)
         return x
-
-def convert_mass_feats_1hot(breast_density, mass_shape, mass_margins):
-    BREAST_DENSITY_TYPES = np.array([1, 2, 3, 4])
-    BREAST_MASS_SHAPES = np.array(['ROUND', 'OVAL', 'IRREGULAR', 'LOBULATED', 'ARCHITECTURAL_DISTORTION', 'ASYMMETRIC_BREAST_TISSUE', 'LYMPH_NODE', 'FOCAL_ASYMMETRIC_DENSITY'])
-    BREAST_MASS_MARGINS = np.array(['ILL_DEFINED', 'CIRCUMSCRIBED', 'SPICULATED', 'MICROLOBULATED', 'OBSCURED'])
-
-    one_hot_breast_density = (BREAST_DENSITY_TYPES == breast_density).astype('int')
-    one_hot_mass_shape = (BREAST_MASS_SHAPES == mass_shape).astype('int')
-    one_hot_mass_margins = (BREAST_MASS_MARGINS == mass_margins).astype('int')
-
-    ret = np.concatenate((one_hot_breast_density, one_hot_mass_shape, one_hot_mass_margins))
-    assert np.sum(ret) >= 3
-
-    return ret
-
-def convert_calc_feats_1hot(breast_density, calc_type, calc_distribution):
-    if breast_density == 0:
-        breast_density=1 # one test sample is false labelling
-
-    BREAST_DENSITY_TYPES = np.array([1, 2, 3, 4])
-    BREAST_CALC_TYPES = np.array(["AMORPHOUS", "PUNCTATE","VASCULAR","LARGE_RODLIKE","DYSTROPHIC","SKIN","MILK_OF_CALCIUM","EGGSHELL","PLEOMORPHIC","COARSE","FINE_LINEAR_BRANCHING","LUCENT_CENTER","ROUND_AND_REGULAR","LUCENT_CENTERED"])
-    BREAST_CALC_DISTS = np.array(["CLUSTERED", "LINEAR","REGIONAL","DIFFUSELY_SCATTERED","SEGMENTAL"])
-
-    one_hot_breast_density = (BREAST_DENSITY_TYPES == breast_density).astype('int')
-    one_hot_calc_type = (BREAST_CALC_TYPES == calc_type).astype('int')
-    one_hot_calc_distribution = (BREAST_CALC_DISTS == calc_distribution).astype('int')
-
-    ret = np.concatenate((one_hot_breast_density, one_hot_calc_type, one_hot_calc_distribution))
-    assert np.sum(ret) >= 3
-
-    return ret
-    
-
-class Pathology_Dataset(Dataset):
-    def __init__(self, lesion_type, annotation_file, root_dir, transform=None):
-        self.annotations = pd.read_csv(annotation_file)
-        self.root_dir = root_dir
-        self.transform = transform
-        self.lesion_type = lesion_type
-
-        malignant_images_list = glob.glob(os.path.join(root_dir, 'MALIGNANT', '*.png'))
-        benign_images_list = glob.glob(os.path.join(root_dir, 'BENIGN', '*.png'))
-        self.images_list = malignant_images_list + benign_images_list
-        self.labels = [0] * len(malignant_images_list) + [1] * len(benign_images_list)
-
-    def __len__(self):
-        return len(self.images_list)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        img_path = self.images_list[idx]
-        img_name, _ = os.path.splitext(os.path.basename(img_path))
-        # image = io.imread(img_path)
-        image = Image.open(img_path)
-        label = self.labels[idx]
-
-        roi_idx = 0
-        while True:
-            roi_idx += 1
-            rslt_df = get_info_lesion(self.annotations, f'{img_name}')
-
-            if len(rslt_df) > 0:
-                break
-
-        if self.lesion_type == 'mass':
-            breast_density = rslt_df['breast_density'].to_numpy()[0]
-            mass_shape = rslt_df['mass shape'].to_numpy()[0]
-            mass_margins = rslt_df['mass margins'].to_numpy()[0]
-            input_vector = convert_mass_feats_1hot(breast_density, mass_shape, mass_margins)
-        elif self.lesion_type == 'calc':
-            breast_density = rslt_df['breast density'].to_numpy()[0]
-            calc_type = rslt_df['calc type'].to_numpy()[0]
-            calc_distribution = rslt_df['calc distribution'].to_numpy()[0]
-            input_vector = convert_calc_feats_1hot(breast_density, calc_type, calc_distribution)
-            
-        if self.transform:
-            image = self.transform(image)
-            
-        return {'image': image, 'pathology': label, 'input_vector': input_vector}
 
 
 def train_pathology_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
@@ -171,7 +92,7 @@ def train_pathology_model(model, dataloaders, criterion, optimizer, num_epochs=2
             for sample in dataloaders[phase]:
                 inputs = sample['image']
                 labels = sample['pathology']
-                input_vectors = sample['input_vector']
+                input_vectors = sample['feature_vector']
                 input_vectors = input_vectors.type(torch.FloatTensor)
 
                 inputs = inputs.to(device)
@@ -195,7 +116,11 @@ def train_pathology_model(model, dataloaders, criterion, optimizer, num_epochs=2
                         loss2 = criterion(aux_outputs, labels)
                         loss = loss1 + 0.4*loss2
                     else:
-                        outputs = model(inputs, input_vectors)
+                        if phase == 'val':
+                            outputs = model(inputs, input_vectors, training=False)
+                        elif phase == 'train':
+                            outputs = model(inputs, input_vectors, training=True)
+                            
                         loss = criterion(outputs, labels)
 
                     _, preds = torch.max(outputs, 1)
@@ -254,7 +179,7 @@ def get_all_preds_pathology(model, loader, device):
     for sample in loader:
         inputs = sample['image']
         labels = sample['pathology']
-        input_vectors = sample['input_vector']
+        input_vectors = sample['feature_vector']
         input_vectors = input_vectors.type(torch.FloatTensor)
 
         inputs = inputs.to(device)
@@ -282,8 +207,6 @@ if __name__ == '__main__':
                         help="Batch size for training")
     parser.add_argument(
         "-e", "--epochs", type=int, help="the number of epochs for training")
-    # parser.add_argument("-f", "--frozen", default=False, action='store_true',
-    #                     help="True if you want to frozen all the layers except the last one")
     parser.add_argument("-f", "--freeze_type", help="For Resnet50, freeze_type could be: 'none', 'all', 'last_fc', 'top1_conv_block', 'top2_conv_block', 'top3_conv_block'. For VGG16, freeze_type could be: 'none', 'all', 'last_fc', 'fc2', 'fc1', 'top1_conv_block', 'top2_conv_block'")
 
     args = parser.parse_args()
@@ -296,7 +219,7 @@ if __name__ == '__main__':
             data_root, processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats'][args.dataset])
     elif args.dataset in ['calc_pathology']:
         data_dir = os.path.join(
-            data_root, processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calcification_feats'][args.dataset])
+            data_root, processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats'][args.dataset])
 
     save_path = args.save_path
     if not os.path.exists(save_path):
@@ -309,7 +232,8 @@ if __name__ == '__main__':
     model_name = args.model_name
 
     # Number of classes in the dataset
-    num_classes = len(os.listdir(os.path.join(data_dir, 'train')))
+    classes = ['MALIGNANT', 'BENIGN']
+    num_classes = len(classes)
 
     # Batch size for training (change depending on how much memory you have)
     batch_size = args.batch_size
@@ -357,12 +281,12 @@ if __name__ == '__main__':
 
     if args.dataset == 'mass_pathology':
         pathology_datasets = \
-            {x: Pathology_Dataset(lesion_type='mass',
+            {x: Features_Pathology_Dataset(lesion_type='mass',
                 annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/train/mass_case_description_train_set.csv',
                 root_dir=os.path.join(data_dir, x), transform=data_transforms[x]) for x in ['train', 'val']}
     elif args.dataset == 'calc_pathology':
         pathology_datasets = \
-            {x: Pathology_Dataset(lesion_type='calc',
+            {x: Features_Pathology_Dataset(lesion_type='calc',
                 annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train/calc_case_description_train_set.csv',
                 root_dir=os.path.join(data_dir, x), transform=data_transforms[x]) for x in ['train', 'val']}
         
@@ -425,12 +349,12 @@ if __name__ == '__main__':
     ################### Test Model #############################
     if args.dataset == 'mass_pathology':
         test_image_datasets = \
-            {'test': Pathology_Dataset(lesion_type='mass',
+            {'test': Features_Pathology_Dataset(lesion_type='mass',
                 annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/test/mass_case_description_test_set.csv',
                 root_dir=os.path.join(data_dir, 'test'), transform=data_transforms['test'])}
     elif args.dataset == 'calc_pathology':
         test_image_datasets = \
-            {'test': Pathology_Dataset(lesion_type='calc',
+            {'test': Features_Pathology_Dataset(lesion_type='calc',
                 annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/test/calc_case_description_test_set.csv',
                 root_dir=os.path.join(data_dir, 'test'), transform=data_transforms['test'])}
 
@@ -440,8 +364,11 @@ if __name__ == '__main__':
     
     with torch.no_grad():
         prediction_loader = test_dataloaders_dict['test']
-        preds, labels = get_all_preds_pathology(model, prediction_loader, device) 
+        preds, labels = get_all_preds_pathology(model, prediction_loader, device)
+
         softmaxs = torch.softmax(preds, dim=-1)
+        binarized_labels = label_binarize(labels.cpu(), classes=[*range(num_classes)])
+        print(binarized_labels.shape, softmaxs.shape)
 
     ######### PLOT ##########
     matplotlib.use('Agg')
@@ -450,28 +377,73 @@ if __name__ == '__main__':
     cm = confusion_matrix(labels.cpu(), preds.argmax(dim=1).cpu())
 
     plt.figure(figsize=(5, 5))
-    plot_confusion_matrix(cm, ['MALIGNANT', 'BENIGN'])
+    plot_confusion_matrix(cm, classes)
     plt.savefig(os.path.join(save_path, 'confusion_matrix.png'))
     plt.close()
 
     plt.figure(figsize=(5, 5))
-    norm_cm = plot_confusion_matrix(cm, ['MALIGNANT', 'BENIGN'], normalize=True)
+    norm_cm = plot_confusion_matrix(cm, classes, normalize=True)
     plt.savefig(os.path.join(save_path, 'norm_confusion_matrix.png'))
     plt.close()
 
-    # draw precision recall curve
-    plt.figure(figsize=(5, 5))
-    pr, rec, ap = plot_precision_recall_curve(labels.cpu(), softmaxs[:, 1].cpu())
+    # Plot PR curve
+    prs, recs, aps = [], [], []
+    if args.dataset in ['mass_pathology', 'calc_pathology']:
+        pr, rec, ap = plot_precision_recall_curve(binarized_labels, softmaxs[:, 0].cpu(), class_name='Pathology')
+        prs.append(pr)
+        recs.append(rec)
+        aps.append(ap)
+    else:
+        for i in range(num_classes):
+            pr, rec, ap = plot_precision_recall_curve(binarized_labels[:, i], softmaxs[:, i].cpu(), class_name=classes[i])
+            prs.append(pr)
+            recs.append(rec)
+            aps.append(ap)
+
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.legend(loc="best")
+
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.grid(True)
+    plt.tight_layout()
+
     plt.savefig(os.path.join(save_path, 'pr_curve.png'))
     plt.close()
-    
-    # draw roc curve
-    plt.figure(figsize=(5, 5))
-    fpr, tpr, auc = plot_roc_curve(labels.cpu(), softmaxs[:, 1].cpu())
+
+    # Plot ROC curve
+    fprs, tprs, aucs = [], [], []
+    if args.dataset in ['mass_pathology', 'calc_pathology']:
+        fpr, tpr, auc = plot_precision_recall_curve(binarized_labels, softmaxs[:, 0].cpu(), class_name='Pathology')
+        fprs.append(fpr)
+        tprs.append(tpr)
+        aucs.append(auc)
+    else:
+        for i in range(num_classes):
+            fpr, tpr, auc = plot_roc_curve(binarized_labels[:, i], softmaxs[:, i].cpu(), class_name=classes[i])
+            fprs.append(fpr)
+            tprs.append(tpr)
+            aucs.append(auc)
+
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlabel("1 - Specificity")
+    plt.ylabel("Sensitivity")
+    plt.legend(loc="best")
+
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.grid(True)
+    plt.tight_layout()
+
     plt.savefig(os.path.join(save_path, 'roc_curve.png'))
     plt.close()
 
-    plot_data = {'confusion_matrix': cm, 'norm_confusion_matrix': norm_cm, 'precision': pr, 'recall': rec, 'ap': ap, 'fpr': fpr, 'tpr': tpr, 'auc': auc}
+    # Save Data for plotting in the future
+    plot_data = {'confusion_matrix': cm, 'norm_confusion_matrix': norm_cm,
+                 'precision_list': prs, 'recall_list': recs, 'ap_list': aps,
+                 'fpr_list': fprs, 'tpr_list': tprs, 'auc_list': aucs,
+                 'classes': classes}
 
     with open(os.path.join(save_path, 'plot_data.pkl'), 'wb') as f:
         pickle.dump(plot_data, f)

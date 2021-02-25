@@ -47,7 +47,7 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
 
     return cm
 
-def plot_precision_recall_curve(y, y_pred):
+def plot_precision_recall_curve(y, y_pred, class_name):
     precisions, recalls, thresholds = precision_recall_curve(y, y_pred)
     ap = average_precision_score(y, y_pred)
     ap = round(ap, 2)
@@ -59,37 +59,21 @@ def plot_precision_recall_curve(y, y_pred):
     thresholds = thresholds[:-1].tolist()
     thresholds.reverse()
 
+    interpolated_precisions = [0] * len(precisions)
     for idx in range(0, len(precisions) - 1):
-        precisions[idx] = max(precisions[idx+1:])
+        interpolated_precisions[idx] = max(precisions[idx:])
 
-    plt.plot(recalls[:-1], precisions[:-1], "b-", label=f"pr curve (AP={ap})")
-    plt.xlabel("Recall")
-    plt.ylabel("Precision")
-    plt.legend()
-
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.grid(True)
-    plt.tight_layout()
+    plt.plot(recalls[:], interpolated_precisions[:], label=f"{class_name} (AP={ap})")
 
     return precisions, recalls, ap
 
 
-def plot_roc_curve(y, y_pred):
+def plot_roc_curve(y, y_pred, class_name):
     fpr, tpr, thresholds = roc_curve(y, y_pred)
     auc = roc_auc_score(y, y_pred)
     auc = round(auc, 2)
 
-    plt.plot(fpr, tpr, "b-", label=f"roc curve (AUC={auc})")
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlabel("1 - Specificity")
-    plt.ylabel("Sensitivity")
-    plt.legend()
-
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.grid(True)
-    plt.tight_layout()
+    plt.plot(fpr, tpr, label=f"{class_name} (AUC={auc})")
 
     return fpr, tpr, auc
     

@@ -2,7 +2,9 @@ from config.cfg_loader import proj_paths_json
 from torchvision import datasets, models, transforms
 from test import get_all_preds, plot_confusion_matrix, plot_precision_recall_curve, plot_roc_curve
 from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing import label_binarize
 from utils.fileio import json
+from datasets import Mass_Shape_Dataset, Mass_Margins_Dataset, Calc_Type_Dataset, Calc_Dist_Dataset, Pathology_Dataset, Breast_Density_Dataset
 
 import torch
 import torch.nn as nn
@@ -251,12 +253,28 @@ if __name__ == '__main__':
     data_root = proj_paths_json['DATA']['root']
     processed_cbis_ddsm_root = os.path.join(
         data_root, proj_paths_json['DATA']['processed_CBIS_DDSM'])
+
+    # CLASSES ID
+    if args.dataset in ['mass_pathology', 'calc_pathology']:
+        classes = np.array(['BENIGN', 'MALIGNANT'])
+    elif args.dataset == 'mass_shape_comb_feats_omit':
+        classes = np.array(['ROUND', 'OVAL', 'IRREGULAR', 'LOBULATED', 'ARCHITECTURAL_DISTORTION', 'ASYMMETRIC_BREAST_TISSUE', 'LYMPH_NODE', 'FOCAL_ASYMMETRIC_DENSITY'])
+    elif args.dataset == 'mass_margins_comb_feats_omit':
+        classes = np.array(['ILL_DEFINED', 'CIRCUMSCRIBED', 'SPICULATED', 'MICROLOBULATED', 'OBSCURED'])
+    elif args.dataset == 'calc_type_comb_feats_omit':
+        classes = np.array(["AMORPHOUS", "PUNCTATE","VASCULAR","LARGE_RODLIKE","DYSTROPHIC","SKIN","MILK_OF_CALCIUM","EGGSHELL","PLEOMORPHIC","COARSE","FINE_LINEAR_BRANCHING","LUCENT_CENTER","ROUND_AND_REGULAR","LUCENT_CENTERED"])
+    elif args.dataset == 'calc_dist_comb_feats_omit':
+        classes = np.array(["CLUSTERED", "LINEAR","REGIONAL","DIFFUSELY_SCATTERED","SEGMENTAL"])
+    elif args.dataset in ['mass_breast_density_lesion', 'mass_breast_density_image', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+        classes = np.array([1, 2, 3, 4])
+        
+        
     if args.dataset in ['mass_pathology', 'mass_shape_comb_feats_omit', 'mass_margins_comb_feats_omit', 'mass_breast_density_lesion', 'mass_breast_density_image']:
         data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats'][args.dataset])
     elif args.dataset in ['calc_pathology', 'calc_type_comb_feats_omit', 'calc_dist_comb_feats_omit', 'calc_breast_density_lesion', 'calc_breast_density_image']:
         data_dir = os.path.join(
-            data_root, processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calcification_feats'][args.dataset])
+            data_root, processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats'][args.dataset])
 
     save_path = args.save_path
     if not os.path.exists(save_path):
@@ -269,7 +287,7 @@ if __name__ == '__main__':
     model_name = args.model_name
 
     # Number of classes in the dataset
-    num_classes = len(os.listdir(os.path.join(data_dir, 'train')))
+    num_classes = len(classes.tolist())
 
     # Batch size for training (change depending on how much memory you have)
     batch_size = args.batch_size
@@ -314,16 +332,36 @@ if __name__ == '__main__':
     print("Initializing Datasets and Dataloaders...")
 
     # Create training and validation datasets
-    image_datasets = {x: datasets.ImageFolder(os.path.join(
-        data_dir, x), data_transforms[x]) for x in ['train', 'val']}
+    if args.dataset in ['mass_pathology', 'calc_pathology']:
+        image_datasets = {x: Pathology_Dataset(os.path.join(
+            data_dir, x), data_transforms[x]) for x in ['train', 'val', 'test']}
+    elif args.dataset == 'mass_shape_comb_feats_omit':
+        image_datasets = {x: Mass_Shape_Dataset(os.path.join(
+            data_dir, x), data_transforms[x]) for x in ['train', 'val', 'test']}
+    elif args.dataset == 'mass_margins_comb_feats_omit':
+        image_datasets = {x: Mass_Margins_Dataset(os.path.join(
+            data_dir, x), data_transforms[x]) for x in ['train', 'val', 'test']}
+    elif args.dataset == 'calc_type_comb_feats_omit':
+        image_datasets = {x: Calc_Type_Dataset(os.path.join(
+            data_dir, x), data_transforms[x]) for x in ['train', 'val', 'test']}
+    elif args.dataset == 'calc_dist_comb_feats_omit':
+        image_datasets = {x: Calc_Dist_Dataset(os.path.join(
+            data_dir, x), data_transforms[x]) for x in ['train', 'val', 'test']}
+    elif args.dataset in ['mass_breast_density_lesion', 'mass_breast_density_image', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+        image_datasets = {x: Breast_Density_Dataset(os.path.join(
+            data_dir, x), data_transforms[x]) for x in ['train', 'val', 'test']}
+        
+
     # Create training and validation dataloaders
     dataloaders_dict = {x: torch.utils.data.DataLoader(
         image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in ['train', 'val']}
 
     # Detect if we have a GPU available
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Send the model to GPU
+    if torch.cuda.device_count() > 1:
+        model_ft = nn.DataParallel(model_ft)
     model_ft = model_ft.to(device)
 
     # Gather the parameters to be optimized/updated in this run. If we are
@@ -375,49 +413,104 @@ if __name__ == '__main__':
 
     
     ################### Test Model #############################
-    test_image_datasets = {'test': datasets.ImageFolder(os.path.join(data_dir, 'test'), data_transforms['test'])}
-    test_dataloaders_dict = {'test': torch.utils.data.DataLoader(test_image_datasets['test'], batch_size=batch_size, shuffle=False, num_workers=4)}
+    test_dataloaders_dict = {'test': torch.utils.data.DataLoader(image_datasets['test'], batch_size=batch_size, shuffle=False, num_workers=4)}
 
     model_ft.eval()
     
     with torch.no_grad():
         prediction_loader = test_dataloaders_dict['test']
         preds, labels = get_all_preds(model_ft, prediction_loader, device)
+
         softmaxs = torch.softmax(preds, dim=-1)
+        binarized_labels = label_binarize(labels.cpu(), classes=[*range(num_classes)])
+        print(binarized_labels.shape, softmaxs.shape)
 
     ######### PLOT ##########
     matplotlib.use('Agg')
-    # plot_confusion_matrix(cm, ['IRREGULAR', 'LOBULATED', 'OVAL', 'ROUND'])
 
     # plot confusion matrix
     cm = confusion_matrix(labels.cpu(), preds.argmax(dim=1).cpu())
 
-    classes = os.listdir(os.path.join(data_dir, 'test'))
+    # rm not existed classes for plotting confusion matrix
+    test_classes = os.listdir(os.path.join(data_dir, 'test'))
+    cm_test_classes = []
+    for _class in classes:
+        _class = str(_class)
+        if _class in test_classes:
+            cm_test_classes.append(_class)
 
-    plt.figure(figsize=(5, 5))
-    plot_confusion_matrix(cm, classes)
+    plt.figure(figsize=(10, 10))
+    plot_confusion_matrix(cm, cm_test_classes)
     plt.savefig(os.path.join(save_path, 'confusion_matrix.png'))
     plt.close()
 
-    plt.figure(figsize=(5, 5))
-    norm_cm = plot_confusion_matrix(cm, classes, normalize=True)
+    plt.figure(figsize=(10, 10))
+    norm_cm = plot_confusion_matrix(cm, cm_test_classes, normalize=True)
     plt.savefig(os.path.join(save_path, 'norm_confusion_matrix.png'))
     plt.close()
 
+    # Plot PR curve
+    prs, recs, aps = [], [], []
     if args.dataset in ['mass_pathology', 'calc_pathology']:
-        # draw precision recall curve
-        plt.figure(figsize=(5, 5))
-        pr, rec, ap = plot_precision_recall_curve(labels.cpu(), softmaxs[:, 1].cpu())
-        plt.savefig(os.path.join(save_path, 'pr_curve.png'))
-        plt.close()
+        print(binarized_labels.shape, softmaxs.shape)
+        pr, rec, ap = plot_precision_recall_curve(binarized_labels, softmaxs[:, 1].cpu(), class_name='Pathology')
+        prs.append(pr)
+        recs.append(rec)
+        aps.append(ap)
+    else:
+        for i in range(num_classes):
+            if np.sum(binarized_labels[:, i]) > 0:
+                pr, rec, ap = plot_precision_recall_curve(binarized_labels[:, i], softmaxs[:, i].cpu(), class_name=classes[i])
+                prs.append(pr)
+                recs.append(rec)
+                aps.append(ap)
 
-        # draw roc curve
-        plt.figure(figsize=(5, 5))
-        fpr, tpr, auc = plot_roc_curve(labels.cpu(), softmaxs[:, 1].cpu())
-        plt.savefig(os.path.join(save_path, 'roc_curve.png'))
-        plt.close()
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.legend(loc="best")
 
-    plot_data = {'confusion_matrix': cm, 'norm_confusion_matrix': norm_cm, 'precision': pr, 'recall': rec, 'ap': ap, 'fpr': fpr, 'tpr': tpr, 'auc': auc}
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.grid(True)
+    plt.tight_layout()
+
+    plt.savefig(os.path.join(save_path, 'pr_curve.png'))
+    plt.close()
+
+    # Plot ROC curve
+    fprs, tprs, aucs = [], [], []
+    if args.dataset in ['mass_pathology', 'calc_pathology']:
+        fpr, tpr, auc = plot_roc_curve(binarized_labels, softmaxs[:, 1].cpu(), class_name='Pathology')
+        fprs.append(fpr)
+        tprs.append(tpr)
+        aucs.append(auc)
+    else:
+        for i in range(num_classes):
+            if np.sum(binarized_labels[:, i]) > 0:
+                fpr, tpr, auc = plot_roc_curve(binarized_labels[:, i], softmaxs[:, i].cpu(), class_name=classes[i])
+                fprs.append(fpr)
+                tprs.append(tpr)
+                aucs.append(auc)
+
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlabel("1 - Specificity")
+    plt.ylabel("Sensitivity")
+    plt.legend(loc="best")
+
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.grid(True)
+    plt.tight_layout()
+
+    plt.savefig(os.path.join(save_path, 'roc_curve.png'))
+    plt.close()
+
+    # Save Data for plotting in the future
+    plot_data = {'confusion_matrix': cm, 'norm_confusion_matrix': norm_cm,
+                 'precision_list': prs, 'recall_list': recs, 'ap_list': aps,
+                 'fpr_list': fprs, 'tpr_list': tprs, 'auc_list': aucs,
+                 'classes': classes}
+
 
     with open(os.path.join(save_path, 'plot_data.pkl'), 'wb') as f:
         pickle.dump(plot_data, f)

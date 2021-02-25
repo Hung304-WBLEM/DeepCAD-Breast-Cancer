@@ -181,30 +181,30 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
 
     df = pandas.read_csv(os.path.join(data_root, annotation_filename))
 
-    if lesion_type == 'mass':
-        # remove rows with NA value in some columns
-        for key in ['mass shape', 'mass margins']:
-            df = df[df[key].notna()]
-        print('Len mass data (NA removed):', len(df))
+    # if lesion_type == 'mass':
+    #     # remove rows with NA value in some columns
+    #     for key in ['mass shape', 'mass margins']:
+    #         df = df[df[key].notna()]
+    #     print('Len mass data (NA removed):', len(df))
 
-        # remove all combined features whose names will contain underscore.
-        df = df[~df['mass shape'].str.contains('-')]
-        print('Len mass data (Mass shape combined features removed):', len(df))
+    #     # remove all combined features whose names will contain underscore.
+    #     df = df[~df['mass shape'].str.contains('-')]
+    #     print('Len mass data (Mass shape combined features removed):', len(df))
 
-        df = df[~df['mass margins'].str.contains('-')]
-        print('Len mass data (Mass margins combined features remove):', len(df))
-    elif lesion_type == 'calc':
-        # remove rows with NA value in some columns
-        for key in ['calc type', 'calc distribution']:
-            df = df[df[key].notna()]
-        print('Len calc data (NA removed):', len(df))
+    #     df = df[~df['mass margins'].str.contains('-')]
+    #     print('Len mass data (Mass margins combined features remove):', len(df))
+    # elif lesion_type == 'calc':
+    #     # remove rows with NA value in some columns
+    #     for key in ['calc type', 'calc distribution']:
+    #         df = df[df[key].notna()]
+    #     print('Len calc data (NA removed):', len(df))
 
-        # remove all combined features whose names will contain underscore.
-        df = df[~df['calc type'].str.contains('-')]
-        print('Len calc data (Calc type combined features removed):', len(df))
+    #     # remove all combined features whose names will contain underscore.
+    #     df = df[~df['calc type'].str.contains('-')]
+    #     print('Len calc data (Calc type combined features removed):', len(df))
 
-        df = df[~df['calc distribution'].str.contains('-')]
-        print('Len calc data (Calc distribution combined features remove):', len(df))
+    #     df = df[~df['calc distribution'].str.contains('-')]
+    #     print('Len calc data (Calc distribution combined features remove):', len(df))
 
     for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
         filename = os.path.basename(dir_path)
@@ -254,7 +254,7 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
 
             if lesion_type == 'mass':
                 mass_shape = rslt_df['mass shape'].to_numpy()[0]
-                if isinstance(mass_shape, str):
+                if isinstance(mass_shape, str) and '-' not in mass_shape:
                     mass_shape_save_path = os.path.join(
                         feat1_root, mass_shape)
                     save_mass_shape_lesion_path = os.path.join(
@@ -264,7 +264,7 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
                         cv2.imwrite(save_mass_shape_lesion_path, lesion_patch)
 
                 mass_margins = rslt_df['mass margins'].to_numpy()[0]
-                if isinstance(mass_margins, str):
+                if isinstance(mass_margins, str) and '-' not in mass_margins:
                     mass_margins_save_path = os.path.join(
                         feat2_root, mass_margins)
 
@@ -290,7 +290,7 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
 
             elif lesion_type == 'calc':
                 calc_type = rslt_df['calc type'].to_numpy()[0]
-                if isinstance(calc_type, str):
+                if isinstance(calc_type, str) and '-' not in calc_type:
                     calc_type_save_path = os.path.join(
                         feat1_root, calc_type)
                     save_calc_type_lesion_path = os.path.join(
@@ -300,7 +300,7 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
                         cv2.imwrite(save_calc_type_lesion_path, lesion_patch)
 
                 calc_dist = rslt_df['calc distribution'].to_numpy()[0]
-                if isinstance(calc_dist, str):
+                if isinstance(calc_dist, str) and '-' not in calc_dist:
                     calc_dist_save_path = os.path.join(
                         feat2_root, calc_dist)
 
@@ -329,30 +329,30 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
 def get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type):
     df = pandas.read_csv(os.path.join(data_root, annotation_filename))
 
-    if lesion_type == 'mass':
-        # remove rows with NA value in some columns
-        for key in ['mass shape', 'mass margins']:
-            df = df[df[key].notna()]
-        print('Len mass data (NA removed):', len(df))
+    # if lesion_type == 'mass':
+    #     # remove rows with NA value in some columns
+    #     for key in ['mass shape', 'mass margins']:
+    #         df = df[df[key].notna()]
+    #     print('Len mass data (NA removed):', len(df))
 
-        # remove all combined features whose names will contain underscore.
-        df = df[~df['mass shape'].str.contains('-')]
-        print('Len mass data (Mass shape combined features removed):', len(df))
+    #     # remove all combined features whose names will contain underscore.
+    #     df = df[~df['mass shape'].str.contains('-')]
+    #     print('Len mass data (Mass shape combined features removed):', len(df))
 
-        df = df[~df['mass margins'].str.contains('-')]
-        print('Len mass data (Mass margins combined features remove):', len(df))
-    elif lesion_type == 'calc':
-        # remove rows with NA value in some columns
-        for key in ['calc type', 'calc distribution']:
-            df = df[df[key].notna()]
-        print('Len calc data (NA removed):', len(df))
+    #     df = df[~df['mass margins'].str.contains('-')]
+    #     print('Len mass data (Mass margins combined features remove):', len(df))
+    # elif lesion_type == 'calc':
+    #     # remove rows with NA value in some columns
+    #     for key in ['calc type', 'calc distribution']:
+    #         df = df[df[key].notna()]
+    #     print('Len calc data (NA removed):', len(df))
 
-        # remove all combined features whose names will contain underscore.
-        df = df[~df['calc type'].str.contains('-')]
-        print('Len calc data (Calc type combined features removed):', len(df))
+    #     # remove all combined features whose names will contain underscore.
+    #     df = df[~df['calc type'].str.contains('-')]
+    #     print('Len calc data (Calc type combined features removed):', len(df))
 
-        df = df[~df['calc distribution'].str.contains('-')]
-        print('Len calc data (Calc distribution combined features remove):', len(df))
+    #     df = df[~df['calc distribution'].str.contains('-')]
+    #     print('Len calc data (Calc distribution combined features remove):', len(df))
 
 
     for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
@@ -718,36 +718,36 @@ if __name__ == '__main__':
 
     ############## Extract Lesion Patches ##############
     # split lesion patches based on: mass shape, mass margins, breast density
-    mass_shape_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_shape_comb_feats_omit'])
-    mass_margins_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_margins_comb_feats_omit'])
-    mass_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_lesion'])
-    mass_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_image'])
+    # mass_shape_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_shape_comb_feats_omit'])
+    # mass_margins_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_margins_comb_feats_omit'])
+    # mass_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_lesion'])
+    # mass_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_image'])
 
-    for split in ['train', 'val', 'test']:
-        if split == 'train':
-            data_root = mass_train_train_root
-            annotation_filename = 'mass_case_description_train_set.csv'
-        elif split == 'val':
-            data_root = mass_train_val_root
-            annotation_filename = 'mass_case_description_train_set.csv'
-        elif split == 'test':
-            data_root = mass_test_root
-            annotation_filename = 'mass_case_description_test_set.csv'
-        get_lesions_feature(feat1_root=os.path.join(mass_shape_comb_feats_omit_root, split),
-                            feat2_root=os.path.join(mass_margins_comb_feats_omit_root, split),
-                            feat3_root=os.path.join(mass_breast_density_lesion_root, split),
-                            feat4_root=os.path.join(mass_breast_density_image_root, split),
-                            data_root=data_root,
-                            annotation_filename=annotation_filename,
-                            lesion_type='mass')
+    # for split in ['train', 'val', 'test']:
+    #     if split == 'train':
+    #         data_root = mass_train_train_root
+    #         annotation_filename = 'mass_case_description_train_set.csv'
+    #     elif split == 'val':
+    #         data_root = mass_train_val_root
+    #         annotation_filename = 'mass_case_description_train_set.csv'
+    #     elif split == 'test':
+    #         data_root = mass_test_root
+    #         annotation_filename = 'mass_case_description_test_set.csv'
+    #     get_lesions_feature(feat1_root=os.path.join(mass_shape_comb_feats_omit_root, split),
+    #                         feat2_root=os.path.join(mass_margins_comb_feats_omit_root, split),
+    #                         feat3_root=os.path.join(mass_breast_density_lesion_root, split),
+    #                         feat4_root=os.path.join(mass_breast_density_image_root, split),
+    #                         data_root=data_root,
+    #                         annotation_filename=annotation_filename,
+    #                         lesion_type='mass')
 
 
     # split lesion patches based on pathology
-    # mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
+    mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
 
-    # get_lesions_pathology(os.path.join(mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
-    # get_lesions_pathology(os.path.join(mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
-    # get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
+    get_lesions_pathology(os.path.join(mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    get_lesions_pathology(os.path.join(mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
 
     ################################################################
     ##################### CALCIFICATION LESIONS ####################
@@ -831,36 +831,36 @@ if __name__ == '__main__':
 
     ############ EXTRACT LESION PATCHES ##############
     # split lesion patches based on: mass shape, mass margins, breast density
-    calc_type_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_type_comb_feats_omit'])
-    calc_dist_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_dist_comb_feats_omit'])
-    calc_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_lesion'])
-    calc_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_image'])
+    # calc_type_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_type_comb_feats_omit'])
+    # calc_dist_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_dist_comb_feats_omit'])
+    # calc_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_lesion'])
+    # calc_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_image'])
 
-    for split in ['train', 'val', 'test']:
-        if split == 'train':
-            data_root = calc_train_train_root
-            annotation_filename = 'calc_case_description_train_set.csv'
-        elif split == 'val':
-            data_root = calc_train_val_root
-            annotation_filename = 'calc_case_description_train_set.csv'
-        elif split == 'test':
-            data_root = calc_test_root
-            annotation_filename = 'calc_case_description_test_set.csv'
-        get_lesions_feature(feat1_root=os.path.join(calc_type_comb_feats_omit_root, split),
-                            feat2_root=os.path.join(calc_dist_comb_feats_omit_root, split),
-                            feat3_root=os.path.join(calc_breast_density_lesion_root, split),
-                            feat4_root=os.path.join(calc_breast_density_image_root, split),
-                            data_root=data_root,
-                            annotation_filename=annotation_filename,
-                            lesion_type='calc')
+    # for split in ['train', 'val', 'test']:
+    #     if split == 'train':
+    #         data_root = calc_train_train_root
+    #         annotation_filename = 'calc_case_description_train_set.csv'
+    #     elif split == 'val':
+    #         data_root = calc_train_val_root
+    #         annotation_filename = 'calc_case_description_train_set.csv'
+    #     elif split == 'test':
+    #         data_root = calc_test_root
+    #         annotation_filename = 'calc_case_description_test_set.csv'
+    #     get_lesions_feature(feat1_root=os.path.join(calc_type_comb_feats_omit_root, split),
+    #                         feat2_root=os.path.join(calc_dist_comb_feats_omit_root, split),
+    #                         feat3_root=os.path.join(calc_breast_density_lesion_root, split),
+    #                         feat4_root=os.path.join(calc_breast_density_image_root, split),
+    #                         data_root=data_root,
+    #                         annotation_filename=annotation_filename,
+    #                         lesion_type='calc')
 
 
     # split lesion patches based on pathology
-    # calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calcification_feats']['calc_pathology'])
+    calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
 
-    # get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
-    # get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
-    # get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
 
     ############# Save detection ground-truth for evaluation ##############
     ### using https://github.com/rafaelpadilla/Object-Detection-Metrics ###
