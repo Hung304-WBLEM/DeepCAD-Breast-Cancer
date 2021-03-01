@@ -12,7 +12,7 @@ import shutil
 from config.cfg_loader import proj_paths_json
 from pycocotools import mask as coco_api_mask
 from sklearn.model_selection import StratifiedShuffleSplit
-from utils.detectutil import bbox_util
+from utilities.detectutil import bbox_util
 
 
 def convert_npz_to_png(data_path):
@@ -324,6 +324,76 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
                     if not os.path.exists(save_calc_density_img_path):
                         os.makedirs(calc_density_img_save_path, exist_ok=True)
                         cv2.imwrite(save_calc_density_img_path, img)
+
+def stoa_get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type):
+    df = pandas.read_csv(os.path.join(data_root, annotation_filename))
+
+    for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
+        filename = os.path.basename(dir_path)
+        img_path = os.path.join(dir_path, filename + '.png')
+        if not os.path.exists(img_path):
+            continue
+
+        img = mmcv.imread(img_path)
+        old_height, old_width = img.shape[:2]
+        img = cv2.resize(img, (896, 1152))
+        new_height, new_width = img.shape[:2]
+
+        for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+            while True:
+                if roi_idx == 100: # assume no mammamogram contains at most 100
+                    break
+                roi_idx += 1
+
+                rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
+
+                if len(rslt_df) == 0:
+                    print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
+                    continue
+
+                label = rslt_df['pathology'].to_numpy()[0]
+                if label == 'MALIGNANT':
+                    cat_id = 0
+                elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
+                    cat_id = 1
+                else:
+                    raise ValueError(
+                        f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
+
+                break
+
+            if roi_idx == 100:
+                print(f'ROI features contain NA or combined type: {filename}')
+                break
+
+            mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
+            seg_poly = mask2polygon(mask_arr)
+            seg_area = area(mask_arr)
+
+            flat_seg_poly = [el for sublist in seg_poly for el in sublist]
+            px = flat_seg_poly[::2]
+            py = flat_seg_poly[1::2]
+            x_min, y_min, x_max, y_max = (min(px), min(py), max(px), max(py))
+            center_x = (x_min + x_max)/2.0
+            center_y = (y_min + y_max)/2.0
+
+            new_center_x = (center_x/old_width)*new_width
+            new_center_y = (center_y/old_height)*new_height
+
+            new_x_min = max(0, int(new_center_x - 224/2))
+            new_y_min = max(0, int(new_center_y - 224/2))
+            new_x_max = min(int(new_width), int(new_center_x + 224/2))
+            new_y_max = min(int(new_height), int(new_center_y + 224/2))
+
+            lesion_patch = img[new_y_min:(new_y_max+1), new_x_min:(new_x_max+1)]
+
+            if cat_id == 0:
+                save_path = os.path.join(save_root, 'MALIGNANT')
+            elif cat_id == 1:
+                save_path = os.path.join(save_root, 'BENIGN')
+
+            os.makedirs(save_path, exist_ok=True)
+            cv2.imwrite(os.path.join(save_path, f'{filename}_{roi_idx}.png'), lesion_patch)
 
 
 def get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type):
@@ -743,11 +813,16 @@ if __name__ == '__main__':
 
 
     # split lesion patches based on pathology
-    mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
+    # mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
 
-    get_lesions_pathology(os.path.join(mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
-    get_lesions_pathology(os.path.join(mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
-    get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
+    # get_lesions_pathology(os.path.join(mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    # get_lesions_pathology(os.path.join(mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    # get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
+
+    stoa_mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['stoa_mass_pathology'])
+    stoa_get_lesions_pathology(os.path.join(stoa_mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    stoa_get_lesions_pathology(os.path.join(stoa_mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    stoa_get_lesions_pathology(os.path.join(stoa_mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
 
     ################################################################
     ##################### CALCIFICATION LESIONS ####################
@@ -856,11 +931,18 @@ if __name__ == '__main__':
 
 
     # split lesion patches based on pathology
-    calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
+    # calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
 
-    get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
-    get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
-    get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
+    # get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    # get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    # get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
+
+
+    stoa_calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['stoa_calc_pathology'])
+    stoa_get_lesions_pathology(os.path.join(stoa_calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    stoa_get_lesions_pathology(os.path.join(stoa_calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    stoa_get_lesions_pathology(os.path.join(stoa_calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
+
 
     ############# Save detection ground-truth for evaluation ##############
     ### using https://github.com/rafaelpadilla/Object-Detection-Metrics ###
