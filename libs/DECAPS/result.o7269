@@ -1,0 +1,10 @@
+which: no hipcc in (/share/apps/cudatoolkit-10.1/bin:/home/hqvo2/miniconda3/envs/decaps/bin:/home/hqvo2/miniconda3/condabin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/slurm/bin:/opt/slurm/sbin:/home/hqvo2/.local/bin:/home/hqvo2/bin)
+WARNING:tensorflow:From /home/hqvo2/Projects/Breast_Cancer/libs/DECAPS/utils/logger_utils.py:16: The name tf.summary.FileWriter is deprecated. Please use tf.compat.v1.summary.FileWriter instead.
+
+WARNING:tensorflow:From /home/hqvo2/Projects/Breast_Cancer/libs/DECAPS/utils/logger_utils.py:16: The name tf.summary.FileWriter is deprecated. Please use tf.compat.v1.summary.FileWriter instead.
+
+WARNING:tensorflow:From /home/hqvo2/Projects/Breast_Cancer/libs/DECAPS/utils/logger_utils.py:20: The name tf.Summary is deprecated. Please use tf.compat.v1.Summary instead.
+
+WARNING:tensorflow:From /home/hqvo2/Projects/Breast_Cancer/libs/DECAPS/utils/logger_utils.py:20: The name tf.Summary is deprecated. Please use tf.compat.v1.Summary instead.
+
+slurmstepd: error: *** JOB 7269 ON compute-0-8 CANCELLED AT 2021-02-27T08:44:41 ***

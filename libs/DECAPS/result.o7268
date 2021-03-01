@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "train.py", line 14, in <module>
+    from utils.logger_utils import Logger
+  File "/home/hqvo2/Projects/Breast_Cancer/libs/DECAPS/utils/logger_utils.py", line 2, in <module>
+    import tensorflow as tf
+ModuleNotFoundError: No module named 'tensorflow'
