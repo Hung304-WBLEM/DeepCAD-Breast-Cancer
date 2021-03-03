@@ -24,9 +24,12 @@ def convert_npz_to_png(data_path):
 
         save_path = os.path.join(dir, os.path.basename(dir)+'.png')
         if not os.path.exists(save_path):
-            mamm_img = np.load(os.path.join(dir, "image.npz"),
-                               allow_pickle=True)["image"]
-            cv2.imwrite(save_path, mamm_img)
+            try:
+                mamm_img = np.load(os.path.join(dir, "image.npz"),
+                                allow_pickle=True)["image"]
+                cv2.imwrite(save_path, mamm_img)
+            except:
+                print('zlip error:', dir)
 
 
 def mask2polygon(_mask):
@@ -726,98 +729,98 @@ if __name__ == '__main__':
     mass_train_train_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'train_train')
     mass_train_val_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'train_val')
 
-    convert_npz_to_png(data_path=mass_train_root)
-    convert_npz_to_png(data_path=mass_test_root)
+    # convert_npz_to_png(data_path=mass_train_root)
+    # convert_npz_to_png(data_path=mass_test_root)
 
-    categories = [{'id': 0, 'name': 'malignant-mass', 'supercategory': 'mass'}, {'id': 1, 'name': 'benign-mass', 'supercategory': 'mass'}]
-
-    # Split train val
     # categories = [{'id': 0, 'name': 'malignant-mass', 'supercategory': 'mass'}, {'id': 1, 'name': 'benign-mass', 'supercategory': 'mass'}]
-    # split_train_val(train_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/train_train', \
-    #                 val_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/train_val', \
+
+    # # Split train val
+    # categories = [{'id': 0, 'name': 'malignant-mass', 'supercategory': 'mass'}, {'id': 1, 'name': 'benign-mass', 'supercategory': 'mass'}]
+    # split_train_val(train_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/mass/train_train', \
+    #                 val_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/mass/train_val', \
     #                 categories=categories, \
     #                 data_root=mass_train_root, \
     #                 annotation_filename='mass_case_description_train_set.csv')
 
     # Default bbox size
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes.json',
-                         data_root=mass_train_root,
-                         annotation_filename='mass_case_description_train_set.csv')
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes.json',
+    #                      data_root=mass_train_root,
+    #                      annotation_filename='mass_case_description_train_set.csv')
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes.json',
-                         data_root=mass_test_root,
-                         annotation_filename='mass_case_description_test_set.csv')
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes.json',
+    #                      data_root=mass_test_root,
+    #                      annotation_filename='mass_case_description_test_set.csv')
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes.json',
-                         data_root=mass_train_train_root,
-                         annotation_filename='mass_case_description_train_set.csv')
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes.json',
+    #                      data_root=mass_train_train_root,
+    #                      annotation_filename='mass_case_description_train_set.csv')
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes.json',
-                         data_root=mass_train_val_root,
-                         annotation_filename='mass_case_description_train_set.csv')
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes.json',
+    #                      data_root=mass_train_val_root,
+    #                      annotation_filename='mass_case_description_train_set.csv')
 
-    # Extend bbox size by 0.1, 0.2, 0.3
-    for ratio in [0.1, 0.2, 0.3]:
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
-                            data_root=mass_train_root,
-                            annotation_filename='mass_case_description_train_set.csv',
-                            extend_bb_ratio=ratio)
+    # # Extend bbox size by 0.1, 0.2, 0.3
+    # for ratio in [0.1, 0.2, 0.3]:
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+    #                         data_root=mass_train_root,
+    #                         annotation_filename='mass_case_description_train_set.csv',
+    #                         extend_bb_ratio=ratio)
 
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
-                            data_root=mass_test_root,
-                            annotation_filename='mass_case_description_test_set.csv',
-                            extend_bb_ratio=ratio)
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+    #                         data_root=mass_test_root,
+    #                         annotation_filename='mass_case_description_test_set.csv',
+    #                         extend_bb_ratio=ratio)
 
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
-                            data_root=mass_train_train_root,
-                            annotation_filename='mass_case_description_train_set.csv',
-                            extend_bb_ratio=ratio)
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+    #                         data_root=mass_train_train_root,
+    #                         annotation_filename='mass_case_description_train_set.csv',
+    #                         extend_bb_ratio=ratio)
 
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
-                            data_root=mass_train_val_root,
-                            annotation_filename='mass_case_description_train_set.csv',
-                            extend_bb_ratio=ratio)
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+    #                         data_root=mass_train_val_root,
+    #                         annotation_filename='mass_case_description_train_set.csv',
+    #                         extend_bb_ratio=ratio)
 
     ############## Extract Lesion Patches ##############
     # split lesion patches based on: mass shape, mass margins, breast density
-    # mass_shape_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_shape_comb_feats_omit'])
-    # mass_margins_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_margins_comb_feats_omit'])
-    # mass_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_lesion'])
-    # mass_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_image'])
+    mass_shape_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_shape_comb_feats_omit'])
+    mass_margins_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_margins_comb_feats_omit'])
+    mass_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_lesion'])
+    mass_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_image'])
 
-    # for split in ['train', 'val', 'test']:
-    #     if split == 'train':
-    #         data_root = mass_train_train_root
-    #         annotation_filename = 'mass_case_description_train_set.csv'
-    #     elif split == 'val':
-    #         data_root = mass_train_val_root
-    #         annotation_filename = 'mass_case_description_train_set.csv'
-    #     elif split == 'test':
-    #         data_root = mass_test_root
-    #         annotation_filename = 'mass_case_description_test_set.csv'
-    #     get_lesions_feature(feat1_root=os.path.join(mass_shape_comb_feats_omit_root, split),
-    #                         feat2_root=os.path.join(mass_margins_comb_feats_omit_root, split),
-    #                         feat3_root=os.path.join(mass_breast_density_lesion_root, split),
-    #                         feat4_root=os.path.join(mass_breast_density_image_root, split),
-    #                         data_root=data_root,
-    #                         annotation_filename=annotation_filename,
-    #                         lesion_type='mass')
+    for split in ['train', 'val', 'test']:
+        if split == 'train':
+            data_root = mass_train_train_root
+            annotation_filename = 'mass_case_description_train_set.csv'
+        elif split == 'val':
+            data_root = mass_train_val_root
+            annotation_filename = 'mass_case_description_train_set.csv'
+        elif split == 'test':
+            data_root = mass_test_root
+            annotation_filename = 'mass_case_description_test_set.csv'
+        get_lesions_feature(feat1_root=os.path.join(mass_shape_comb_feats_omit_root, split),
+                            feat2_root=os.path.join(mass_margins_comb_feats_omit_root, split),
+                            feat3_root=os.path.join(mass_breast_density_lesion_root, split),
+                            feat4_root=os.path.join(mass_breast_density_image_root, split),
+                            data_root=data_root,
+                            annotation_filename=annotation_filename,
+                            lesion_type='mass')
 
 
     # split lesion patches based on pathology
-    # mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
+    mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
 
-    # get_lesions_pathology(os.path.join(mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
-    # get_lesions_pathology(os.path.join(mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
-    # get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
+    get_lesions_pathology(os.path.join(mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    get_lesions_pathology(os.path.join(mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
+    get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
 
     stoa_mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['stoa_mass_pathology'])
     stoa_get_lesions_pathology(os.path.join(stoa_mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
@@ -834,62 +837,62 @@ if __name__ == '__main__':
     calc_train_train_root = os.path.join(processed_cbis_ddsm_root, 'calc', 'train_train')
     calc_train_val_root = os.path.join(processed_cbis_ddsm_root, 'calc', 'train_val')
 
-    convert_npz_to_png(data_path=calc_train_root)
-    convert_npz_to_png(data_path=calc_test_root)
+    # convert_npz_to_png(data_path=calc_train_root)
+    # convert_npz_to_png(data_path=calc_test_root)
 
-    categories = [{'id': 0, 'name': 'malignant-calc', 'supercategory': 'calcification'}, {'id': 1, 'name': 'benign-calc', 'supercategory': 'calcification'}]
-
-    # Split train-val
     # categories = [{'id': 0, 'name': 'malignant-calc', 'supercategory': 'calcification'}, {'id': 1, 'name': 'benign-calc', 'supercategory': 'calcification'}]
-    # split_train_val(train_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train_train', \
-    #                 val_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train_val', \
+
+    # # Split train-val
+    # categories = [{'id': 0, 'name': 'malignant-calc', 'supercategory': 'calcification'}, {'id': 1, 'name': 'benign-calc', 'supercategory': 'calcification'}]
+    # split_train_val(train_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/calc/train_train', \
+    #                 val_save_root='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/calc/train_val', \
     #                 categories=categories, \
     #                 data_root=calc_train_root, \
     #                 annotation_filename='calc_case_description_train_set.csv')
 
 
-    # Default bbox size
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes.json',
-                         data_root=calc_train_root,
-                         annotation_filename='calc_case_description_train_set.csv')
+    # # Default bbox size
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes.json',
+    #                      data_root=calc_train_root,
+    #                      annotation_filename='calc_case_description_train_set.csv')
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes.json',
-                         data_root=calc_test_root,
-                         annotation_filename='calc_case_description_test_set.csv')
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes.json',
-                         data_root=calc_train_train_root,
-                         annotation_filename='calc_case_description_train_set.csv')
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_coco_with_classes.json',
-                         data_root=calc_train_val_root,
-                         annotation_filename='calc_case_description_train_set.csv')
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes.json',
+    #                      data_root=calc_test_root,
+    #                      annotation_filename='calc_case_description_test_set.csv')
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes.json',
+    #                      data_root=calc_train_train_root,
+    #                      annotation_filename='calc_case_description_train_set.csv')
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_coco_with_classes.json',
+    #                      data_root=calc_train_val_root,
+    #                      annotation_filename='calc_case_description_train_set.csv')
 
-    # Extend bbox size by 0.1, 0.2, 0.3
-    for ratio in [0.1, 0.2, 0.3]:
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
-                            data_root=calc_train_root,
-                            annotation_filename='calc_case_description_train_set.csv',
-                            extend_bb_ratio=ratio)
+    # # Extend bbox size by 0.1, 0.2, 0.3
+    # for ratio in [0.1, 0.2, 0.3]:
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+    #                         data_root=calc_train_root,
+    #                         annotation_filename='calc_case_description_train_set.csv',
+    #                         extend_bb_ratio=ratio)
 
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
-                            data_root=calc_test_root,
-                            annotation_filename='calc_case_description_test_set.csv',
-                            extend_bb_ratio=ratio)
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
-                            data_root=calc_train_train_root,
-                            annotation_filename='calc_case_description_train_set.csv',
-                            extend_bb_ratio=ratio)
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
-                            data_root=calc_train_val_root,
-                            annotation_filename='calc_case_description_train_set.csv',
-                            extend_bb_ratio=ratio)
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+    #                         data_root=calc_test_root,
+    #                         annotation_filename='calc_case_description_test_set.csv',
+    #                         extend_bb_ratio=ratio)
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+    #                         data_root=calc_train_train_root,
+    #                         annotation_filename='calc_case_description_train_set.csv',
+    #                         extend_bb_ratio=ratio)
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_extend_bbox_{ratio}.json',
+    #                         data_root=calc_train_val_root,
+    #                         annotation_filename='calc_case_description_train_set.csv',
+    #                         extend_bb_ratio=ratio)
 
     # # Extend bbox size by 0.2 and keep original bbox
     # convert_ddsm_to_coco(categories=categories,
@@ -906,36 +909,36 @@ if __name__ == '__main__':
 
     ############ EXTRACT LESION PATCHES ##############
     # split lesion patches based on: mass shape, mass margins, breast density
-    # calc_type_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_type_comb_feats_omit'])
-    # calc_dist_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_dist_comb_feats_omit'])
-    # calc_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_lesion'])
-    # calc_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_image'])
+    calc_type_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_type_comb_feats_omit'])
+    calc_dist_comb_feats_omit_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_dist_comb_feats_omit'])
+    calc_breast_density_lesion_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_lesion'])
+    calc_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_image'])
 
-    # for split in ['train', 'val', 'test']:
-    #     if split == 'train':
-    #         data_root = calc_train_train_root
-    #         annotation_filename = 'calc_case_description_train_set.csv'
-    #     elif split == 'val':
-    #         data_root = calc_train_val_root
-    #         annotation_filename = 'calc_case_description_train_set.csv'
-    #     elif split == 'test':
-    #         data_root = calc_test_root
-    #         annotation_filename = 'calc_case_description_test_set.csv'
-    #     get_lesions_feature(feat1_root=os.path.join(calc_type_comb_feats_omit_root, split),
-    #                         feat2_root=os.path.join(calc_dist_comb_feats_omit_root, split),
-    #                         feat3_root=os.path.join(calc_breast_density_lesion_root, split),
-    #                         feat4_root=os.path.join(calc_breast_density_image_root, split),
-    #                         data_root=data_root,
-    #                         annotation_filename=annotation_filename,
-    #                         lesion_type='calc')
+    for split in ['train', 'val', 'test']:
+        if split == 'train':
+            data_root = calc_train_train_root
+            annotation_filename = 'calc_case_description_train_set.csv'
+        elif split == 'val':
+            data_root = calc_train_val_root
+            annotation_filename = 'calc_case_description_train_set.csv'
+        elif split == 'test':
+            data_root = calc_test_root
+            annotation_filename = 'calc_case_description_test_set.csv'
+        get_lesions_feature(feat1_root=os.path.join(calc_type_comb_feats_omit_root, split),
+                            feat2_root=os.path.join(calc_dist_comb_feats_omit_root, split),
+                            feat3_root=os.path.join(calc_breast_density_lesion_root, split),
+                            feat4_root=os.path.join(calc_breast_density_image_root, split),
+                            data_root=data_root,
+                            annotation_filename=annotation_filename,
+                            lesion_type='calc')
 
 
     # split lesion patches based on pathology
-    # calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
+    calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
 
-    # get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
-    # get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
-    # get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
 
 
     stoa_calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['stoa_calc_pathology'])

@@ -120,6 +120,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     logging.info('Best val Acc: {:4f}'.format(best_acc))
 
     # load best model weights
+    # if get_best_weights:
     model.load_state_dict(best_model_wts)
     return model, train_loss_history, train_acc_history, val_loss_history, val_acc_history
 
@@ -131,13 +132,17 @@ def set_parameter_requires_grad(model, model_name, freeze_type):
     freeze_type - can be 'none', 'all'
     '''
     if model_name == 'resnet50':
-        if freeze_type != 'none':
-            last_frozen_idx = {'all': 160, 'last_fc': 158, 'top1_conv_block': 149,
-                               'top2_conv_block': 140, 'top3_conv_block': 128}
-            for idx, (name, param) in enumerate(model.named_parameters()):
-                # print(idx, name)
-                if idx <= last_frozen_idx[freeze_type]:
-                    param.requires_grad = False
+        for idx, (name, param) in enumerate(model.named_parameters()):
+            param.requires_grad = True
+
+        last_frozen_idx = {'none': -1, 'all': 160, 'last_fc': 158, 'top1_conv_block': 149,
+                            'top2_conv_block': 140, 'top3_conv_block': 128,
+                            'first_freeze': 158, 'second_freeze': 87,
+                            'third_freeze': -1}
+        for idx, (name, param) in enumerate(model.named_parameters()):
+            print(idx, name)
+            if idx <= last_frozen_idx[freeze_type]:
+                param.requires_grad = False
     elif model_name == 'vgg16':
         if freeze_type != 'none':
             last_frozen_idx = {'all': 57, 'last_fc': 55, 'fc2': 53,
@@ -155,6 +160,65 @@ def compute_classes_weights(data_root, classes_names):
     for idx, class_name in enumerate(classes_names):
         weights[idx] = len(
             glob.glob(os.path.join(data_root, class_name, '*.png')))
+
+    total_samples = np.sum(weights)
+
+    weights = (1/weights) * total_samples / num_classes
+
+    return weights
+
+
+def compute_classes_weights_mass_calc_pathology(mass_root, calc_root, classes_names):
+    num_classes = len(classes_names)
+
+    weights = np.zeros(num_classes)
+
+    for idx, class_name in enumerate(classes_names):
+        weights[idx] = len(glob.glob(os.path.join(mass_root, class_name, '*.png')) +
+                           glob.glob(os.path.join(calc_root, class_name, '*.png')))
+
+    total_samples = np.sum(weights)
+
+    weights = (1/weights) * total_samples / num_classes
+
+    return weights
+
+
+def compute_classes_weights_mass_calc_pathology_4class(mass_root, calc_root, classes_names):
+    num_classes = len(classes_names)
+
+    weights = np.zeros(num_classes)
+
+    for idx, class_name in enumerate(classes_names):
+        pathology, lesion_type = class_name.split('_')
+
+        if lesion_type == 'MASS':
+            weights[idx] = len(glob.glob(os.path.join(mass_root, pathology, '*.png')))
+        elif lesion_type == 'CALC':
+            weights[idx] = len(glob.glob(os.path.join(calc_root, pathology, '*.png')))
+
+    total_samples = np.sum(weights)
+
+    weights = (1/weights) * total_samples / num_classes
+
+    return weights
+
+
+def compute_classes_weights_mass_calc_pathology_5class(mass_root, calc_root, bg_root, classes_names):
+    num_classes = len(classes_names)
+
+    weights = np.zeros(num_classes)
+
+    for idx, class_name in enumerate(classes_names):
+        if class_name == 'BG':
+            weights[idx] = len(glob.glob(os.path.join(bg_root, '*.png')))
+        else:
+            pathology, lesion_type = class_name.split('_')
+
+            if lesion_type == 'MASS':
+                weights[idx] = len(glob.glob(os.path.join(mass_root, pathology, '*.png')))
+            elif lesion_type == 'CALC':
+                weights[idx] = len(glob.glob(os.path.join(calc_root, pathology, '*.png')))
 
     total_samples = np.sum(weights)
 
@@ -182,7 +246,7 @@ def initialize_model(model_name, num_classes, freeze_type, use_pretrained=True):
         """ Resnet50
         """
         model_ft = models.resnet50(pretrained=use_pretrained)
-        set_parameter_requires_grad(model_ft, model_name, freeze_type)
+        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         num_ftrs = model_ft.fc.in_features
         # model_ft.fc = nn.Linear(num_ftrs, num_classes)
         model_ft.fc = nn.Sequential(
@@ -220,7 +284,6 @@ def initialize_model(model_name, num_classes, freeze_type, use_pretrained=True):
         """ Squeezenet
         """
         model_ft = models.squeezenet1_0(pretrained=use_pretrained)
-        set_parameter_requires_grad(model_ft, feature_extract)
         # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         model_ft.classifier[1] = nn.Conv2d(
             512, num_classes, kernel_size=(1, 1), stride=(1, 1))
@@ -270,6 +333,59 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
 
 
+def train_stage(model_ft, model_name, criterion, optimizer_type, freeze_type, learning_rate, weight_decay, num_epochs, dataloaders_dict):
+    set_parameter_requires_grad(model_ft, model_name, freeze_type=freeze_type)
+    
+    # Gather the parameters to be optimized/updated in this run. If we are
+    #  finetuning we will be updating all parameters. However, if we are
+    #  doing feature extract method, we will only update the parameters
+    #  that we have just initialized, i.e. the parameters with requires_grad
+    #  is True.
+    print("Params to learn:")
+    params_to_update = []
+    for name, param in model_ft.named_parameters():
+        if param.requires_grad == True:
+            params_to_update.append(param)
+            print("\t", name)
+
+    # Observe that all parameters are being optimized
+    if optimizer_type == 'sgd':
+        optimizer_ft = optim.SGD(params_to_update,
+                                 lr=learning_rate,
+                                 weight_decay=weight_decay,
+                                 momentum=0.9)
+    elif args.optimizer == 'adam':
+        optimizer_ft = optim.Adam(params_to_update,
+                                  lr=learning_rate,
+                                  weight_decay=weight_decay)
+
+    # Train and evaluate
+    model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
+        train_model(model_ft, dataloaders_dict, criterion, optimizer_ft,
+                    num_epochs=num_epochs, is_inception=(model_name == "inception"))
+    return model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist
+
+
+def plot_train_val_loss(num_epochs, train_loss_hist, val_loss_hist, train_acc_hist, val_acc_hist, save_path):
+    fig = plt.figure()
+    plt.plot(range(num_epochs), train_loss_hist, label='train loss')
+    plt.plot(range(num_epochs), val_loss_hist, label='val loss')
+    plt.xlabel('#epochs')
+    plt.ylabel('loss')
+    plt.legend()
+    plt.savefig(os.path.join(save_path, 'loss_plot.png'))
+    plt.close()
+
+    fig = plt.figure()
+    plt.plot(range(num_epochs), train_acc_hist, label='train accuracy')
+    plt.plot(range(num_epochs), val_acc_hist, label='val accuracy')
+    plt.xlabel('#epochs')
+    plt.ylabel('accuracy')
+    plt.legend()
+    plt.savefig(os.path.join(save_path, 'acc_plot.png'))
+    plt.close()
+
+
 if __name__ == '__main__':
     ##############################################
     ############## Parse Arguments ###############
@@ -311,6 +427,10 @@ if __name__ == '__main__':
         from datasets import Pathology_Dataset as data
     elif args.dataset in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
         from datasets import Mass_Calc_Pathology_Dataset as data
+    elif args.dataset in ['four_classes_mass_calc_pathology']:
+        from datasets import Four_Classes_Mass_Calc_Pathology_Dataset as data
+    elif args.dataset in ['five_classes_mass_calc_pathology']:
+        from datasets import Five_Classes_Mass_Calc_Pathology_Dataset as data
     elif args.dataset == 'mass_shape_comb_feats_omit':
         from datasets import Mass_Shape_Dataset as data
     elif args.dataset == 'mass_margins_comb_feats_omit':
@@ -336,7 +456,7 @@ if __name__ == '__main__':
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats'][args.dataset])
 
-    elif args.dataset in ['mass_calc_pathology']:
+    elif args.dataset in ['mass_calc_pathology', 'four_classes_mass_calc_pathology']:
         mass_data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
@@ -351,6 +471,8 @@ if __name__ == '__main__':
         calc_data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['stoa_calc_pathology'])
+
+        
 
     # Fix random seed
     set_seed()
@@ -437,40 +559,19 @@ if __name__ == '__main__':
         model_ft = nn.DataParallel(model_ft)
     model_ft = model_ft.to(device)
 
-    # Gather the parameters to be optimized/updated in this run. If we are
-    #  finetuning we will be updating all parameters. However, if we are
-    #  doing feature extract method, we will only update the parameters
-    #  that we have just initialized, i.e. the parameters with requires_grad
-    #  is True.
-    params_to_update = model_ft.parameters()
-    print("Params to learn:")
-    if args.freeze_type != 'none':
-        params_to_update = []
-        for name, param in model_ft.named_parameters():
-            if param.requires_grad == True:
-                params_to_update.append(param)
-                print("\t", name)
-    else:
-        for name, param in model_ft.named_parameters():
-            if param.requires_grad == True:
-                print("\t", name)
-
-    # Observe that all parameters are being optimized
-    if args.optimizer == 'sgd':
-        optimizer_ft = optim.SGD(params_to_update,
-                                 lr=args.learning_rate,
-                                 weight_decay=args.weight_decay,
-                                 momentum=0.9)
-    elif args.optimizer == 'adam':
-        optimizer_ft = optim.Adam(params_to_update,
-                                  lr=args.learning_rate,
-                                  weight_decay=args.weights_decay)
-
     # Setup the loss fn
     if args.weighted_classes:
         print('Optimization with classes weighting')
-        classes_weights = compute_classes_weights(
-            data_root=os.path.join(data_dir, 'train'), classes_names=classes)
+        if args.dataset in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
+            classes_weights = compute_classes_weights_mass_calc_pathology(
+                mass_root=os.path.join(mass_data_dir, 'train'),
+                calc_root=os.path.join(calc_data_dir, 'train'),
+                classes_names=classes
+            )
+        else:
+            classes_weights = compute_classes_weights(
+                data_root=os.path.join(data_dir, 'train'), classes_names=classes)
+
         classes_weights = torch.from_numpy(
             classes_weights).type(torch.FloatTensor)
         criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
@@ -478,28 +579,52 @@ if __name__ == '__main__':
         print('Optimization without classes weighting')
         criterion = nn.CrossEntropyLoss()
 
-    # Train and evaluate
-    model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft,
-                                                                                         num_epochs=num_epochs, is_inception=(model_name == "inception"))
+    all_train_losses = []
+    all_val_losses = []
+    all_train_accs = []
+    all_val_accs = []
+
+    # 1st stage
+    model_ft, train_loss_hist, val_loss_hist, train_acc_hist, val_acc_hist = \
+        train_stage(model_ft, model_name, criterion,
+                    optimizer_type=args.optimizer,
+                    freeze_type='first_freeze',
+                    learning_rate=0.001, weight_decay=0.01,
+                    num_epochs=6, dataloaders_dict=dataloaders_dict)
+    all_train_losses.extend(train_loss_hist)
+    all_val_losses.extend(val_loss_hist)
+    all_train_accs.extend(train_acc_hist)
+    all_val_accs.extend(val_acc_hist)
+
+    # 2nd stage
+    model_ft, train_loss_hist, val_loss_hist, train_acc_hist, val_acc_hist = \
+        train_stage(model_ft, model_name, criterion,
+                    optimizer_type=args.optimizer,
+                    freeze_type='second_freeze',
+                    learning_rate=0.0001, weight_decay=0.01,
+                    num_epochs=20, dataloaders_dict=dataloaders_dict)
+    all_train_losses.extend(train_loss_hist)
+    all_val_losses.extend(val_loss_hist)
+    all_train_accs.extend(train_acc_hist)
+    all_val_accs.extend(val_acc_hist)
+
+    # 3rd stage
+    model_ft, train_loss_hist, val_loss_hist, train_acc_hist, val_acc_hist = \
+        train_stage(model_ft, model_name, criterion,
+                    optimizer_type=args.optimizer,
+                    freeze_type='third_freeze',
+                    learning_rate=0.00001, weight_decay=0.01,
+                    num_epochs=74, dataloaders_dict=dataloaders_dict)
+    all_train_losses.extend(train_loss_hist)
+    all_val_losses.extend(val_loss_hist)
+    all_train_accs.extend(train_acc_hist)
+    all_val_accs.extend(val_acc_hist)
+
+
     torch.save(model_ft.state_dict(), os.path.join(save_path, 'ckpt.pth'))
 
-    fig = plt.figure()
-    plt.plot(range(args.epochs), train_loss_hist, label='train loss')
-    plt.plot(range(args.epochs), val_loss_hist, label='val loss')
-    plt.xlabel('#epochs')
-    plt.ylabel('loss')
-    plt.legend()
-    plt.savefig(os.path.join(save_path, 'loss_plot.png'))
-    plt.close()
-
-    fig = plt.figure()
-    plt.plot(range(args.epochs), train_acc_hist, label='train accuracy')
-    plt.plot(range(args.epochs), val_acc_hist, label='val accuracy')
-    plt.xlabel('#epochs')
-    plt.ylabel('accuracy')
-    plt.legend()
-    plt.savefig(os.path.join(save_path, 'acc_plot.png'))
-    plt.close()
+    plot_train_val_loss(args.epochs, all_train_losses, all_val_losses,
+                        all_train_accs, all_val_accs, save_path)
 
     ################### Test Model #############################
     test_dataloaders_dict = {'test': torch.utils.data.DataLoader(

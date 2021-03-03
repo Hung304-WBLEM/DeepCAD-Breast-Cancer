@@ -158,7 +158,7 @@ class Calc_Dist_Dataset(Dataset):
 
 
 class Breast_Density_Dataset(Dataset):
-    classes = np.array([1, 2, 3, 4])
+    classes = np.array(['1', '2', '3', '4'])
 
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
@@ -261,6 +261,92 @@ class Mass_Calc_Pathology_Dataset(Dataset):
 
         return image, label
 
+
+class Four_Classes_Mass_Calc_Pathology_Dataset(Dataset):
+    classes = np.array(['BENIGN_MASS', 'MALIGNANT_MASS', 'BENIGN_CALC', 'MALIGNANT_CALC'])
+
+    def __init__(self, mass_root_dir, calc_root_dir, transform=None):
+        self.transform = transform
+
+        self.images_list = []
+        self.labels = []
+
+        for idx, class_name in enumerate(Mass_Calc_Pathology_Dataset.classes):
+            pathology, lesion_type = class_name.split('_')
+
+            if lesion_type == 'MASS':
+                mass_images = glob.glob(os.path.join(
+                    mass_root_dir, pathology, '*.png'))
+                self.images_list += mass_images
+                self.labels += [idx] * len(mass_images)
+            elif lesion_type == 'CALC':
+                calc_images = glob.glob(os.path.join(
+                    calc_root_dir, pathology, '*.png'))
+                self.images_list += calc_images
+                self.labels += [idx] * len(calc_images)
+
+    def __len__(self):
+        return len(self.images_list)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        img_path = self.images_list[idx]
+        img_name, _ = os.path.splitext(os.path.basename(img_path))
+        image = Image.open(img_path)
+        label = self.labels[idx]
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label
+
+
+class Five_Classes_Mass_Calc_Pathology_Dataset(Dataset):
+    classes = np.array(['BACKGROUND', 'BENIGN_MASS', 'MALIGNANT_MASS', 'BENIGN_CALC', 'MALIGNANT_CALC'])
+
+    def __init__(self, mass_root_dir, calc_root_dir, bg_root_dir, transform=None):
+        self.transform = transform
+
+        self.images_list = []
+        self.labels = []
+
+        for idx, class_name in enumerate(Mass_Calc_Pathology_Dataset.classes):
+            if class_name == 'BACKGROUND':
+                bg_images = glob.glob(os.path.join(bg_root_dir, '*.png'))
+                self.images_list += bg_images
+                self.labels += [idx] * len(bg_images)
+            else:
+                pathology, lesion_type = class_name.split('_')
+
+                if lesion_type == 'MASS':
+                    mass_images = glob.glob(os.path.join(
+                        mass_root_dir, pathology, '*.png'))
+                    self.images_list += mass_images
+                    self.labels += [idx] * len(mass_images)
+                elif lesion_type == 'CALC':
+                    calc_images = glob.glob(os.path.join(
+                        calc_root_dir, pathology, '*.png'))
+                    self.images_list += calc_images
+                    self.labels += [idx] * len(calc_images)
+
+    def __len__(self):
+        return len(self.images_list)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        img_path = self.images_list[idx]
+        img_name, _ = os.path.splitext(os.path.basename(img_path))
+        image = Image.open(img_path)
+        label = self.labels[idx]
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label
 
 class Features_Pathology_Dataset(Dataset):
     classes = np.array(['BENIGN', 'MALIGNANT'])

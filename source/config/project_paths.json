@@ -1,7 +1,7 @@
 {
     "DATA": {
 	"root": "/home/hqvo2/Projects/Breast_Cancer/data",
-	"processed_CBIS_DDSM": "processed_data",
+	"processed_CBIS_DDSM": "processed_data2",
 	"CBIS_DDSM_lesions": {
 	    "mass_feats": {
 		"mass_shape_comb_feats_omit": "mass/cls/mass_shape_comb_feats_omit",
