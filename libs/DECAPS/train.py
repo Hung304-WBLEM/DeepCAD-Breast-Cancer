@@ -14,8 +14,10 @@ from utils.eval_utils import compute_accuracy, binary_cls_compute_metrics
 from utils.logger_utils import Logger
 import torch.nn as nn
 from torchvision import transforms
+from config.cfg_loader import proj_paths_json
+from features_classification import custom_transforms
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1'
 theta_c = 0.5  # crop region with attention values higher than this
 theta_d = 0.5  # drop region with attention values higher than this
 
@@ -439,68 +441,127 @@ if __name__ == '__main__':
     ##################################
     # Load dataset
     ##################################
-    if options.data_name == 'mnist':
-        from dataset.mnist import MNIST as data
-        os.system('cp {}/dataset/mnist.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'fashion_mnist':
-        from dataset.fashion_mnist import FashionMNIST as data
-        os.system('cp {}/dataset/fashion_mnist.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 't_mnist':
-        from dataset.mnist_translate import MNIST as data
-        os.system('cp {}/dataset/mnist_translate.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'c_mnist':
-        from dataset.mnist_clutter import MNIST as data
-        os.system('cp {}/dataset/mnist_clutter.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'cub':
-        from dataset.dataset_CUB import CUB as data
-        os.system('cp {}/dataset/dataset_CUB.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'chexpert':
-        from dataset.chexpert_dataset import CheXpertDataSet as data
-        os.system('cp {}/dataset/chexpert_dataset.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'rsna':
-        from dataset.rsna_data import RSNADataSet as data
-        os.system('cp {}/dataset/rsna_data.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'mias':
-        from dataset.mias_data import MIASDataSet as data
-        os.system('cp {}/dataset/mias_data.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'cbis_ddsm':
+    # if options.data_name == 'mnist':
+    #     from dataset.mnist import MNIST as data
+    #     os.system('cp {}/dataset/mnist.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'fashion_mnist':
+    #     from dataset.fashion_mnist import FashionMNIST as data
+    #     os.system('cp {}/dataset/fashion_mnist.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 't_mnist':
+    #     from dataset.mnist_translate import MNIST as data
+    #     os.system('cp {}/dataset/mnist_translate.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'c_mnist':
+    #     from dataset.mnist_clutter import MNIST as data
+    #     os.system('cp {}/dataset/mnist_clutter.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'cub':
+    #     from dataset.dataset_CUB import CUB as data
+    #     os.system('cp {}/dataset/dataset_CUB.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'chexpert':
+    #     from dataset.chexpert_dataset import CheXpertDataSet as data
+    #     os.system('cp {}/dataset/chexpert_dataset.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'rsna':
+    #     from dataset.rsna_data import RSNADataSet as data
+    #     os.system('cp {}/dataset/rsna_data.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'mias':
+    #     from dataset.mias_data import MIASDataSet as data
+    #     os.system('cp {}/dataset/mias_data.py {}'.format(BASE_DIR, save_dir))
+
+    #############################################
+    ############# Load Dataset Root #############
+    #############################################
+    data_root = proj_paths_json['DATA']['root']
+    processed_cbis_ddsm_root = os.path.join(
+        data_root, proj_paths_json['DATA']['processed_CBIS_DDSM'])
+
+    if options.data_name in ['mass_pathology', 'calc_pathology']:
         from features_classification.datasets import Pathology_Dataset as data
+    elif options.data_name in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
+        from features_classification.datasets import Mass_Calc_Pathology_Dataset as data
+    elif options.data_name == 'mass_shape_comb_feats_omit':
+        from features_classification.datasets import Mass_Shape_Dataset as data
+    elif options.data_name == 'mass_margins_comb_feats_omit':
+        from features_classification.datasets import Mass_Margins_Dataset as data
+    elif options.data_name == 'calc_type_comb_feats_omit':
+        from features_classification.datasets import Calc_Type_Dataset as data
+    elif options.data_name == 'calc_dist_comb_feats_omit':
+        from features_classification.datasets import Calc_Dist_Dataset as data
+    elif options.data_name in ['mass_breast_density_lesion', 'mass_breast_density_image', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+        from features_classification.datasets import Breast_Density_Dataset as data
+    elif options.data_name in ['four_classes_mass_calc_pathology']:
+        from features_classification.datasets import Four_Classes_Mass_Calc_Pathology_Dataset as data
+
+    classes = data.classes
         
+    if options.data_name in ['mass_pathology', 'mass_shape_comb_feats_omit', 'mass_margins_comb_feats_omit', 'mass_breast_density_lesion', 'mass_breast_density_image']:
+        data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats'][options.data_name])
+
+    elif options.data_name in ['calc_pathology', 'calc_type_comb_feats_omit', 'calc_dist_comb_feats_omit', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+        data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats'][options.data_name])
+
+    elif options.data_name in ['mass_calc_pathology', 'four_classes_mass_calc_pathology']:
+        mass_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
+        calc_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
+
+    elif options.data_name in ['stoa_mass_calc_pathology']:
+        mass_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['stoa_mass_pathology'])
+        calc_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['stoa_calc_pathology'])
+
+    # Number of classes in the dataset
+    num_classes = len(classes.tolist())
 
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize((224, 224)),
-
-            # transforms.RandomResizedCrop(input_size),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
-            # torchvision.transforms.RandomRotation(20, resample=PIL.Image.BILINEAR),
-
-            # transforms.CenterCrop(input_size), # rm after experiment
+            transforms.RandomAffine(25, scale=(0.8, 1.2)),
+            custom_transforms.IntensityShift((-20, 20)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
             transforms.Resize((224, 224)),
-            # transforms.CenterCrop(input_size),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'test': transforms.Compose([
             transforms.Resize((224, 224)),
-            # transforms.CenterCrop(input_size),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
     }
 
+
     # train_dataset = data(mode='train')
-    data_root = '/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/cls/mass_pathology'
-    train_dataset = data(root_dir=os.path.join(data_root, 'train'), transform=data_transforms['train'])
+    # test_dataset = data(mode='test')
+
+    if options.data_name in ['mass_calc_pathology', 'four_classes_mass_calc_pathology', 'stoa_mass_calc_pathology']:
+        train_dataset = data(os.path.join(mass_data_dir, 'train'),
+                             os.path.join(calc_data_dir, 'train'),
+                             transform=data_transforms['train'])
+        test_dataset = data(os.path.join(mass_data_dir, 'val'),
+                            os.path.join(calc_data_dir, 'val'),
+                            transform=data_transforms['val'])
+    else:
+        train_dataset = data(os.path.join(data_dir, 'train'),
+                             data_transforms['train'])
+        test_dataset = data(os.path.join(data_dir, 'val'),
+                            data_transforms['val'])
+
     train_loader = DataLoader(train_dataset, batch_size=options.batch_size,
                               shuffle=True, num_workers=options.workers, drop_last=False)
-    # test_dataset = data(mode='test')
-    test_dataset = data(root_dir=os.path.join(data_root, 'val'), transform=data_transforms['val'])
     test_loader = DataLoader(test_dataset, batch_size=options.batch_size,
                              shuffle=False, num_workers=options.workers, drop_last=False)
 

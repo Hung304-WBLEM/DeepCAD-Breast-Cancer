@@ -12,6 +12,9 @@ import torch.nn.functional as F
 from utils.eval_utils import binary_cls_compute_metrics
 import torch.nn as nn
 from torchvision import transforms
+from features_classification import custom_transforms
+from features_classification.eval_utils import eval_all
+from config.cfg_loader import proj_paths_json
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 theta_c = 0.5   # crop region with attention values higher than this
@@ -186,57 +189,110 @@ if __name__ == '__main__':
     ##################################
     # Load dataset
     ##################################
-    if options.data_name == 'mnist':
-        from dataset.mnist import MNIST as data
-        os.system('cp {}/dataset/mnist.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'fashion_mnist':
-        from dataset.fashion_mnist import FashionMNIST as data
-        os.system('cp {}/dataset/fashion_mnist.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 't_mnist':
-        from dataset.mnist_translate import MNIST as data
-        os.system('cp {}/dataset/mnist_translate.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'c_mnist':
-        from dataset.mnist_clutter import MNIST as data
-        os.system('cp {}/dataset/mnist_clutter.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'cub':
-        from dataset.dataset_CUB import CUB as data
-        os.system('cp {}/dataset/dataset_CUB.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'chexpert':
-        from dataset.chexpert_dataset import CheXpertDataSet as data
-        os.system('cp {}/dataset/chexpert_dataset.py {}'.format(BASE_DIR, save_dir))
-    elif options.data_name == 'cbis_ddsm':
+    # if options.data_name == 'mnist':
+    #     from dataset.mnist import MNIST as data
+    #     os.system('cp {}/dataset/mnist.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'fashion_mnist':
+    #     from dataset.fashion_mnist import FashionMNIST as data
+    #     os.system('cp {}/dataset/fashion_mnist.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 't_mnist':
+    #     from dataset.mnist_translate import MNIST as data
+    #     os.system('cp {}/dataset/mnist_translate.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'c_mnist':
+    #     from dataset.mnist_clutter import MNIST as data
+    #     os.system('cp {}/dataset/mnist_clutter.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'cub':
+    #     from dataset.dataset_CUB import CUB as data
+    #     os.system('cp {}/dataset/dataset_CUB.py {}'.format(BASE_DIR, save_dir))
+    # elif options.data_name == 'chexpert':
+    #     from dataset.chexpert_dataset import CheXpertDataSet as data
+    #     os.system('cp {}/dataset/chexpert_dataset.py {}'.format(BASE_DIR, save_dir))
+
+    #############################################
+    ############# Load Dataset Root #############
+    #############################################
+    data_root = proj_paths_json['DATA']['root']
+    processed_cbis_ddsm_root = os.path.join(
+        data_root, proj_paths_json['DATA']['processed_CBIS_DDSM'])
+
+    if options.data_name in ['mass_pathology', 'calc_pathology']:
         from features_classification.datasets import Pathology_Dataset as data
+    elif options.data_name in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
+        from features_classification.datasets import Mass_Calc_Pathology_Dataset as data
+    elif options.data_name == 'mass_shape_comb_feats_omit':
+        from features_classification.datasets import Mass_Shape_Dataset as data
+    elif options.data_name == 'mass_margins_comb_feats_omit':
+        from features_classification.datasets import Mass_Margins_Dataset as data
+    elif options.data_name == 'calc_type_comb_feats_omit':
+        from features_classification.datasets import Calc_Type_Dataset as data
+    elif options.data_name == 'calc_dist_comb_feats_omit':
+        from features_classification.datasets import Calc_Dist_Dataset as data
+    elif options.data_name in ['mass_breast_density_lesion', 'mass_breast_density_image', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+        from features_classification.datasets import Breast_Density_Dataset as data
+    elif options.data_name in ['four_classes_mass_calc_pathology']:
+        from features_classification.datasets import Four_Classes_Mass_Calc_Pathology_Dataset as data
+
+    classes = data.classes
+        
+    if options.data_name in ['mass_pathology', 'mass_shape_comb_feats_omit', 'mass_margins_comb_feats_omit', 'mass_breast_density_lesion', 'mass_breast_density_image']:
+        data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats'][options.data_name])
+
+    elif options.data_name in ['calc_pathology', 'calc_type_comb_feats_omit', 'calc_dist_comb_feats_omit', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+        data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats'][options.data_name])
+
+    elif options.data_name in ['mass_calc_pathology', 'four_classes_mass_calc_pathology']:
+        mass_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
+        calc_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
+
+    elif options.data_name in ['stoa_mass_calc_pathology']:
+        mass_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['stoa_mass_pathology'])
+        calc_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['stoa_calc_pathology'])
+
+    # Number of classes in the dataset
+    num_classes = len(classes.tolist())
 
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize((224, 224)),
-
-            # transforms.RandomResizedCrop(input_size),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
-            # torchvision.transforms.RandomRotation(20, resample=PIL.Image.BILINEAR),
-
-            # transforms.CenterCrop(input_size), # rm after experiment
+            transforms.RandomAffine(25, scale=(0.8, 1.2)),
+            custom_transforms.IntensityShift((-20, 20)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
             transforms.Resize((224, 224)),
-            # transforms.CenterCrop(input_size),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'test': transforms.Compose([
             transforms.Resize((224, 224)),
-            # transforms.CenterCrop(input_size),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
     }
 
     # test_dataset = data(mode='test')
-    data_root = '/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/cls/mass_pathology'
-    test_dataset = data(root_dir=os.path.join(data_root, 'val'), transform=data_transforms['val'])
+    if options.data_name in ['mass_calc_pathology', 'four_classes_mass_calc_pathology', 'stoa_mass_calc_pathology']:
+        test_dataset = data(os.path.join(mass_data_dir, 'test'),
+                            os.path.join(calc_data_dir, 'test'),
+                            transform=data_transforms['test'])
+    else:
+        test_dataset = data(os.path.join(data_dir, 'test'),
+                            data_transforms['test'])
     test_loader = DataLoader(test_dataset, batch_size=options.batch_size,
                              shuffle=False, num_workers=options.workers, drop_last=False)
     ##################################
@@ -245,4 +301,23 @@ if __name__ == '__main__':
     log_string('')
     log_string('Start Testing')
 
-    evaluate()
+    outputs_raw, outputs_crop, outputs_combined, targets = evaluate()
+
+    save_raw_results_path = os.path.join(save_dir, 'raw_results')
+    save_crop_results_path = os.path.join(save_dir, 'crop_results')
+    save_combined_results_path = os.path.join(save_dir, 'combined_results')
+
+    os.makedirs(save_raw_results_path, exist_ok=True)
+    os.makedirs(save_crop_results_path, exist_ok=True)
+    os.makedirs(save_combined_results_path, exist_ok=True)
+
+    targets = torch.max(targets, 1).indices.detach().numpy()
+    outputs_raw = torch.softmax(outputs_raw, dim=-1).detach().numpy()
+    outputs_crop = torch.softmax(outputs_crop, dim=-1).detach().numpy()
+    outputs_combined = torch.softmax(outputs_combined, dim=-1).detach().numpy()
+
+    print(outputs_raw)
+    print(outputs_combined)
+    eval_all(targets, outputs_raw, classes, save_raw_results_path)
+    eval_all(targets, outputs_crop, classes, save_crop_results_path)
+    eval_all(targets, outputs_combined, classes, save_combined_results_path)

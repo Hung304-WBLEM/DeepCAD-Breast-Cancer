@@ -9,6 +9,7 @@
 		"mass_breast_density_lesion": "mass/cls/mass_breast_density_lesion",
 		"mass_breast_density_image": "mass/cls/mass_breast_density_image",
 		"mass_pathology": "mass/cls/mass_pathology",
+		"mass_pathology_clean": "mass/cls/mass_pathology_clean",
 		"stoa_mass_pathology": "mass/cls/stoa_mass_pathology"
 	    },
 	    "calc_feats": {
@@ -17,6 +18,7 @@
 		"calc_breast_density_lesion": "calc/cls/calc_breast_density_lesion",
 		"calc_breast_density_image": "calc/cls/calc_breast_density_image",
 		"calc_pathology": "calc/cls/calc_pathology",
+		"calc_pathology_clean": "calc/cls/calc_pathology_clean",
 		"stoa_calc_pathology": "calc/cls/stoa_calc_pathology"
 	    }
 	},
