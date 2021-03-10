@@ -1,0 +1,1 @@
+python train.py --dn four_classes_mass_calc_pathology --nc 4 -b 16 -e 100 --sd /home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_features_classification/four_classes_mass_calc_pathology_transcaps_e100_b16_32x32
