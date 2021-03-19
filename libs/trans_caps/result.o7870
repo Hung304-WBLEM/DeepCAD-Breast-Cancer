@@ -1,0 +1,3 @@
+cp: cannot stat ‘/home/hqvo2/Projects/Breast_Cancer/libs/trans_caps/config.py’: No such file or directory
+which: no hipcc in (/share/apps/cudatoolkit-10.1/bin:/home/hqvo2/miniconda3/envs/decaps/bin:/home/hqvo2/miniconda3/condabin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/slurm/bin:/opt/slurm/sbin:/home/hqvo2/.local/bin:/home/hqvo2/bin)
+slurmstepd: error: *** JOB 7870 ON compute-0-8 CANCELLED AT 2021-03-17T00:54:02 DUE TO TIME LIMIT ***

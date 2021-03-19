@@ -64,10 +64,10 @@ def cbis_ddsm_get_dataloaders(dataset, batch_size):
 
     # Data augmentation and normalization for training
     # Just normalization for validation
-    # input_size = 512 # remove after experiment
+    input_size = 224 # remove after experiment
     data_transforms = {
         'train': transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((input_size, input_size)),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
             transforms.RandomAffine(25, scale=(0.8, 1.2)),
@@ -76,12 +76,12 @@ def cbis_ddsm_get_dataloaders(dataset, batch_size):
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((input_size, input_size)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'test': transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((input_size, input_size)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
@@ -106,7 +106,7 @@ def cbis_ddsm_get_dataloaders(dataset, batch_size):
     test_dataloaders_dict = {'test': torch.utils.data.DataLoader(
         image_datasets['test'], batch_size=batch_size, shuffle=False, num_workers=0)}
 
-    return dataloaders_dict['train'], dataloaders_dict['val'], test_dataloaders_dict['test']
+    return dataloaders_dict['train'], dataloaders_dict['val'], test_dataloaders_dict['test'], classes
     
 
 def get_train_valid_loader(data_dir,

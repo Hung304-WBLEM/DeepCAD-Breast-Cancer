@@ -20,6 +20,10 @@ class CapsuleNet(nn.Module):
             # A = 64 if args.data_name != 'cifar100' else 128
             A = 64
             self.pre_caps = resnet.__dict__[args.resnet_version](in_channels=args.img_c, planes=int(A/4))
+            # my code
+            # self.conv1 = nn.Conv2d(64, 64, 3, 2, 1)
+            # self.conv2 = nn.Conv2d(64, 64, 3, 2, 1)
+
         elif args.backbone == 'resnet_v2':
             self.pre_caps = resnet_backbone()
             A = 128
@@ -50,14 +54,20 @@ class CapsuleNet(nn.Module):
 
         self.primary_caps = PrimaryCaps(A, args.B, K=3, P=P, stride=1, pad=1)
         self.conv_caps1 = ConvCaps(args.B, args.C, K=3, P=P, stride=2, pad=1, **kwargs)
-        # self.conv_caps2 = ConvCaps(args.C, args.D, K=3, P=P, stride=1, **kwargs)
-        self.class_caps = ConvCaps(args.C, args.num_classes, K=4, P=P, pad=0, last_layer=True, **kwargs)
+        self.conv_caps2 = ConvCaps(args.C, args.D, K=3, P=P, stride=2, pad=1, **kwargs)
+        self.conv_caps3 = ConvCaps(args.D, args.D, K=3, P=P, stride=2, pad=1, **kwargs)
+        self.conv_caps4 = ConvCaps(args.D, args.D, K=3, P=P, stride=2, pad=1, **kwargs)
+        self.class_caps = ConvCaps(args.D, args.num_classes, K=4, P=P, pad=0, last_layer=True, **kwargs)
 
     def forward(self, imgs, y=None):
         x = self.pre_caps(imgs)
+        # x = self.conv1(x)
+        # x = self.conv2(x)
         x = self.primary_caps(x)
         x = self.conv_caps1(x)
-        # x = self.conv_caps2(x)
+        x = self.conv_caps2(x)
+        x = self.conv_caps3(x)
+        x = self.conv_caps4(x)
 
         if self.args.routing == 'DR':
             out = self.class_caps(x).squeeze()
@@ -76,7 +86,7 @@ class CapsuleNet(nn.Module):
             out = out.log()
         elif self.args.routing == 'TR':
             x = self.class_caps(x)
-            x = x.view(imgs.shape[0], self.args.num_classes, -1)
+            x = x.contiguous().view(imgs.shape[0], self.args.num_classes, -1)
             out = self.final_fc(x).squeeze(-1)
 
         _, y_pred = out.max(dim=1)

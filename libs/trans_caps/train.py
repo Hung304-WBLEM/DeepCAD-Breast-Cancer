@@ -65,7 +65,8 @@ def train():
             predictions += [y_pred]
             train_loss += loss.item()
 
-            if (batch_id + 1) % options.disp_freq == 0:
+            # if (batch_id + 1) % options.disp_freq == 0:
+            if (batch_id + 1) % train_freq == 0:
                 train_loss /= options.disp_freq
                 train_acc = compute_accuracy(torch.cat(targets), torch.cat(predictions))
                 log_string("epoch: {0}, step: {1}, time: {2:.2f}, train_loss: {3:.4f} train_accuracy: {4:.02%}"
@@ -196,7 +197,7 @@ if __name__ == '__main__':
     ##################################
     # Use cuda
     ##################################
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
@@ -220,6 +221,8 @@ if __name__ == '__main__':
         lr_decay = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150], gamma=0.1)
     elif options.data_name == "smallnorb":
         lr_decay = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150], gamma=0.1)
+    elif options.data_name == 'four_classes_mass_calc_pathology':
+        lr_decay = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[150, 250], gamma=0.1)
 
 
     ##################################
@@ -232,7 +235,7 @@ if __name__ == '__main__':
     #                            options.random_seed,
     #                            options.exp,
     #                            options.valid_size, **kwargs)
-    train_loader, valid_loader, test_loader = \
+    train_loader, valid_loader, test_loader, _ = \
         cbis_ddsm_get_dataloaders(options.data_name,
                                   options.batch_size)
 
@@ -245,5 +248,6 @@ if __name__ == '__main__':
                format(options.epochs, options.batch_size, len(train_loader.dataset), len(valid_loader.dataset)))
     train_logger = Logger(os.path.join(logs_dir, 'train'))
     test_logger = Logger(os.path.join(logs_dir, 'test'))
+    train_freq = int(np.ceil(len(train_loader.dataset))/options.batch_size)
     val_freq = int(np.ceil(len(train_loader.dataset))/options.batch_size)
     train()

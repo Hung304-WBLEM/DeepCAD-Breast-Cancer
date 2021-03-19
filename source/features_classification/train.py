@@ -23,10 +23,10 @@ from sklearn.preprocessing import label_binarize
 from sklearn.metrics import confusion_matrix
 from torchvision import datasets, models, transforms
 from config.cfg_loader import proj_paths_json
-from train_utils import compute_classes_weights, compute_classes_weights_mass_calc_pathology, compute_classes_weights_mass_calc_pathology_4class, compute_classes_weights_mass_calc_pathology_5class, set_seed, plot_train_val_loss
+from train_utils import compute_classes_weights, compute_classes_weights_mass_calc_pathology, compute_classes_weights_mass_calc_pathology_4class, compute_classes_weights_mass_calc_pathology_5class, set_seed, plot_train_val_loss, compute_classes_weights_within_batch
 
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
+def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, weight_sample=True, is_inception=False):
     since = time.time()
 
     train_acc_history = []
@@ -36,6 +36,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
+    best_loss = float('inf')
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch+1, num_epochs))
@@ -78,6 +79,11 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                         outputs = model(inputs)
                         loss = criterion(outputs, labels)
 
+                    if weight_sample:
+                        sample_weight = compute_classes_weights_within_batch(labels)
+                        sample_weight = torch.from_numpy(np.array(sample_weight)).to(device)
+                        loss = (loss * sample_weight / sample_weight.sum()).sum()
+
                     _, preds = torch.max(outputs, 1)
 
                     # backward + optimize only if in training phase
@@ -99,9 +105,15 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 phase, epoch_loss, epoch_acc))
 
             # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
+            # if phase == 'val' and epoch_acc > best_acc:
+            #     best_loss = epoch_loss
+            #     best_acc = epoch_acc
+            #     best_model_wts = copy.deepcopy(model.state_dict())
+            if phase == 'val' and epoch_loss < best_loss:
+                best_loss = epoch_loss
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
+                
             if phase == 'val':
                 val_loss_history.append(epoch_loss)
                 val_acc_history.append(epoch_acc)
@@ -114,6 +126,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
+    print('Best val Loss: {:4f}'.format(best_loss))
     print('Best val Acc: {:4f}'.format(best_acc))
     logging.info('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
@@ -338,7 +351,7 @@ if __name__ == '__main__':
         from datasets import Pathology_Dataset as data
     elif args.dataset in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
         from datasets import Mass_Calc_Pathology_Dataset as data
-    elif args.dataset in ['four_classes_mass_calc_pathology']:
+    elif args.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad']:
         from datasets import Four_Classes_Mass_Calc_Pathology_Dataset as data
     elif args.dataset in ['five_classes_mass_calc_pathology']:
         from datasets import Five_Classes_Mass_Calc_Pathology_Dataset as data
@@ -374,6 +387,39 @@ if __name__ == '__main__':
         calc_data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
+
+    elif args.dataset == 'four_classes_mass_calc_pathology_512x512-crop_zero-pad':
+        mass_data_dir = os.path.join(
+            data_root,
+            processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_512x512-crop_zero-pad'])
+
+        calc_data_dir = os.path.join(
+            data_root,
+            processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_512x512-crop_zero-pad'])
+
+    elif args.dataset == 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad':
+        mass_data_dir = os.path.join(
+            data_root,
+            processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_1024x1024-crop_zero-pad'])
+
+        calc_data_dir = os.path.join(
+            data_root,
+            processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_1024x1024-crop_zero-pad'])
+
+    elif args.dataset == 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad':
+        mass_data_dir = os.path.join(
+            data_root,
+            processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_2048x2048-crop_zero-pad'])
+
+        calc_data_dir = os.path.join(
+            data_root,
+            processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_2048x2048-crop_zero-pad'])
 
     elif args.dataset in ['stoa_mass_calc_pathology']:
         mass_data_dir = os.path.join(
@@ -447,7 +493,7 @@ if __name__ == '__main__':
 
         
     # Create Training, Validation and Test datasets
-    if args.dataset in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
+    if args.dataset in ['mass_calc_pathology', 'four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad', 'stoa_mass_calc_pathology']:
         image_datasets = {x: data(os.path.join(mass_data_dir, x),
                                   os.path.join(calc_data_dir, x),
                                   transform=data_transforms[x])
@@ -479,10 +525,18 @@ if __name__ == '__main__':
                 calc_root=os.path.join(calc_data_dir, 'train'),
                 classes_names=classes
             )
+        elif args.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad']:
+            classes_weights = compute_classes_weights_mass_calc_pathology_4class(
+                mass_root=os.path.join(mass_data_dir, 'train'),
+                calc_root=os.path.join(calc_data_dir, 'train'),
+                classes_names=classes
+            )
         else:
             classes_weights = compute_classes_weights(
                 data_root=os.path.join(data_dir, 'train'), classes_names=classes)
 
+        print('Classes weights:', list(zip(classes, classes_weights)))
+        
         classes_weights = torch.from_numpy(
             classes_weights).type(torch.FloatTensor)
         criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
@@ -496,7 +550,7 @@ if __name__ == '__main__':
     all_val_accs = []
 
     # 1st stage
-    model_ft, train_loss_hist, val_loss_hist, train_acc_hist, val_acc_hist = \
+    model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
         train_stage(model_ft, model_name, criterion,
                     optimizer_type=args.optimizer,
                     freeze_type='first_freeze',
@@ -508,7 +562,7 @@ if __name__ == '__main__':
     all_val_accs.extend(val_acc_hist)
 
     # 2nd stage
-    model_ft, train_loss_hist, val_loss_hist, train_acc_hist, val_acc_hist = \
+    model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
         train_stage(model_ft, model_name, criterion,
                     optimizer_type=args.optimizer,
                     freeze_type='second_freeze',
@@ -520,7 +574,7 @@ if __name__ == '__main__':
     all_val_accs.extend(val_acc_hist)
 
     # 3rd stage
-    model_ft, train_loss_hist, val_loss_hist, train_acc_hist, val_acc_hist = \
+    model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
         train_stage(model_ft, model_name, criterion,
                     optimizer_type=args.optimizer,
                     freeze_type='third_freeze',

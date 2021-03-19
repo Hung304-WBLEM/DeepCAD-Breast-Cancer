@@ -10,7 +10,10 @@
 		"mass_breast_density_image": "mass/cls/mass_breast_density_image",
 		"mass_pathology": "mass/cls/mass_pathology",
 		"mass_pathology_clean": "mass/cls/mass_pathology_clean",
-		"stoa_mass_pathology": "mass/cls/stoa_mass_pathology"
+		"stoa_mass_pathology": "mass/cls/stoa_mass_pathology",
+		"mass_pathology_512x512-crop_zero-pad": "mass/cls/mass_pathology_512x512-crop_zero-pad",
+		"mass_pathology_1024x1024-crop_zero-pad": "mass/cls/mass_pathology_1024x1024-crop_zero-pad",
+		"mass_pathology_2048x2048-crop_zero-pad": "mass/cls/mass_pathology_2048x2048-crop_zero-pad"
 	    },
 	    "calc_feats": {
 		"calc_type_comb_feats_omit": "calc/cls/calc_type_comb_feats_omit",
@@ -19,7 +22,10 @@
 		"calc_breast_density_image": "calc/cls/calc_breast_density_image",
 		"calc_pathology": "calc/cls/calc_pathology",
 		"calc_pathology_clean": "calc/cls/calc_pathology_clean",
-		"stoa_calc_pathology": "calc/cls/stoa_calc_pathology"
+		"stoa_calc_pathology": "calc/cls/stoa_calc_pathology",
+		"calc_pathology_512x512-crop_zero-pad": "calc/cls/calc_pathology_512x512-crop_zero-pad",
+		"calc_pathology_1024x1024-crop_zero-pad": "calc/cls/calc_pathology_1024x1024-crop_zero-pad",
+		"calc_pathology_2048x2048-crop_zero-pad": "calc/cls/calc_pathology_2048x2048-crop_zero-pad"
 	    }
 	},
         "methodist_data": "methodist_data"

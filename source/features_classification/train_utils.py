@@ -57,6 +57,26 @@ def compute_classes_weights_mass_calc_pathology_4class(mass_root, calc_root, cla
     return weights
 
 
+def compute_classes_weights_within_batch(batch_labels):
+    classes, counts = torch.unique(batch_labels, return_counts=True)
+
+    batch_weights = torch.zeros(batch_labels.shape[0])
+    weights = torch.zeros(classes.shape[0])
+
+    classes_map = dict()
+    for idx, class_id in enumerate(classes):
+        classes_map[class_id.item()] = idx
+
+        weights[idx] = torch.sum(batch_labels == class_id)
+
+    weights = (1/weights) * batch_labels.shape[0] / classes.shape[0]
+
+    batch_weights = [weights[classes_map[label.item()]] for label in batch_labels]
+
+    return batch_weights
+
+
+
 def compute_classes_weights_mass_calc_pathology_5class(mass_root, calc_root, bg_root, classes_names):
     num_classes = len(classes_names)
 

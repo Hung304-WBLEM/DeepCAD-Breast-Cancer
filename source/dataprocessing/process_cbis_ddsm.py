@@ -328,6 +328,7 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
                         os.makedirs(calc_density_img_save_path, exist_ok=True)
                         cv2.imwrite(save_calc_density_img_path, img)
 
+
 def stoa_get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type):
     df = pandas.read_csv(os.path.join(data_root, annotation_filename))
 
@@ -397,6 +398,104 @@ def stoa_get_lesions_pathology(save_root, data_root, annotation_filename, lesion
 
             os.makedirs(save_path, exist_ok=True)
             cv2.imwrite(os.path.join(save_path, f'{filename}_{roi_idx}.png'), lesion_patch)
+
+
+def get_lesions_pathology_with_background(save_root, data_root, annotation_filename, lesion_type, patch_size, BG=False):
+    '''
+    Author: Ben
+    
+    Keep the original image size and Crop 512x512 ROI with zero padding.
+    Note: Set BG to True if you want to extract Random Background ROI. Otherwise, it
+    will only extract Mass and Calcification Cases
+    '''
+
+    df = pandas.read_csv(os.path.join(data_root, annotation_filename))
+
+    all_shape = []
+    for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
+        filename = os.path.basename(dir_path)
+        img_path = os.path.join(dir_path, filename + '.png')
+        if not os.path.exists(img_path):
+            continue
+
+        img = mmcv.imread(img_path)
+
+        for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+            while True:
+                if roi_idx == 100: # assume no mammamogram contains at most 100
+                    break
+                roi_idx += 1
+
+                rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
+
+                if len(rslt_df) == 0:
+                    print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
+                    continue
+
+                label = rslt_df['pathology'].to_numpy()[0]
+                if label == 'MALIGNANT':
+                    cat_id = 0
+                elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
+                    cat_id = 1
+                else:
+                    raise ValueError(
+                        f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
+
+                break
+
+            if roi_idx == 100:
+                print(f'ROI features contain NA or combined type: {filename}')
+                break
+
+            mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
+            seg_poly = mask2polygon(mask_arr)
+            seg_area = area(mask_arr)
+
+            flat_seg_poly = [el for sublist in seg_poly for el in sublist]
+            px = flat_seg_poly[::2]
+            py = flat_seg_poly[1::2]
+
+            h = max(py) + 1 - min(py)
+            w = max(px) + 1 - min(px)
+            all_shape.append((h, w))
+
+            patchz_size = patch_size
+            x_ctr, y_ctr = (min(px) + max(px)) // 2, (min(py) + max(py)) // 2
+            x_min, y_min, x_max, y_max = np.max([0, x_ctr - patchz_size // 2]), \
+                                         np.max([0, y_ctr - patchz_size // 2]), \
+                                         np.min([img.shape[1], x_ctr + patchz_size // 2 - 1]), \
+                                         np.min([img.shape[0], y_ctr + patchz_size // 2 - 1]),
+            pad = [patchz_size - (y_max - y_min), patchz_size - (x_max - x_min)]
+            pad_array = np.array([(pad[0] // 2, pad[0] - pad[0] // 2), (pad[1] // 2, pad[1] - pad[1] // 2), (0, 0)])
+
+            if not BG:
+                lesion_patch = img[y_min:(y_max+1), x_min:(x_max+1)]
+                if np.any(pad_array != 0):
+                    lesion_patch = np.pad(lesion_patch, pad_array)
+            else:
+                h = y_max + 1 - y_min
+                w = x_max + 1 - x_min
+                try:
+                    y_s = np.random.choice(np.concatenate([np.arange(y_min-h), np.arange(y_max+1, img.shape[0]-h, 1)]))
+                    x_s = np.random.choice(np.concatenate([np.arange(x_min-w), np.arange(x_max+1, img.shape[1]-w, 1)]))
+                except:
+                    continue
+                lesion_patch = img[y_s: y_s + h, x_s: x_s + w]
+
+            if not BG:
+                if cat_id == 0:
+                    save_path = os.path.join(save_root, 'MALIGNANT')
+                elif cat_id == 1:
+                    save_path = os.path.join(save_root, 'BENIGN')
+            else:
+                save_path = save_root
+
+            os.makedirs(save_path, exist_ok=True)
+            cv2.imwrite(os.path.join(save_path, f'{filename}_{roi_idx}.png'), lesion_patch)
+
+    print("top 10 maximum mask shape: ")
+    print(np.sort(np.array(all_shape).reshape(-1))[::-1][:10])
+    np.savez_compressed(os.path.join(save_root, "allshape.npz"), shape=np.array(all_shape))
 
 
 def get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type, remove_na_comb=False):
@@ -654,6 +753,7 @@ def split_data():
         print(strat_calc_train_set[key].value_counts() / len(strat_calc_train_set))
         print(strat_calc_test_set[key].value_counts() / len(strat_calc_test_set))
 
+
 def split_train_val(train_save_root, val_save_root, categories, data_root, annotation_filename):
     df = pd.read_csv(os.path.join(data_root, annotation_filename))
 
@@ -824,12 +924,34 @@ if __name__ == '__main__':
     # get_lesions_pathology(os.path.join(mass_pathology_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass')
 
     # mass pathology clean
-    mass_pathology_clean_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_clean'])
+    # mass_pathology_clean_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_clean'])
 
-    get_lesions_pathology(os.path.join(mass_pathology_clean_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', remove_na_comb=True)
-    get_lesions_pathology(os.path.join(mass_pathology_clean_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', remove_na_comb=True)
-    get_lesions_pathology(os.path.join(mass_pathology_clean_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass', remove_na_comb=True)
+    # get_lesions_pathology(os.path.join(mass_pathology_clean_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', remove_na_comb=True)
+    # get_lesions_pathology(os.path.join(mass_pathology_clean_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', remove_na_comb=True)
+    # get_lesions_pathology(os.path.join(mass_pathology_clean_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass', remove_na_comb=True)
 
+    # mass pathology 512x512 crop with zero padding
+    # mass_pathology_512x512_zeropad_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_512x512-crop_zero-pad'])
+
+    # get_lesions_pathology_with_background(os.path.join(mass_pathology_512x512_zeropad_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', patch_size=512)
+    # get_lesions_pathology_with_background(os.path.join(mass_pathology_512x512_zeropad_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', patch_size=512)
+    # get_lesions_pathology_with_background(os.path.join(mass_pathology_512x512_zeropad_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass', patch_size=512)
+
+    # mass pathology 1024x1024 crop with zero padding
+    # mass_pathology_1024x1024_zeropad_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_1024x1024-crop_zero-pad'])
+
+    # get_lesions_pathology_with_background(os.path.join(mass_pathology_1024x1024_zeropad_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', patch_size=1024)
+    # get_lesions_pathology_with_background(os.path.join(mass_pathology_1024x1024_zeropad_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', patch_size=1024)
+    # get_lesions_pathology_with_background(os.path.join(mass_pathology_1024x1024_zeropad_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass', patch_size=1024)
+
+    # mass pathology 2048x2048 crop with zero padding
+    mass_pathology_2048x2048_zeropad_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_2048x2048-crop_zero-pad'])
+
+    get_lesions_pathology_with_background(os.path.join(mass_pathology_2048x2048_zeropad_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', patch_size=2048)
+    get_lesions_pathology_with_background(os.path.join(mass_pathology_2048x2048_zeropad_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass', patch_size=2048)
+    get_lesions_pathology_with_background(os.path.join(mass_pathology_2048x2048_zeropad_root, 'test'), data_root=mass_test_root, annotation_filename='mass_case_description_test_set.csv', lesion_type='mass', patch_size=2048)
+
+    # stoa mass pathology
     # stoa_mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['stoa_mass_pathology'])
     # stoa_get_lesions_pathology(os.path.join(stoa_mass_pathology_root, 'train'), data_root=mass_train_train_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
     # stoa_get_lesions_pathology(os.path.join(stoa_mass_pathology_root, 'val'), data_root=mass_train_val_root, annotation_filename='mass_case_description_train_set.csv', lesion_type='mass')
@@ -949,11 +1071,32 @@ if __name__ == '__main__':
     # get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc')
 
     # calc pathology clean
-    calc_pathology_clean_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_clean'])
+    # calc_pathology_clean_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_clean'])
 
-    get_lesions_pathology(os.path.join(calc_pathology_clean_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', remove_na_comb=True)
-    get_lesions_pathology(os.path.join(calc_pathology_clean_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', remove_na_comb=True)
-    get_lesions_pathology(os.path.join(calc_pathology_clean_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc', remove_na_comb=True)
+    # get_lesions_pathology(os.path.join(calc_pathology_clean_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', remove_na_comb=True)
+    # get_lesions_pathology(os.path.join(calc_pathology_clean_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', remove_na_comb=True)
+    # get_lesions_pathology(os.path.join(calc_pathology_clean_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc', remove_na_comb=True)
+
+    # calc pathology 512x512 crop with zero padding
+    # calc_pathology_512x512_zeropad_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_512x512-crop_zero-pad'])
+
+    # get_lesions_pathology_with_background(os.path.join(calc_pathology_512x512_zeropad_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', patch_size=512)
+    # get_lesions_pathology_with_background(os.path.join(calc_pathology_512x512_zeropad_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', patch_size=512)
+    # get_lesions_pathology_with_background(os.path.join(calc_pathology_512x512_zeropad_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc', patch_size=512)
+
+    # calc pathology 1024x1024 crop with zero padding
+    # calc_pathology_1024x1024_zeropad_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_1024x1024-crop_zero-pad'])
+
+    # get_lesions_pathology_with_background(os.path.join(calc_pathology_1024x1024_zeropad_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', patch_size=1024)
+    # get_lesions_pathology_with_background(os.path.join(calc_pathology_1024x1024_zeropad_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', patch_size=1024)
+    # get_lesions_pathology_with_background(os.path.join(calc_pathology_1024x1024_zeropad_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc', patch_size=1024)
+
+    # calc pathology 2048x2048 crop with zero padding
+    calc_pathology_2048x2048_zeropad_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_2048x2048-crop_zero-pad'])
+
+    get_lesions_pathology_with_background(os.path.join(calc_pathology_2048x2048_zeropad_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', patch_size=2048)
+    get_lesions_pathology_with_background(os.path.join(calc_pathology_2048x2048_zeropad_root, 'val'), data_root=calc_train_val_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc', patch_size=2048)
+    get_lesions_pathology_with_background(os.path.join(calc_pathology_2048x2048_zeropad_root, 'test'), data_root=calc_test_root, annotation_filename='calc_case_description_test_set.csv', lesion_type='calc', patch_size=2048)
 
     # stoa_calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['stoa_calc_pathology'])
     # stoa_get_lesions_pathology(os.path.join(stoa_calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')
