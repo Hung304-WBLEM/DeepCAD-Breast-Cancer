@@ -5,6 +5,7 @@ import torch
 import numpy as np
 import math
 import random
+import cv2
 
 from torch.utils.data import Dataset
 from PIL import Image
@@ -44,7 +45,7 @@ class Mass_Shape_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return {'image': image, 'label': label, 'img_path': img_path}
 
 
 class Mass_Margins_Dataset(Dataset):
@@ -81,7 +82,7 @@ class Mass_Margins_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return {'image': image, 'label': label, 'img_path': img_path}
 
 
 class Calc_Type_Dataset(Dataset):
@@ -119,7 +120,7 @@ class Calc_Type_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return {'image': image, 'label': label, 'img_path': img_path}
 
 
 class Calc_Dist_Dataset(Dataset):
@@ -156,7 +157,7 @@ class Calc_Dist_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return {'image': image, 'label': label, 'img_path': img_path}
 
 
 class Breast_Density_Dataset(Dataset):
@@ -190,7 +191,7 @@ class Breast_Density_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return {'image': image, 'label': label, 'img_path': img_path}
 
 
 class Pathology_Dataset(Dataset):
@@ -223,7 +224,7 @@ class Pathology_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return {'image': image, 'label': label, 'img_path': img_path}
 
 
 class Mass_Calc_Pathology_Dataset(Dataset):
@@ -261,7 +262,7 @@ class Mass_Calc_Pathology_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return {'image': image, 'label': label, 'img_path': img_path}
 
 
 class Four_Classes_Mass_Calc_Pathology_Dataset(Dataset):
@@ -296,13 +297,28 @@ class Four_Classes_Mass_Calc_Pathology_Dataset(Dataset):
 
         img_path = self.images_list[idx]
         img_name, _ = os.path.splitext(os.path.basename(img_path))
+
         image = Image.open(img_path)
+
+        # image = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+
+        # For Histogram Equalization
+        # image = cv2.equalizeHist(image)
+
+        # For CLAHE (Contrast Limited Adaptive Histogram Equalization)
+        # clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        # image = clahe.apply(image)
+
+        # duplicate channels
+        # image = np.stack([image, image, image], axis=2)
+        # image = Image.fromarray(image)
+
         label = self.labels[idx]
 
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return {'image': image, 'label': label, 'img_path': img_path}
 
 
 class Five_Classes_Mass_Calc_Pathology_Dataset(Dataset):
@@ -348,7 +364,7 @@ class Five_Classes_Mass_Calc_Pathology_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return {'image': image, 'label': label, 'img_path': img_path}
 
 
 class  Four_Classes_Features_Pathology_Dataset(Dataset):
@@ -526,7 +542,7 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return {'image': image, 'pathology': label, 'feature_vector': feature_vector, 'img_path': img_path}
+        return {'image': image, 'label': label, 'feature_vector': feature_vector, 'img_path': img_path}
 
 
 class Features_Pathology_Dataset(Dataset):
@@ -677,4 +693,4 @@ class Features_Pathology_Dataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return {'image': image, 'pathology': label, 'feature_vector': feature_vector}
+        return {'image': image, 'label': label, 'feature_vector': feature_vector, 'img_path': img_path}

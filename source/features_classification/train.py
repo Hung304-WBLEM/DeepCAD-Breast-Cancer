@@ -15,18 +15,27 @@ import glob
 import pickle
 import random
 import custom_transforms
+import math
 matplotlib.use('Agg')
 
-from eval_utils import eval_all
+from config_origin import options
+from eval_utils import eval_all, evalplot_precision_recall_curve, evalplot_roc_curve, evalplot_confusion_matrix
 from utilities.fileio import json
 from sklearn.preprocessing import label_binarize
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, accuracy_score
 from torchvision import datasets, models, transforms
 from config.cfg_loader import proj_paths_json
-from train_utils import compute_classes_weights, compute_classes_weights_mass_calc_pathology, compute_classes_weights_mass_calc_pathology_4class, compute_classes_weights_mass_calc_pathology_5class, set_seed, plot_train_val_loss, compute_classes_weights_within_batch
+from train_utils import compute_classes_weights, compute_classes_weights_mass_calc_pathology, compute_classes_weights_mass_calc_pathology_4class, compute_classes_weights_mass_calc_pathology_5class
+from train_utils import compute_classes_weights_within_batch
+from train_utils import set_seed, plot_train_val_loss
+from train_utils import images_to_probs, plot_classes_preds, add_pr_curve_tensorboard
+from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
 
+GLOBAL_EPOCH = 0
+image_datasets = None
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, weight_sample=True, is_inception=False):
+def train_model(model, dataloaders, criterion, optimizer, writer, num_epochs=25, weight_sample=True, is_inception=False):
     since = time.time()
 
     train_acc_history = []
@@ -39,7 +48,11 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, weight_
     best_loss = float('inf')
 
     for epoch in range(num_epochs):
+        global GLOBAL_EPOCH
+        GLOBAL_EPOCH += 1
+        
         print('Epoch {}/{}'.format(epoch+1, num_epochs))
+        print('Global epoch:', GLOBAL_EPOCH)
         print('-' * 10)
         logging.info('Epoch {}/{}'.format(epoch+1, num_epochs))
         logging.info('-' * 10)
@@ -55,7 +68,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, weight_
             running_corrects = 0
 
             # Iterate over data.
-            for inputs, labels in dataloaders[phase]:
+            for data_info in dataloaders[phase]:
+                inputs = data_info['image']
+                labels = data_info['label']
+
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
@@ -79,7 +95,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, weight_
                         outputs = model(inputs)
                         loss = criterion(outputs, labels)
 
-                    if weight_sample:
+                    if weight_sample and phase == 'train':
                         sample_weight = compute_classes_weights_within_batch(labels)
                         sample_weight = torch.from_numpy(np.array(sample_weight)).to(device)
                         loss = (loss * sample_weight / sample_weight.sum()).sum()
@@ -103,6 +119,14 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, weight_
                 phase, epoch_loss, epoch_acc))
             logging.info('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
+
+            # For tensorboard
+            writer.add_scalar(f'{phase} loss', epoch_loss, GLOBAL_EPOCH)
+            writer.add_scalar(f'{phase} acc', epoch_acc, GLOBAL_EPOCH)
+            writer.add_figure(f'{phase} predictions vs. actuals',
+                              plot_classes_preds(model, inputs, labels, classes, num_images=min(inputs.shape[0], 16)),
+                              global_step=GLOBAL_EPOCH)
+            evaluate(model, classes, device, writer, epoch=GLOBAL_EPOCH)
 
             # deep copy the model
             # if phase == 'val' and epoch_acc > best_acc:
@@ -138,7 +162,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, weight_
     return model, train_loss_history, train_acc_history, val_loss_history, val_acc_history
 
 
-def set_parameter_requires_grad(model, model_name, freeze_type):
+def set_parameter_requires_grad(model, model_name, last_frozen_layer):
     '''
     Parameters:
     model_name - can be 'vgg16' or 'resnet50'
@@ -148,13 +172,14 @@ def set_parameter_requires_grad(model, model_name, freeze_type):
         for idx, (name, param) in enumerate(model.named_parameters()):
             param.requires_grad = True
 
-        last_frozen_idx = {'none': -1, 'all': 160, 'last_fc': 158, 'top1_conv_block': 149,
-                            'top2_conv_block': 140, 'top3_conv_block': 128,
-                            'first_freeze': 158, 'second_freeze': 87,
-                            'third_freeze': -1}
+        # last_frozen_idx = {'none': -1, 'all': 160, 'last_fc': 158, 'top1_conv_block': 149,
+        #                     'top2_conv_block': 140, 'top3_conv_block': 128,
+        #                     'first_freeze': 158, 'second_freeze': 87,
+        #                     'third_freeze': -1}
         for idx, (name, param) in enumerate(model.named_parameters()):
             print(idx, name)
-            if idx <= last_frozen_idx[freeze_type]:
+            # if idx <= last_frozen_idx[freeze_type]:
+            if idx <= last_frozen_layer:
                 param.requires_grad = False
     elif model_name == 'vgg16':
         if freeze_type != 'none':
@@ -166,7 +191,7 @@ def set_parameter_requires_grad(model, model_name, freeze_type):
                     param.requires_grad = False
 
 
-def initialize_model(model_name, num_classes, freeze_type, use_pretrained=True):
+def initialize_model(model_name, num_classes, use_pretrained=True):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
     model_ft = None
@@ -259,8 +284,8 @@ def initialize_model(model_name, num_classes, freeze_type, use_pretrained=True):
     return model_ft, input_size
 
 
-def train_stage(model_ft, model_name, criterion, optimizer_type, freeze_type, learning_rate, weight_decay, num_epochs, dataloaders_dict):
-    set_parameter_requires_grad(model_ft, model_name, freeze_type=freeze_type)
+def train_stage(model_ft, model_name, criterion, optimizer_type, last_frozen_layer, learning_rate, weight_decay, num_epochs, dataloaders_dict, weighted_samples, writer):
+    set_parameter_requires_grad(model_ft, model_name, last_frozen_layer)
     
     # Gather the parameters to be optimized/updated in this run. If we are
     #  finetuning we will be updating all parameters. However, if we are
@@ -287,21 +312,29 @@ def train_stage(model_ft, model_name, criterion, optimizer_type, freeze_type, le
 
     # Train and evaluate
     model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
-        train_model(model_ft, dataloaders_dict, criterion, optimizer_ft,
-                    num_epochs=num_epochs, is_inception=(model_name == "inception"))
+        train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, writer,
+                    num_epochs=num_epochs, weight_sample=weighted_samples, is_inception=(model_name == "inception"))
     return model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist
 
+
 @torch.no_grad()
-def get_all_preds(model, loader, device):
+def get_all_preds(model, loader, device, classes=None, plot_test_images=False):
     all_preds = torch.tensor([])
     all_preds = all_preds.to(device)
     all_labels = torch.tensor([], dtype=torch.long)
     all_labels = all_labels.to(device)
-    for batch in loader:
-        images, labels = batch
+    for idx, data_info in enumerate(loader):
+        images = data_info['image']
+        labels = data_info['label']
 
         images = images.to(device)
         labels = labels.to(device)
+
+        if plot_test_images:
+            writer.add_figure(f'test predictions vs. actuals',
+                                plot_classes_preds(model, images, labels, classes, num_images=images.shape[0]),
+                                global_step=idx)
+
         all_labels = torch.cat((all_labels, labels), dim=0)
 
         preds = model(images)
@@ -310,35 +343,88 @@ def get_all_preds(model, loader, device):
         )
     return all_preds, all_labels
 
+
+@torch.no_grad()
+def evaluate(model, classes, device, writer, epoch):
+    model.eval()
+    global image_datasets
+
+    test_dataloaders_dict = {
+        'test': torch.utils.data.DataLoader(
+            image_datasets['test'], batch_size=32,
+            shuffle=False,
+            worker_init_fn=np.random.seed(42), num_workers=0)}
+
+    with torch.no_grad():
+        prediction_loader = test_dataloaders_dict['test']
+        preds, labels = get_all_preds(model_ft, prediction_loader, device)
+
+        softmaxs = torch.softmax(preds, dim=-1)
+        binarized_labels = label_binarize(
+            labels.cpu(), classes=[*range(num_classes)])
+
+    y_true = labels.cpu().detach().numpy()
+    y_proba_pred = softmaxs.cpu().detach().numpy()
+    binarized_y_true = label_binarize(y_true, classes=[*range(len(classes))])
+    y_pred = y_proba_pred.argmax(axis=1)
+
+    # accuracy
+    acc = accuracy_score(y_true, y_pred)
+    writer.add_scalar(f'test acc', acc, epoch)
+
+    # AUCs
+    _, _, pr_aucs = evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes)
+    _, _, roc_aucs = evalplot_roc_curve(binarized_y_true, y_proba_pred, classes)
+
+    idx = 0
+    for class_id, class_name in enumerate(classes):
+        if np.sum(binarized_y_true[:, class_id]) > 0:
+            writer.add_scalar(f'test pr auc - {class_name}', pr_aucs[idx], epoch)
+            writer.add_scalar(f'test roc auc - {class_name}', roc_aucs[idx], epoch)
+            idx += 1
+
+    model.train()
+
+
+@torch.no_grad()
+def final_evaluate(model, classes, device, writer):
+    model.eval()
+    global image_datasets
+
+    test_dataloaders_dict = {
+        'test': torch.utils.data.DataLoader(
+            image_datasets['test'], batch_size=16,
+            shuffle=False,
+            worker_init_fn=np.random.seed(42), num_workers=0)}
+
+    with torch.no_grad():
+        prediction_loader = test_dataloaders_dict['test']
+        preds, labels = get_all_preds(model_ft, prediction_loader, device, classes, plot_test_images=True)
+
+        softmaxs = torch.softmax(preds, dim=-1)
+        binarized_labels = label_binarize(
+            labels.cpu(), classes=[*range(num_classes)])
+
+    y_true = labels.cpu().detach().numpy()
+    y_proba_pred = softmaxs.cpu().detach().numpy()
+    binarized_y_true = label_binarize(y_true, classes=[*range(len(classes))])
+    y_pred = y_proba_pred.argmax(axis=1)
+
+    writer.add_figure(f'test confusion matrix',
+                      evalplot_confusion_matrix(y_true,
+                                                y_pred, classes, fig_only=True),
+                        global_step=None)
+    writer.add_figure(f'test roc curve',
+                        evalplot_roc_curve(binarized_y_true,
+                                           y_proba_pred, classes, fig_only=True),
+                        global_step=None)
+    writer.add_figure(f'test pr curve',
+                        evalplot_precision_recall_curve(binarized_y_true,
+                                           y_proba_pred, classes, fig_only=True),
+                        global_step=None)
+
+
 if __name__ == '__main__':
-    ##############################################
-    ############## Parse Arguments ###############
-    ##############################################
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--dataset",
-                        help="Name of the available datasets")
-    parser.add_argument("-s", "--save_path",
-                        help="Path to save the trained model")
-    parser.add_argument("-m", "--model_name",
-                        help="Select the backbone for training. Available backbones include: 'resnet', 'resnet50', 'alexnet', 'vgg', 'squeezenet', 'densenet', 'inception'")
-    parser.add_argument("-b", "--batch_size", type=int,
-                        help="Batch size for training")
-    parser.add_argument("-e", "--epochs", type=int,
-                        help="the number of epochs for training")
-    parser.add_argument("-wc", "--weighted_classes",
-                        default=False, action='store_true',
-                        help="enable if you want to train with classes weighting")
-    parser.add_argument("-lr", "--learning_rate", type=float,
-                        help="Learning rate")
-    parser.add_argument("-wd", "--weights_decay", type=float, default=0,
-                        help="Weights decay")
-    parser.add_argument("-opt", "--optimizer", type=str,
-                        help="Choose optimizer: sgd, adam")
-    parser.add_argument("-f", "--freeze_type",
-                        help="For Resnet50, freeze_type could be: 'none', 'all', 'last_fc', 'top1_conv_block', 'top2_conv_block', 'top3_conv_block'. For VGG16, freeze_type could be: 'none', 'all', 'last_fc', 'fc2', 'fc1', 'top1_conv_block', 'top2_conv_block'")
-
-    args = parser.parse_args()
-
     #############################################
     ############# Load Dataset Root #############
     #############################################
@@ -347,40 +433,40 @@ if __name__ == '__main__':
         data_root, proj_paths_json['DATA']['processed_CBIS_DDSM'])
 
     # Import dataset
-    if args.dataset in ['mass_pathology', 'calc_pathology', 'mass_pathology_clean', 'calc_pathology_clean']:
+    if options.dataset in ['mass_pathology', 'calc_pathology', 'mass_pathology_clean', 'calc_pathology_clean']:
         from datasets import Pathology_Dataset as data
-    elif args.dataset in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
+    elif options.dataset in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
         from datasets import Mass_Calc_Pathology_Dataset as data
-    elif args.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad']:
+    elif options.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad']:
         from datasets import Four_Classes_Mass_Calc_Pathology_Dataset as data
-    elif args.dataset in ['five_classes_mass_calc_pathology']:
+    elif options.dataset in ['five_classes_mass_calc_pathology']:
         from datasets import Five_Classes_Mass_Calc_Pathology_Dataset as data
-    elif args.dataset == 'mass_shape_comb_feats_omit':
+    elif options.dataset == 'mass_shape_comb_feats_omit':
         from datasets import Mass_Shape_Dataset as data
-    elif args.dataset == 'mass_margins_comb_feats_omit':
+    elif options.dataset == 'mass_margins_comb_feats_omit':
         from datasets import Mass_Margins_Dataset as data
-    elif args.dataset == 'calc_type_comb_feats_omit':
+    elif options.dataset == 'calc_type_comb_feats_omit':
         from datasets import Calc_Type_Dataset as data
-    elif args.dataset == 'calc_dist_comb_feats_omit':
+    elif options.dataset == 'calc_dist_comb_feats_omit':
         from datasets import Calc_Dist_Dataset as data
-    elif args.dataset in ['mass_breast_density_lesion', 'mass_breast_density_image', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+    elif options.dataset in ['mass_breast_density_lesion', 'mass_breast_density_image', 'calc_breast_density_lesion', 'calc_breast_density_image']:
         from datasets import Breast_Density_Dataset as data
     
     # Get classes
     classes = data.classes
 
 
-    if args.dataset in ['mass_pathology', 'mass_pathology_clean', 'mass_shape_comb_feats_omit', 'mass_margins_comb_feats_omit', 'mass_breast_density_lesion', 'mass_breast_density_image']:
+    if options.dataset in ['mass_pathology', 'mass_pathology_clean', 'mass_shape_comb_feats_omit', 'mass_margins_comb_feats_omit', 'mass_breast_density_lesion', 'mass_breast_density_image']:
         data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
-            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats'][args.dataset])
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats'][options.dataset])
 
-    elif args.dataset in ['calc_pathology', 'calc_pathology_clean', 'calc_type_comb_feats_omit', 'calc_dist_comb_feats_omit', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+    elif options.dataset in ['calc_pathology', 'calc_pathology_clean', 'calc_type_comb_feats_omit', 'calc_dist_comb_feats_omit', 'calc_breast_density_lesion', 'calc_breast_density_image']:
         data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
-            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats'][args.dataset])
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats'][options.dataset])
 
-    elif args.dataset in ['mass_calc_pathology', 'four_classes_mass_calc_pathology']:
+    elif options.dataset in ['mass_calc_pathology', 'four_classes_mass_calc_pathology']:
         mass_data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
@@ -388,7 +474,7 @@ if __name__ == '__main__':
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
 
-    elif args.dataset == 'four_classes_mass_calc_pathology_512x512-crop_zero-pad':
+    elif options.dataset == 'four_classes_mass_calc_pathology_512x512-crop_zero-pad':
         mass_data_dir = os.path.join(
             data_root,
             processed_cbis_ddsm_root,
@@ -399,7 +485,7 @@ if __name__ == '__main__':
             processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_512x512-crop_zero-pad'])
 
-    elif args.dataset == 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad':
+    elif options.dataset == 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad':
         mass_data_dir = os.path.join(
             data_root,
             processed_cbis_ddsm_root,
@@ -410,7 +496,7 @@ if __name__ == '__main__':
             processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_1024x1024-crop_zero-pad'])
 
-    elif args.dataset == 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad':
+    elif options.dataset == 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad':
         mass_data_dir = os.path.join(
             data_root,
             processed_cbis_ddsm_root,
@@ -421,7 +507,7 @@ if __name__ == '__main__':
             processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_2048x2048-crop_zero-pad'])
 
-    elif args.dataset in ['stoa_mass_calc_pathology']:
+    elif options.dataset in ['stoa_mass_calc_pathology']:
         mass_data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['stoa_mass_pathology'])
@@ -434,42 +520,41 @@ if __name__ == '__main__':
     # Fix random seed
     set_seed()
 
-    save_path = args.save_path
+    save_path = options.save_path
     if not os.path.exists(save_path):
         os.makedirs(save_path, exist_ok=True)
 
     logging.basicConfig(filename=os.path.join(save_path, 'train.log'), level=logging.INFO,
                         filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 
+    # TensorBoard Summary Writer
+    # writer = SummaryWriter('runs/' + datetime.now().strftime('%d-%m-%Y_%H:%M:%S'))
+    writer = SummaryWriter(os.path.join(save_path, 'tensorboard_logs'))
+
     # Models to choose from [resnet, resnet50, alexnet, vgg, squeezenet, densenet, inception]
-    model_name = args.model_name
+    model_name = options.model_name
 
     # Number of classes in the dataset
     num_classes = len(classes.tolist())
 
     # Batch size for training (change depending on how much memory you have)
-    batch_size = args.batch_size
+    batch_size = options.batch_size
 
     # Number of epochs to train
-    num_epochs = args.epochs
-
-    # Flag for feature extracting. When False, we finetune the whole model,
-    #   when True we only update the reshaped layer params
-    # feature_extract = args.frozen
+    num_epochs = options.epochs
 
     # Initialize the model for this run
     model_ft, input_size = initialize_model(
-        model_name, num_classes, args.freeze_type, use_pretrained=True)
+        model_name, num_classes, use_pretrained=True)
 
     # Print the model we just instantiated
     print(model_ft)
 
     # Data augmentation and normalization for training
-    # Just normalization for validation
-    # input_size = 512 # remove after experiment
+    input_size = options.input_size
     data_transforms = {
         'train': transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((input_size, input_size)),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
             transforms.RandomAffine(25, scale=(0.8, 1.2)),
@@ -478,12 +563,12 @@ if __name__ == '__main__':
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((input_size, input_size)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'test': transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((input_size, input_size)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
@@ -493,7 +578,7 @@ if __name__ == '__main__':
 
         
     # Create Training, Validation and Test datasets
-    if args.dataset in ['mass_calc_pathology', 'four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad', 'stoa_mass_calc_pathology']:
+    if options.dataset in ['mass_calc_pathology', 'four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad', 'stoa_mass_calc_pathology']:
         image_datasets = {x: data(os.path.join(mass_data_dir, x),
                                   os.path.join(calc_data_dir, x),
                                   transform=data_transforms[x])
@@ -505,8 +590,16 @@ if __name__ == '__main__':
 
 
     # Create training and validation dataloaders
-    dataloaders_dict = {x: torch.utils.data.DataLoader(
-        image_datasets[x], batch_size=batch_size, worker_init_fn=np.random.seed(42), shuffle=True, num_workers=0) for x in ['train', 'val']}
+    dataloaders_dict = {
+        'train': torch.utils.data.DataLoader(
+            image_datasets['train'], batch_size=batch_size,
+            worker_init_fn=np.random.seed(42),
+            shuffle=True, num_workers=0),
+        'val': torch.utils.data.DataLoader(
+            image_datasets['val'], batch_size=batch_size,
+            worker_init_fn=np.random.seed(42),
+            shuffle=False, num_workers=0)
+    }
 
     # Detect if we have a GPU available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -517,15 +610,15 @@ if __name__ == '__main__':
     model_ft = model_ft.to(device)
 
     # Setup the loss fn
-    if args.weighted_classes:
+    if options.weighted_classes:
         print('Optimization with classes weighting')
-        if args.dataset in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
+        if options.dataset in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
             classes_weights = compute_classes_weights_mass_calc_pathology(
                 mass_root=os.path.join(mass_data_dir, 'train'),
                 calc_root=os.path.join(calc_data_dir, 'train'),
                 classes_names=classes
             )
-        elif args.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad']:
+        elif options.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad']:
             classes_weights = compute_classes_weights_mass_calc_pathology_4class(
                 mass_root=os.path.join(mass_data_dir, 'train'),
                 calc_root=os.path.join(calc_data_dir, 'train'),
@@ -550,36 +643,55 @@ if __name__ == '__main__':
     all_val_accs = []
 
     # 1st stage
+    epochs_1st_stage = int(math.ceil(options.epochs * 0.06))
     model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
         train_stage(model_ft, model_name, criterion,
-                    optimizer_type=args.optimizer,
-                    freeze_type='first_freeze',
-                    learning_rate=0.001, weight_decay=0.01,
-                    num_epochs=6, dataloaders_dict=dataloaders_dict)
+                    optimizer_type=options.optimizer,
+                    # freeze_type='first_freeze',
+                    last_frozen_layer=options.first_stage_last_frozen_layer,
+                    # learning_rate=0.001, weight_decay=0.01,
+                    learning_rate=options.first_stage_learning_rate,
+                    weight_decay=options.first_stage_weight_decay,
+                    num_epochs=epochs_1st_stage,
+                    dataloaders_dict=dataloaders_dict,
+                    weighted_samples=options.weighted_samples,
+                    writer=writer)
     all_train_losses.extend(train_loss_hist)
     all_val_losses.extend(val_loss_hist)
     all_train_accs.extend(train_acc_hist)
     all_val_accs.extend(val_acc_hist)
 
     # 2nd stage
+    epochs_2nd_stage = int(math.ceil(options.epochs * 0.2))
     model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
         train_stage(model_ft, model_name, criterion,
-                    optimizer_type=args.optimizer,
-                    freeze_type='second_freeze',
-                    learning_rate=0.0001, weight_decay=0.01,
-                    num_epochs=20, dataloaders_dict=dataloaders_dict)
+                    optimizer_type=options.optimizer,
+                    # freeze_type='second_freeze',
+                    last_frozen_layer=options.second_stage_last_frozen_layer,
+                    # learning_rate=0.0001, weight_decay=0.01,
+                    learning_rate=options.second_stage_learning_rate,
+                    weight_decay=options.second_stage_weight_decay,
+                    num_epochs=epochs_2nd_stage, dataloaders_dict=dataloaders_dict,
+                    weighted_samples=options.weighted_samples,
+                    writer=writer)
     all_train_losses.extend(train_loss_hist)
     all_val_losses.extend(val_loss_hist)
     all_train_accs.extend(train_acc_hist)
     all_val_accs.extend(val_acc_hist)
 
     # 3rd stage
+    epochs_3rd_stage = options.epochs - (epochs_1st_stage + epochs_2nd_stage)
     model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
         train_stage(model_ft, model_name, criterion,
-                    optimizer_type=args.optimizer,
-                    freeze_type='third_freeze',
-                    learning_rate=0.00001, weight_decay=0.01,
-                    num_epochs=74, dataloaders_dict=dataloaders_dict)
+                    optimizer_type=options.optimizer,
+                    # freeze_type='third_freeze',
+                    last_frozen_layer=options.third_stage_last_frozen_layer,
+                    # learning_rate=0.00001, weight_decay=0.01,
+                    learning_rate=options.third_stage_learning_rate,
+                    weight_decay=options.third_stage_weight_decay,
+                    num_epochs=epochs_3rd_stage, dataloaders_dict=dataloaders_dict,
+                    weighted_samples=options.weighted_samples,
+                    writer=writer)
     all_train_losses.extend(train_loss_hist)
     all_val_losses.extend(val_loss_hist)
     all_train_accs.extend(train_acc_hist)
@@ -588,12 +700,15 @@ if __name__ == '__main__':
 
     torch.save(model_ft.state_dict(), os.path.join(save_path, 'ckpt.pth'))
 
-    plot_train_val_loss(args.epochs, all_train_losses, all_val_losses,
+    plot_train_val_loss(options.epochs, all_train_losses, all_val_losses,
                         all_train_accs, all_val_accs, save_path)
 
     ################### Test Model #############################
-    test_dataloaders_dict = {'test': torch.utils.data.DataLoader(
-        image_datasets['test'], batch_size=batch_size, shuffle=False, num_workers=0)}
+    test_dataloaders_dict = {
+        'test': torch.utils.data.DataLoader(
+            image_datasets['test'], batch_size=batch_size,
+            shuffle=False,
+            worker_init_fn=np.random.seed(42), num_workers=0)}
 
     model_ft.eval()
 
@@ -605,5 +720,13 @@ if __name__ == '__main__':
         binarized_labels = label_binarize(
             labels.cpu(), classes=[*range(num_classes)])
 
+    # plot all the pr curves
+    for i in range(len(classes)):
+        add_pr_curve_tensorboard(writer, classes, i, labels.cpu().detach().numpy(), softmaxs.cpu().detach().numpy())
+
+    # my roc curve
+    final_evaluate(model_ft, classes, device, writer)
+    
+    # evaluation
     eval_all(labels.cpu().detach().numpy(),
              softmaxs.cpu().detach().numpy(), classes, save_path)

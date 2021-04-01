@@ -13,25 +13,31 @@ from sklearn.preprocessing import label_binarize
 
 
 def plot_confusion_matrix(cm, classes, normalize=False, cmap=plt.cm.Blues):
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
+    # if normalize:
+    #     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    #     print("Normalized confusion matrix")
+    # else:
+    #     print('Confusion matrix, without normalization')
+
+    norm_cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    norm_cm = np.nan_to_num(norm_cm)
 
     print(cm)
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    print(norm_cm)
+    plt.imshow(norm_cm, interpolation='nearest', cmap=cmap)
 
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
     plt.yticks(tick_marks, classes)
 
-    fmt = '.2f' if normalize else 'd'
-    thresh = (cm.max() + cm.min()) / 2.
+    # fmt = '.2f' if normalize else 'd'
+    thresh = (norm_cm.max() + norm_cm.min()) / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
+        # plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center",
+        #          color="white" if cm[i, j] > thresh else "black")
+        plt.text(j, i, '{0:.2f}\n({1:d})'.format(norm_cm[i,j], cm[i,j]), verticalalignment="center", horizontalalignment="center",
+                 color="white" if norm_cm[i, j] > thresh else "black")
 
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
@@ -40,22 +46,41 @@ def plot_confusion_matrix(cm, classes, normalize=False, cmap=plt.cm.Blues):
     return cm
 
 
-def evalplot_confusion_matrix(y_true, y_pred, classes, save_root):
+def evalplot_confusion_matrix(y_true, y_pred, classes, save_root=None, fig_only=False):
     # Confusion Matrix
     cm = confusion_matrix(y_true, y_pred)
 
-    plt.figure(figsize=(10, 10))
-    plot_confusion_matrix(cm, classes)
-    plt.savefig(os.path.join(save_root, 'confusion_matrix.png'))
-    plt.close()
+    # plt.figure(figsize=(10, 10))
+    # plot_confusion_matrix(cm, classes)
+    # if save_root is not None:
+    #     plt.savefig(os.path.join(save_root, 'confusion_matrix.png'))
+    # plt.close()
 
     # Normalized Confusion Matrix
-    plt.figure(figsize=(10, 10))
-    norm_cm = plot_confusion_matrix(cm, classes, normalize=True)
-    plt.savefig(os.path.join(save_root, 'norm_confusion_matrix.png'))
+    # plt.figure(figsize=(10, 10))
+    # norm_cm = plot_confusion_matrix(cm, classes, normalize=True)
+    # if save_root is not None:
+    #     plt.savefig(os.path.join(save_root, 'norm_confusion_matrix.png'))
+    # plt.close()
+    label_freq = np.unique(y_true).tolist()
+    pred_freq = np.unique(y_pred).tolist()
+    avail_classes = []
+    for class_id, class_name in enumerate(classes):
+        if class_id not in label_freq and class_id not in pred_freq:
+            continue
+        avail_classes.append(class_name)
+
+    fig = plt.figure(figsize=(10, 10))
+    cm = plot_confusion_matrix(cm, avail_classes)
+    if save_root is not None:
+        plt.savefig(os.path.join(save_root, 'confusion_matrix.png'))
+
+    if fig_only:
+        return fig
+
     plt.close()
 
-    return cm, norm_cm
+    return cm
 
 
 def plot_precision_recall_curve(binarized_y_true, y_proba_pred, class_name):
@@ -81,12 +106,16 @@ def plot_precision_recall_curve(binarized_y_true, y_proba_pred, class_name):
     return precisions, recalls, ap
 
 
-def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, save_root):
+def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, save_root=None, fig_only=False):
     precisions_list = []
     recalls_list = []
     average_precisions_list = []
 
-    plt.figure(figsize=(10, 10))
+    if fig_only:
+        fig = plt.figure(figsize=(6, 6))
+    else:
+        fig = plt.figure(figsize=(10, 10))
+
     if binarized_y_true.shape[1] == 1:  # For binary clasification
         precisions, recalls, average_precisions = plot_precision_recall_curve(
             binarized_y_true, y_proba_pred[:, 1], classes[1])  # Assume class 1 is positive
@@ -111,9 +140,13 @@ def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, sav
     plt.grid(True)
     plt.tight_layout()
 
-    plt.savefig(os.path.join(save_root, 'pr_curve.png'))
-    plt.close()
+    if save_root is not None:
+        plt.savefig(os.path.join(save_root, 'pr_curve.png'))
 
+    if fig_only:
+        return fig
+
+    plt.close()
     return precisions_list, recalls_list, average_precisions_list
 
 
@@ -127,16 +160,19 @@ def plot_roc_curve(binarized_y_true, y_proba_pred, class_name):
     return fpr, tpr, auc
 
 
-def evalplot_roc_curve(binarized_y_true, y_proba_pred, classes, save_root):
+def evalplot_roc_curve(binarized_y_true, y_proba_pred, classes, save_root=None, fig_only=False):
     fprs_list, tprs_list, aucs_list = [], [], []
 
-    plt.figure(figsize=(10, 10))
+    if fig_only:
+        fig = plt.figure(figsize=(6, 6))
+    else:
+        fig = plt.figure(figsize=(10, 10))
     if binarized_y_true.shape[1] == 1:  # For binary classification
         fpr, tpr, auc = plot_roc_curve(
             binarized_y_true, y_proba_pred[:, 1], class_name=classes[1])
         fprs_list.append(fpr)
         tprs_list.append(tpr)
-        aucs_list.append(aucs_list)
+        aucs_list.append(auc)
     else:  # For multiclass classification
         for class_id, class_name in enumerate(classes):
             if np.sum(binarized_y_true[:, class_id]) > 0:
@@ -144,7 +180,7 @@ def evalplot_roc_curve(binarized_y_true, y_proba_pred, classes, save_root):
                     binarized_y_true[:, class_id], y_proba_pred[:, class_id], class_name)
                 fprs_list.append(fpr)
                 tprs_list.append(tpr)
-                aucs_list.append(aucs_list)
+                aucs_list.append(auc)
 
     plt.plot([0, 1], [0, 1], 'k--')
     plt.xlabel("1 - Specificity")
@@ -156,9 +192,13 @@ def evalplot_roc_curve(binarized_y_true, y_proba_pred, classes, save_root):
     plt.grid(True)
     plt.tight_layout()
 
-    plt.savefig(os.path.join(save_root, 'roc_curve.png'))
-    plt.close()
+    if save_root is not None:
+        plt.savefig(os.path.join(save_root, 'roc_curve.png'))
 
+    if fig_only:
+        return fig
+
+    plt.close()
     return fprs_list, tprs_list, aucs_list
 
 
@@ -170,14 +210,14 @@ def eval_all(y_true, y_proba_pred, classes, save_root):
 
     acc = accuracy_score(y_true, y_pred)
 
-    cm, norm_cm = evalplot_confusion_matrix(y_true, y_pred, classes, save_root)
+    cm = evalplot_confusion_matrix(y_true, y_pred, classes, save_root)
     precisions_list, recalls_list, average_precisions_list = evalplot_precision_recall_curve(
         binarized_y_true, y_proba_pred, classes, save_root)
     fprs_list, tprs_list, aucs_list = evalplot_roc_curve(
         binarized_y_true, y_proba_pred, classes, save_root)
 
     plot_data = {'accuracy': acc,
-                 'confusion_matrix': cm, 'normalized_confusion_matrix': norm_cm,
+                 'confusion_matrix': cm,
                  'classes_precisions_list': precisions_list,
                  'classes_recalls_list': recalls_list,
                  'classes_average_precisions_list': average_precisions_list,
