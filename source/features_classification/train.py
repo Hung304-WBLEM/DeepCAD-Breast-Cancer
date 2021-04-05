@@ -437,31 +437,62 @@ if __name__ == '__main__':
         from datasets import Pathology_Dataset as data
     elif options.dataset in ['mass_calc_pathology', 'stoa_mass_calc_pathology']:
         from datasets import Mass_Calc_Pathology_Dataset as data
-    elif options.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad']:
+    elif options.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad', 'four_classes_mass_calc_pathology_histeq']:
         from datasets import Four_Classes_Mass_Calc_Pathology_Dataset as data
     elif options.dataset in ['five_classes_mass_calc_pathology']:
         from datasets import Five_Classes_Mass_Calc_Pathology_Dataset as data
-    elif options.dataset == 'mass_shape_comb_feats_omit':
+    elif options.dataset in ['mass_shape_comb_feats_omit',
+                             'mass_shape_comb_feats_omit_segm',
+                             'mass_shape_comb_feats_omit_mask']:
         from datasets import Mass_Shape_Dataset as data
-    elif options.dataset == 'mass_margins_comb_feats_omit':
+    elif options.dataset in ['mass_margins_comb_feats_omit',
+                             'mass_margins_comb_feats_omit_segm',
+                             'mass_margins_comb_feats_omit_mask']:
         from datasets import Mass_Margins_Dataset as data
-    elif options.dataset == 'calc_type_comb_feats_omit':
+    elif options.dataset in ['calc_type_comb_feats_omit',
+                             'calc_type_comb_feats_omit_segm',
+                             'calc_type_comb_feats_omit_mask']:
         from datasets import Calc_Type_Dataset as data
-    elif options.dataset == 'calc_dist_comb_feats_omit':
+    elif options.dataset in ['calc_dist_comb_feats_omit',
+                             'calc_dist_comb_feats_omit_segm',
+                             'calc_dist_comb_feats_omit_mask']:
         from datasets import Calc_Dist_Dataset as data
-    elif options.dataset in ['mass_breast_density_lesion', 'mass_breast_density_image', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+    elif options.dataset in ['mass_breast_density_lesion', 'mass_breast_density_image',
+                             'calc_breast_density_lesion', 'calc_breast_density_image',
+                             'mass_breast_density_lesion_segm', 'calc_breast_density_lesion_segm',
+                             'mass_breast_density_lesion_mask', 'calc_breast_density_lesion_mask']:
         from datasets import Breast_Density_Dataset as data
     
     # Get classes
     classes = data.classes
 
 
-    if options.dataset in ['mass_pathology', 'mass_pathology_clean', 'mass_shape_comb_feats_omit', 'mass_margins_comb_feats_omit', 'mass_breast_density_lesion', 'mass_breast_density_image']:
+    if options.dataset in ['mass_pathology', 'mass_pathology_clean',
+                           'mass_shape_comb_feats_omit',
+                           'mass_margins_comb_feats_omit',
+                           'mass_breast_density_lesion',
+                           'mass_shape_comb_feats_omit_segm',
+                           'mass_margins_comb_feats_omit_segm',
+                           'mass_breast_density_lesion_segm',
+                           'mass_shape_comb_feats_omit_mask',
+                           'mass_margins_comb_feats_omit_mask',
+                           'mass_breast_density_lesion_mask',
+                           'mass_breast_density_image']:
         data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats'][options.dataset])
 
-    elif options.dataset in ['calc_pathology', 'calc_pathology_clean', 'calc_type_comb_feats_omit', 'calc_dist_comb_feats_omit', 'calc_breast_density_lesion', 'calc_breast_density_image']:
+    elif options.dataset in ['calc_pathology', 'calc_pathology_clean',
+                             'calc_type_comb_feats_omit',
+                             'calc_dist_comb_feats_omit',
+                             'calc_breast_density_lesion',
+                             'calc_type_comb_feats_omit_segm',
+                             'calc_dist_comb_feats_omit_segm',
+                             'calc_breast_density_lesion_segm',
+                             'calc_type_comb_feats_omit_mask',
+                             'calc_dist_comb_feats_omit_mask',
+                             'calc_breast_density_lesion_mask',
+                             'calc_breast_density_image']:
         data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats'][options.dataset])
@@ -473,6 +504,15 @@ if __name__ == '__main__':
         calc_data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
+
+    elif options.dataset in ['four_classes_mass_calc_pathology_histeq']:
+
+        mass_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_histeq'])
+        calc_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_histeq'])
 
     elif options.dataset == 'four_classes_mass_calc_pathology_512x512-crop_zero-pad':
         mass_data_dir = os.path.join(
@@ -578,7 +618,7 @@ if __name__ == '__main__':
 
         
     # Create Training, Validation and Test datasets
-    if options.dataset in ['mass_calc_pathology', 'four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad', 'stoa_mass_calc_pathology']:
+    if options.dataset in ['mass_calc_pathology', 'four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad', 'four_classes_mass_calc_pathology_histeq', 'stoa_mass_calc_pathology']:
         image_datasets = {x: data(os.path.join(mass_data_dir, x),
                                   os.path.join(calc_data_dir, x),
                                   transform=data_transforms[x])
@@ -618,7 +658,7 @@ if __name__ == '__main__':
                 calc_root=os.path.join(calc_data_dir, 'train'),
                 classes_names=classes
             )
-        elif options.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad']:
+        elif options.dataset in ['four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad', 'four_classes_mass_calc_pathology_histeq']:
             classes_weights = compute_classes_weights_mass_calc_pathology_4class(
                 mass_root=os.path.join(mass_data_dir, 'train'),
                 calc_root=os.path.join(calc_data_dir, 'train'),

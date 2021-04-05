@@ -8,7 +8,18 @@
 		"mass_margins_comb_feats_omit": "mass/cls/mass_margins_comb_feats_omit",
 		"mass_breast_density_lesion": "mass/cls/mass_breast_density_lesion",
 		"mass_breast_density_image": "mass/cls/mass_breast_density_image",
+
+		"mass_shape_comb_feats_omit_segm": "mass/cls/mass_shape_comb_feats_omit_segm",
+		"mass_margins_comb_feats_omit_segm": "mass/cls/mass_margins_comb_feats_omit_segm",
+		"mass_breast_density_lesion_segm": "mass/cls/mass_breast_density_lesion_segm",
+
+		"mass_shape_comb_feats_omit_mask": "mass/cls/mass_shape_comb_feats_omit_mask",
+		"mass_margins_comb_feats_omit_mask": "mass/cls/mass_margins_comb_feats_omit_mask",
+		"mass_breast_density_lesion_mask": "mass/cls/mass_breast_density_lesion_mask",
+
 		"mass_pathology": "mass/cls/mass_pathology",
+		"mass_pathology_histeq": "mass/cls/mass_pathology_histeq",
+		"mass_pathology_clahe": "mass/cls/mass_pathology_clahe",
 		"mass_pathology_clean": "mass/cls/mass_pathology_clean",
 		"stoa_mass_pathology": "mass/cls/stoa_mass_pathology",
 		"mass_pathology_512x512-crop_zero-pad": "mass/cls/mass_pathology_512x512-crop_zero-pad",
@@ -20,7 +31,18 @@
 		"calc_dist_comb_feats_omit": "calc/cls/calc_dist_comb_feats_omit",
 		"calc_breast_density_lesion": "calc/cls/calc_breast_density_lesion",
 		"calc_breast_density_image": "calc/cls/calc_breast_density_image",
+
+		"calc_type_comb_feats_omit_segm": "calc/cls/calc_type_comb_feats_omit_segm",
+		"calc_dist_comb_feats_omit_segm": "calc/cls/calc_dist_comb_feats_omit_segm",
+		"calc_breast_density_lesion_segm": "calc/cls/calc_breast_density_lesion_segm",
+
+		"calc_type_comb_feats_omit_mask": "calc/cls/calc_type_comb_feats_omit_mask",
+		"calc_dist_comb_feats_omit_mask": "calc/cls/calc_dist_comb_feats_omit_mask",
+		"calc_breast_density_lesion_mask": "calc/cls/calc_breast_density_lesion_mask",
+
 		"calc_pathology": "calc/cls/calc_pathology",
+		"calc_pathology_histeq": "calc/cls/calc_pathology_histeq",
+		"calc_pathology_clahe": "calc/cls/calc_pathology_clahe",
 		"calc_pathology_clean": "calc/cls/calc_pathology_clean",
 		"stoa_calc_pathology": "calc/cls/stoa_calc_pathology",
 		"calc_pathology_512x512-crop_zero-pad": "calc/cls/calc_pathology_512x512-crop_zero-pad",
