@@ -71,9 +71,11 @@ def train_model(model, dataloaders, criterion, optimizer, writer, num_epochs=25,
             for data_info in dataloaders[phase]:
                 inputs = data_info['image']
                 labels = data_info['label']
+                binarized_multilabels = data_info['binarized_multilabel']
 
                 inputs = inputs.to(device)
                 labels = labels.to(device)
+                binarized_multilabels = binarized_multilabels.to(device)
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -93,12 +95,21 @@ def train_model(model, dataloaders, criterion, optimizer, writer, num_epochs=25,
                         loss = loss1 + 0.4*loss2
                     else:
                         outputs = model(inputs)
-                        loss = criterion(outputs, labels)
+
+                        if options.criterion == 'ce':
+                            loss = criterion(outputs, labels)
+                        elif options.criterion == 'bce':
+                            loss = criterion(outputs, binarized_multilabels)
 
                     if weight_sample and phase == 'train':
                         sample_weight = compute_classes_weights_within_batch(labels)
                         sample_weight = torch.from_numpy(np.array(sample_weight)).to(device)
                         loss = (loss * sample_weight / sample_weight.sum()).sum()
+
+                    # if options.criterion == 'ce':
+                    #     _, preds = torch.max(outputs, 1)
+                    # elif options.criterion == 'bce':
+                    #     preds = (torch.sigmoid(outputs) > 0.5).int()
 
                     _, preds = torch.max(outputs, 1)
 
@@ -109,7 +120,14 @@ def train_model(model, dataloaders, criterion, optimizer, writer, num_epochs=25,
 
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
+
+                # if options.criterion == 'ce':
+                #     running_corrects += torch.sum(preds == labels.data)
+                # elif options.criterion == 'bce':
+                #     running_corrects += torch.sum(preds == binarized_multilabels.data)
+
                 running_corrects += torch.sum(preds == labels.data)
+                    
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double(
@@ -157,7 +175,6 @@ def train_model(model, dataloaders, criterion, optimizer, writer, num_epochs=25,
     logging.info('Best val Acc: {:4f}'.format(best_acc))
 
     # load best model weights
-    # if get_best_weights:
     model.load_state_dict(best_model_wts)
     return model, train_loss_history, train_acc_history, val_loss_history, val_acc_history
 
@@ -341,6 +358,7 @@ def get_all_preds(model, loader, device, classes=None, plot_test_images=False):
         all_preds = torch.cat(
             (all_preds, preds), dim=0
         )
+            
     return all_preds, all_labels
 
 
@@ -672,10 +690,16 @@ if __name__ == '__main__':
         
         classes_weights = torch.from_numpy(
             classes_weights).type(torch.FloatTensor)
-        criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
+        if options.criterion == 'ce':
+            criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
+        elif options.criterion == 'bce':
+            criterion = nn.BCEWithLogitsLoss(pos_weight=classes_weights.to(device))
     else:
         print('Optimization without classes weighting')
-        criterion = nn.CrossEntropyLoss()
+        if options.criterion == 'ce':
+            criterion = nn.CrossEntropyLoss()
+        elif options.criterion == 'bce':
+            criterion = nn.BCEWithLogitsLoss()
 
     all_train_losses = []
     all_val_losses = []

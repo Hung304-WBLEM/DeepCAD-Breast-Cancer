@@ -30,6 +30,8 @@ parser.add_option("--wd", "--weights_decay", dest="weights_decay", type=float, d
                     help="Weights decay")
 parser.add_option("--opt", "--optimizer", dest="optimizer", type=str,
                     help="Choose optimizer: sgd, adam")
+parser.add_option("--crt", "--criterion", dest="criterion", type=str,
+                  help="Choose criterion: ce, bce")
 # parser.add_option("-f", "--freeze_type", dest="freeze_type",
 #                     help="For Resnet50, freeze_type could be: 'none', 'all', 'last_fc', 'top1_conv_block', 'top2_conv_block', 'top3_conv_block'. For VGG16, freeze_type could be: 'none', 'all', 'last_fc', 'fc2', 'fc1', 'top1_conv_block', 'top2_conv_block'")
 

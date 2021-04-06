@@ -10,6 +10,7 @@ import cv2
 from torch.utils.data import Dataset
 from PIL import Image
 from dataprocessing.process_cbis_ddsm import get_info_lesion
+from sklearn.preprocessing import label_binarize
 
 
 class Mass_Shape_Dataset(Dataset):
@@ -17,6 +18,11 @@ class Mass_Shape_Dataset(Dataset):
                         'LOBULATED', 'ARCHITECTURAL_DISTORTION',
                         'ASYMMETRIC_BREAST_TISSUE', 'LYMPH_NODE',
                         'FOCAL_ASYMMETRIC_DENSITY'])
+
+    @staticmethod
+    def convert_label_to_multilabel(class_name):
+        multilabel = (Mass_Shape_Dataset.classes == class_name).astype(float)
+        return multilabel
 
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
@@ -41,11 +47,12 @@ class Mass_Shape_Dataset(Dataset):
         img_name, _ = os.path.splitext(os.path.basename(img_path))
         image = Image.open(img_path)
         label = self.labels[idx]
+        binarized_multilabel = Mass_Shape_Dataset.convert_label_to_multilabel(Mass_Shape_Dataset.classes[label])
 
         if self.transform:
             image = self.transform(image)
 
-        return {'image': image, 'label': label, 'img_path': img_path}
+        return {'image': image, 'label': label, 'binarized_multilabel': binarized_multilabel, 'img_path': img_path}
 
 
 class Mass_Margins_Dataset(Dataset):
