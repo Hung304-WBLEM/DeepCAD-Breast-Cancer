@@ -62,6 +62,11 @@ class Mass_Margins_Dataset(Dataset):
                         'MICROLOBULATED',
                         'OBSCURED'])
 
+    @staticmethod
+    def convert_label_to_multilabel(class_name):
+        multilabel = (Mass_Margins_Dataset.classes == class_name).astype(float)
+        return multilabel
+
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
         self.transform = transform
@@ -85,11 +90,12 @@ class Mass_Margins_Dataset(Dataset):
         img_name, _ = os.path.splitext(os.path.basename(img_path))
         image = Image.open(img_path)
         label = self.labels[idx]
+        binarized_multilabel = Mass_Margins_Dataset.convert_label_to_multilabel(Mass_Margins_Dataset.classes[label])
 
         if self.transform:
             image = self.transform(image)
 
-        return {'image': image, 'label': label, 'img_path': img_path}
+        return {'image': image, 'label': label, 'binarized_multilabel': binarized_multilabel, 'img_path': img_path}
 
 
 class Calc_Type_Dataset(Dataset):
@@ -99,6 +105,11 @@ class Calc_Type_Dataset(Dataset):
                         "COARSE", "FINE_LINEAR_BRANCHING",
                         "LUCENT_CENTER", "ROUND_AND_REGULAR",
                         "LUCENT_CENTERED"])
+
+    @staticmethod
+    def convert_label_to_multilabel(class_name):
+        multilabel = (Calc_Type_Dataset.classes == class_name).astype(float)
+        return multilabel
 
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
@@ -123,11 +134,12 @@ class Calc_Type_Dataset(Dataset):
         img_name, _ = os.path.splitext(os.path.basename(img_path))
         image = Image.open(img_path)
         label = self.labels[idx]
+        binarized_multilabel = Calc_Type_Dataset.convert_label_to_multilabel(Calc_Type_Dataset.classes[label])
 
         if self.transform:
             image = self.transform(image)
 
-        return {'image': image, 'label': label, 'img_path': img_path}
+        return {'image': image, 'label': label, 'binarized_multilabel': binarized_multilabel, 'img_path': img_path}
 
 
 class Calc_Dist_Dataset(Dataset):
@@ -136,6 +148,11 @@ class Calc_Dist_Dataset(Dataset):
                        "REGIONAL",
                        "DIFFUSELY_SCATTERED",
                        "SEGMENTAL"])
+
+    @staticmethod
+    def convert_label_to_multilabel(class_name):
+        multilabel = (Calc_Dist_Dataset.classes == class_name).astype(float)
+        return multilabel
 
     def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
@@ -160,11 +177,12 @@ class Calc_Dist_Dataset(Dataset):
         img_name, _ = os.path.splitext(os.path.basename(img_path))
         image = Image.open(img_path)
         label = self.labels[idx]
+        binarized_multilabel = Calc_Dist_Dataset.convert_label_to_multilabel(Calc_Dist_Dataset.classes[label])
 
         if self.transform:
             image = self.transform(image)
 
-        return {'image': image, 'label': label, 'img_path': img_path}
+        return {'image': image, 'label': label, 'binarized_multilabel': binarized_multilabel, 'img_path': img_path}
 
 
 class Breast_Density_Dataset(Dataset):
