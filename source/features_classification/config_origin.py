@@ -30,8 +30,10 @@ parser.add_option("--wd", "--weights_decay", dest="weights_decay", type=float, d
                     help="Weights decay")
 parser.add_option("--opt", "--optimizer", dest="optimizer", type=str,
                     help="Choose optimizer: sgd, adam")
-parser.add_option("--crt", "--criterion", dest="criterion", type=str,
+parser.add_option("--crt", "--criterion", dest="criterion", type=str, default="ce",
                   help="Choose criterion: ce, bce")
+parser.add_option("--aug_type", dest="augmentation_type", type=str,
+                  default="torch", help="Choose augmentation type. Available augmentation types include: torch, albumentations")
 # parser.add_option("-f", "--freeze_type", dest="freeze_type",
 #                     help="For Resnet50, freeze_type could be: 'none', 'all', 'last_fc', 'top1_conv_block', 'top2_conv_block', 'top3_conv_block'. For VGG16, freeze_type could be: 'none', 'all', 'last_fc', 'fc2', 'fc1', 'top1_conv_block', 'top2_conv_block'")
 
@@ -57,8 +59,30 @@ parser.add_option("--third_stage_wd",
                   dest="third_stage_weight_decay", type=float, default=0.01)
 parser.add_option("--third_stage_freeze",
                   dest="third_stage_last_frozen_layer", type=int, default=-1)
+## 4th stage
+parser.add_option("--is_fourth_stage", "--is_fourth_stage", dest="train_with_fourth_stage",
+                    default=False, action='store_true',
+                    help="enable if you want to train with 4th stage")
+parser.add_option("--fourth_stage_lr",
+                  dest="fourth_stage_learning_rate", type=float, default=0.000001)
+parser.add_option("--fourth_stage_wd",
+                  dest="fourth_stage_weight_decay", type=float, default=0.01)
+parser.add_option("--fourth_stage_freeze",
+                  dest="fourth_stage_last_frozen_layer", type=int, default=-1)
 
-
+# Dilated Convolution
+parser.add_option("--rnet_dil_2nd",
+                  dest="resnet_dilated_layer2",
+                  default=False, action='store_true',
+                  help="enable if you want to dilate layer2 in the torchvision resnet model")
+parser.add_option("--rnet_dil_3rd",
+                  dest="resnet_dilated_layer3",
+                  default=False, action='store_true',
+                  help="enable if you want to dilate layer3 in the torchvision resnet model")
+parser.add_option("--rnet_dil_4th",
+                  dest="resnet_dilated_layer4",
+                  default=False, action='store_true',
+                  help="enable if you want to dilate layer4 in the torchvision resnet model")
 
 options, _ = parser.parse_args()
 config['hyperparams'] = {}

@@ -16,6 +16,7 @@ import pickle
 import random
 import custom_transforms
 import math
+import albumentations
 matplotlib.use('Agg')
 
 from config_origin import options
@@ -71,11 +72,13 @@ def train_model(model, dataloaders, criterion, optimizer, writer, num_epochs=25,
             for data_info in dataloaders[phase]:
                 inputs = data_info['image']
                 labels = data_info['label']
-                binarized_multilabels = data_info['binarized_multilabel']
 
                 inputs = inputs.to(device)
                 labels = labels.to(device)
-                binarized_multilabels = binarized_multilabels.to(device)
+
+                if options.criterion == 'bce':
+                    binarized_multilabels = data_info['binarized_multilabel']
+                    binarized_multilabels = binarized_multilabels.to(device)
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -185,7 +188,7 @@ def set_parameter_requires_grad(model, model_name, last_frozen_layer):
     model_name - can be 'vgg16' or 'resnet50'
     freeze_type - can be 'none', 'all'
     '''
-    if model_name == 'resnet50':
+    if model_name in ['resnet50', 'dilated_resnet50']:
         for idx, (name, param) in enumerate(model.named_parameters()):
             param.requires_grad = True
 
@@ -234,7 +237,23 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
             nn.Dropout(0.5),
             nn.Linear(num_ftrs, num_classes)
         )
-        input_size = 224
+        # input_size = 224
+
+    elif model_name == "dilated_resnet50":
+        """ Dilated Resnet50
+        """
+        model_ft = \
+            models.resnet50(pretrained=use_pretrained,
+                            replace_stride_with_dilation=[options.resnet_dilated_layer2,
+                                                          options.resnet_dilated_layer3,
+                                                          options.resnet_dilated_layer4])
+        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
+        num_ftrs = model_ft.fc.in_features
+        # model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        model_ft.fc = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(num_ftrs, num_classes)
+        )
 
     elif model_name == "alexnet":
         """ Alexnet
@@ -610,27 +629,66 @@ if __name__ == '__main__':
 
     # Data augmentation and normalization for training
     input_size = options.input_size
-    data_transforms = {
-        'train': transforms.Compose([
-            transforms.Resize((input_size, input_size)),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
-            transforms.RandomAffine(25, scale=(0.8, 1.2)),
-            custom_transforms.IntensityShift((-20, 20)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-        'val': transforms.Compose([
-            transforms.Resize((input_size, input_size)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-        'test': transforms.Compose([
-            transforms.Resize((input_size, input_size)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-    }
+    if options.augmentation_type == 'torch':
+        data_transforms = {
+            'train': transforms.Compose([
+                transforms.Resize((input_size, input_size)),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                transforms.RandomAffine(25, scale=(0.8, 1.2)),
+                custom_transforms.IntensityShift((-20, 20)),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ]),
+            'val': transforms.Compose([
+                transforms.Resize((input_size, input_size)),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ]),
+            'test': transforms.Compose([
+                transforms.Resize((input_size, input_size)),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ]),
+        }
+    elif options.augmentation_type == 'albumentations':
+        data_transforms = {
+            'train': albumentations.Compose([
+                albumentations.Transpose(p=0.5),
+                albumentations.VerticalFlip(p=0.5),
+                albumentations.HorizontalFlip(p=0.5),
+                albumentations.RandomBrightness(limit=0.2, p=0.75),
+                albumentations.RandomContrast(limit=0.2, p=0.75),
+                albumentations.OneOf([
+                    albumentations.MotionBlur(blur_limit=5),
+                    albumentations.MedianBlur(blur_limit=5),
+                    albumentations.GaussianBlur(blur_limit=5),
+                    albumentations.GaussNoise(var_limit=(5.0, 30.0)),
+                ], p=0.7),
+
+                albumentations.OneOf([
+                    albumentations.OpticalDistortion(distort_limit=1.0),
+                    albumentations.GridDistortion(num_steps=5, distort_limit=1.),
+                    albumentations.ElasticTransform(alpha=3),
+                ], p=0.7),
+
+                albumentations.CLAHE(clip_limit=4.0, p=0.7),
+                albumentations.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=20, val_shift_limit=10, p=0.5),
+                albumentations.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, border_mode=0, p=0.85),
+                albumentations.Resize(input_size, input_size),
+                albumentations.Cutout(max_h_size=int(input_size * 0.375), max_w_size=int(input_size * 0.375), num_holes=1, p=0.7),
+                albumentations.Normalize()
+            ]),
+            'val': albumentations.Compose([
+                albumentations.Resize(input_size, input_size),
+                albumentations.Normalize()
+            ]),
+            'test': albumentations.Compose([
+                albumentations.Resize(input_size, input_size),
+                albumentations.Normalize()
+            ])
+        }
+
 
     print("Initializing Datasets and Dataloaders...")
 
@@ -744,7 +802,10 @@ if __name__ == '__main__':
     all_val_accs.extend(val_acc_hist)
 
     # 3rd stage
-    epochs_3rd_stage = options.epochs - (epochs_1st_stage + epochs_2nd_stage)
+    if options.train_with_fourth_stage:
+        epochs_3rd_stage = int(math.ceil(options.epochs * 0.4))
+    else:
+        epochs_3rd_stage = options.epochs - (epochs_1st_stage + epochs_2nd_stage)
     model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
         train_stage(model_ft, model_name, criterion,
                     optimizer_type=options.optimizer,
@@ -760,6 +821,26 @@ if __name__ == '__main__':
     all_val_losses.extend(val_loss_hist)
     all_train_accs.extend(train_acc_hist)
     all_val_accs.extend(val_acc_hist)
+
+    # 4th stage
+    if options.train_with_fourth_stage:
+        epochs_4th_stage = options.epochs - (epochs_1st_stage + epochs_2nd_stage + epochs_3rd_stage)
+        model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
+            train_stage(model_ft, model_name, criterion,
+                        optimizer_type=options.optimizer,
+                        # freeze_type='third_freeze',
+                        last_frozen_layer=options.fourth_stage_last_frozen_layer,
+                        # learning_rate=0.00001, weight_decay=0.01,
+                        learning_rate=options.fourth_stage_learning_rate,
+                        weight_decay=options.fourth_stage_weight_decay,
+                        num_epochs=epochs_4th_stage, dataloaders_dict=dataloaders_dict,
+                        weighted_samples=options.weighted_samples,
+                        writer=writer)
+        all_train_losses.extend(train_loss_hist)
+        all_val_losses.extend(val_loss_hist)
+        all_train_accs.extend(train_acc_hist)
+        all_val_accs.extend(val_acc_hist)
+        
 
 
     torch.save(model_ft.state_dict(), os.path.join(save_path, 'ckpt.pth'))

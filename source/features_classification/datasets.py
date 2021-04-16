@@ -6,6 +6,7 @@ import numpy as np
 import math
 import random
 import cv2
+import albumentations
 
 from torch.utils.data import Dataset
 from PIL import Image
@@ -50,7 +51,12 @@ class Mass_Shape_Dataset(Dataset):
         binarized_multilabel = Mass_Shape_Dataset.convert_label_to_multilabel(Mass_Shape_Dataset.classes[label])
 
         if self.transform:
-            image = self.transform(image)
+            if isinstance(self.transform, albumentations.core.composition.Compose):
+                res = self.transform(image=np.array(image))
+                image = res['image'].astype(np.float32)
+                image = image.transpose(2, 0, 1)
+            else:
+                image = self.transform(image)
 
         return {'image': image, 'label': label, 'binarized_multilabel': binarized_multilabel, 'img_path': img_path}
 
@@ -93,7 +99,12 @@ class Mass_Margins_Dataset(Dataset):
         binarized_multilabel = Mass_Margins_Dataset.convert_label_to_multilabel(Mass_Margins_Dataset.classes[label])
 
         if self.transform:
-            image = self.transform(image)
+            if isinstance(self.transform, albumentations.core.composition.Compose):
+                res = self.transform(image=np.array(image))
+                image = res['image'].astype(np.float32)
+                image = image.transpose(2, 0, 1)
+            else:
+                image = self.transform(image)
 
         return {'image': image, 'label': label, 'binarized_multilabel': binarized_multilabel, 'img_path': img_path}
 
@@ -137,7 +148,12 @@ class Calc_Type_Dataset(Dataset):
         binarized_multilabel = Calc_Type_Dataset.convert_label_to_multilabel(Calc_Type_Dataset.classes[label])
 
         if self.transform:
-            image = self.transform(image)
+            if isinstance(self.transform, albumentations.core.composition.Compose):
+                res = self.transform(image=np.array(image))
+                image = res['image'].astype(np.float32)
+                image = image.transpose(2, 0, 1)
+            else:
+                image = self.transform(image)
 
         return {'image': image, 'label': label, 'binarized_multilabel': binarized_multilabel, 'img_path': img_path}
 
@@ -180,7 +196,12 @@ class Calc_Dist_Dataset(Dataset):
         binarized_multilabel = Calc_Dist_Dataset.convert_label_to_multilabel(Calc_Dist_Dataset.classes[label])
 
         if self.transform:
-            image = self.transform(image)
+            if isinstance(self.transform, albumentations.core.composition.Compose):
+                res = self.transform(image=np.array(image))
+                image = res['image'].astype(np.float32)
+                image = image.transpose(2, 0, 1)
+            else:
+                image = self.transform(image)
 
         return {'image': image, 'label': label, 'binarized_multilabel': binarized_multilabel, 'img_path': img_path}
 
@@ -341,7 +362,12 @@ class Four_Classes_Mass_Calc_Pathology_Dataset(Dataset):
         label = self.labels[idx]
 
         if self.transform:
-            image = self.transform(image)
+            if isinstance(self.transform, albumentations.core.composition.Compose):
+                res = self.transform(image=np.array(image))
+                image = res['image'].astype(np.float32)
+                image = image.transpose(2, 0, 1)
+            else:
+                image = self.transform(image)
 
         return {'image': image, 'label': label, 'img_path': img_path}
 
