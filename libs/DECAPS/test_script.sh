@@ -1,2 +1,2 @@
-python train.py --dn cbis_ddsm --sd /home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_mass_features_classification/mass_pathology_capsnet
-# python inference.py --dn cbis_ddsm --load_model_path /home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_mass_features_classification/mass_pathology_capsnet/20210227_093311/models/955.ckpt
+# python train.py --dn four_classes_mass_calc_pathology --nc 4 --sd /home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_features_classification/test
+python inference.py --dn four_classes_mass_calc_pathology --nc 4 --load_model_path /home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_features_classification/four_classes_mass_calc_pathology_capsnet_e100_b32_224x224/20210303_143651/models/best.ckpt
