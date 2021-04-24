@@ -1,14 +1,17 @@
+from evaluation.eval_mmdet_models import get_best_ckpt
+from dataprocessing.process_cbis_ddsm import read_annotation_json
+from utils.fileio import json
+from config.cfg_loader import proj_paths_json
+from mmdet.apis import init_detector, inference_detector
 import mmcv
 import os
 import glob
 import numpy as np
 import warnings
+import math
+import matplotlib
+matplotlib.use('Agg')
 
-from mmdet.apis import init_detector, inference_detector
-from config.cfg_loader import proj_paths_json
-from utils.fileio import json
-from dataprocessing.process_cbis_ddsm import read_annotation_json
-from evaluation.eval_mmdet_models import get_best_ckpt
 
 if __name__ == '__main__':
     mmdet_root = proj_paths_json['LIB']['mmdet']
@@ -58,15 +61,15 @@ if __name__ == '__main__':
             model.show_result(
                 mamm, result, out_file=os.path.join(save_path, mamm_id))
 
-    # for patient in mmcv.track_iter_progress(glob.glob(os.path.join(Deidentified_Positive_JPEG, 'Patient*'))):
-    #     patient_id = os.path.basename(patient)
-    #     save_path = os.path.join(save_root_positive, patient_id)
-    #     os.makedirs(save_path, exist_ok=True)
+    for patient in mmcv.track_iter_progress(glob.glob(os.path.join(Deidentified_Positive_JPEG, 'Patient*'))):
+        patient_id = os.path.basename(patient)
+        save_path = os.path.join(save_root_positive, patient_id)
+        os.makedirs(save_path, exist_ok=True)
 
-    #     for mamm in mmcv.track_iter_progress(glob.glob(os.path.join(patient, 'Mammoimage', '**', '*.jpg'))):
-    #         mamm_id = os.path.basename(mamm)
-    #         if os.path.exists(os.path.join(save_path, mamm_id)):
-    #             continue
-    #         result = inference_detector(model, mamm)
-    #         model.show_result(
-    #             mamm, result, out_file=os.path.join(save_path, mamm_id))
+        for mamm in glob.glob(os.path.join(patient, 'Mammoimage', '**', '*.jpg')):
+            mamm_id = os.path.basename(mamm)
+            if os.path.exists(os.path.join(save_path, mamm_id)):
+                continue
+            result = inference_detector(model, mamm)
+            model.show_result(
+                mamm, result, out_file=os.path.join(save_path, mamm_id))

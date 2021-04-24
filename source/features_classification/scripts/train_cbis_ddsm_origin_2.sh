@@ -109,13 +109,13 @@ cd ..
 #        --crt bce \
 #        -s ${mass_shape_comb_feats_omit_save_root}/dilated_r50_b32_e100_256x256_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
-python train.py -d mass_margins_comb_feats_omit \
-       -m dilated_resnet50 \
-       --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws \
-       --crt bce \
-       -s ${mass_margins_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# python train.py -d mass_margins_comb_feats_omit \
+#        -m dilated_resnet50 \
+#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws \
+#        --crt bce \
+#        -s ${mass_margins_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 python train.py -d calc_type_comb_feats_omit \
        -m dilated_resnet50 \
@@ -125,10 +125,10 @@ python train.py -d calc_type_comb_feats_omit \
        --crt bce \
        -s ${calc_type_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
-python train.py -d calc_dist_comb_feats_omit \
-       -m dilated_resnet50 \
-       --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws \
-       --crt bce \
-       -s ${calc_dist_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# python train.py -d calc_dist_comb_feats_omit \
+#        -m dilated_resnet50 \
+#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws \
+#        --crt bce \
+#        -s ${calc_dist_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
