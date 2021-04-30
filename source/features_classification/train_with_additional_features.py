@@ -97,6 +97,58 @@ class Pathology_Model(nn.Module):
         return x
 
 
+class Attentive_Pathology_Model(nn.Module):
+    def __init__(self, model_name, input_vector_dim, num_classes, use_pretrained=True):
+        super(Attentive_Pathology_Model, self).__init__()
+        self.model_name = model_name
+
+        if model_name == 'resnet50':
+            self.cnn = models.resnet50(pretrained=use_pretrained)
+            self.cnn = nn.Sequential(*list(self.cnn.children())[:-1])
+
+            self.img_emb_proj = nn.Linear(2048, 100)
+            self.vec_emb_proj = nn.Linear(input_vector_dim, 100)
+
+            self.img_emb_att = nn.Linear(2048 + input_vector_dim, 100)
+            self.vec_emb_att = nn.Linear(2048 + input_vector_dim, 100)
+
+            self.fc1 = nn.Linear(200, 200)
+            self.fc1_att = nn.Linear(200, 200)
+
+            self.fc2 = nn.Linear(200, num_classes)
+            self.fc2_att = nn.Linear(200, num_classes)
+
+
+    def forward(self, image, vector_data, training):
+        img_emb = self.cnn(image)
+        if self.model_name == 'resnet50':
+            img_emb = img_emb.squeeze()
+        vec_emb = vector_data
+
+        proj_img_emb = F.relu(self.img_emb_proj(img_emb))
+        proj_vec_emb = F.relu(self.vec_emb_proj(vec_emb))
+
+        alpha_img = torch.sigmoid(self.img_emb_att(torch.cat((img_emb, vec_emb), dim=1)))
+        alpha_vec = torch.sigmoid(self.vec_emb_att(torch.cat((img_emb, vec_emb), dim=1)))
+
+        aug_img_emb = torch.mul(proj_img_emb, alpha_img)
+        aug_vec_emb = torch.mul(proj_vec_emb, alpha_vec)
+
+        concat_emb = torch.cat((aug_img_emb, aug_vec_emb), dim=1)
+
+        x = F.relu(self.fc1(concat_emb))
+        alpha_x = torch.sigmoid(self.fc1_att(concat_emb))
+        aug_x = torch.mul(x, alpha_x)
+
+        x = self.fc2(aug_x)
+        alpha_x = torch.sigmoid(self.fc2_att(aug_x))
+        aug_x = torch.mul(x, alpha_x)
+
+        x = aug_x
+
+        return x
+
+
 def train_pathology_model(model, dataloaders, criterion, optimizer, writer, num_epochs=25, weight_sample=True, is_inception=False):
     since = time.time()
 
@@ -426,13 +478,13 @@ if __name__ == '__main__':
         breast_density_cats = 4
         mass_shape_cats= 8
         mass_margins_cats = 5
-        model = Pathology_Model(model_name,
+        model = Attentive_Pathology_Model(model_name,
                                 input_vector_dim=breast_density_cats+mass_shape_cats+mass_margins_cats, num_classes=num_classes)
     elif options.dataset in ['calc_pathology', 'calc_pathology_clean']:
         breast_density_cats = 4
         calc_type_cats = 14
         calc_dist_cats = 5
-        model = Pathology_Model(model_name,
+        model = Attentive_Pathology_Model(model_name,
                                 input_vector_dim=breast_density_cats+calc_type_cats+calc_dist_cats, num_classes=num_classes)
     elif options.dataset in ['four_classes_mass_calc_pathology']:
         breast_density_cats = 4
@@ -440,7 +492,7 @@ if __name__ == '__main__':
         mass_margins_cats = 5
         calc_type_cats = 14
         calc_dist_cats = 5
-        model = Pathology_Model(model_name, 
+        model = Attentive_Pathology_Model(model_name, 
                                 input_vector_dim=breast_density_cats+mass_shape_cats+mass_margins_cats+calc_type_cats+calc_dist_cats, num_classes=num_classes)
         
 
