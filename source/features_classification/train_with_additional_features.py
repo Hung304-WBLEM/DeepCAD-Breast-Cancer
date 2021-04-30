@@ -98,9 +98,16 @@ class Pathology_Model(nn.Module):
 
 
 class Attentive_Pathology_Model(nn.Module):
-    def __init__(self, model_name, input_vector_dim, num_classes, use_pretrained=True):
+    def __init__(self, model_name, input_vector_dim, num_classes, attention_type='cross-attention', use_pretrained=True):
+        '''
+        Parameters:
+        attention_type - select type of attention. Available options includes: 
+                         co-attention, cross-attention
+        '''
+
         super(Attentive_Pathology_Model, self).__init__()
         self.model_name = model_name
+        self.attention_type = attention_type
 
         if model_name == 'resnet50':
             self.cnn = models.resnet50(pretrained=use_pretrained)
@@ -109,8 +116,12 @@ class Attentive_Pathology_Model(nn.Module):
             self.img_emb_proj = nn.Linear(2048, 100)
             self.vec_emb_proj = nn.Linear(input_vector_dim, 100)
 
-            self.img_emb_att = nn.Linear(2048 + input_vector_dim, 100)
-            self.vec_emb_att = nn.Linear(2048 + input_vector_dim, 100)
+            if self.attention_type == 'co-attention':
+                self.img_emb_att = nn.Linear(2048 + input_vector_dim, 100)
+                self.vec_emb_att = nn.Linear(2048 + input_vector_dim, 100)
+            elif self.attention_type == 'cross-attention':
+                self.img_emb_att = nn.Linear(input_vector_dim, 100)
+                self.vec_emb_att = nn.Linear(2048, 100)
 
             self.fc1 = nn.Linear(200, 200)
             self.fc1_att = nn.Linear(200, 200)
@@ -128,8 +139,13 @@ class Attentive_Pathology_Model(nn.Module):
         proj_img_emb = F.relu(self.img_emb_proj(img_emb))
         proj_vec_emb = F.relu(self.vec_emb_proj(vec_emb))
 
-        alpha_img = torch.sigmoid(self.img_emb_att(torch.cat((img_emb, vec_emb), dim=1)))
-        alpha_vec = torch.sigmoid(self.vec_emb_att(torch.cat((img_emb, vec_emb), dim=1)))
+        if self.attention_type == 'co-attention':
+            alpha_img = torch.sigmoid(self.img_emb_att(torch.cat((img_emb, vec_emb), dim=1)))
+            alpha_vec = torch.sigmoid(self.vec_emb_att(torch.cat((img_emb, vec_emb), dim=1)))
+        elif self.attention_type == 'cross-attention':
+            alpha_img = torch.sigmoid(self.img_emb_att(vec_emb))
+            alpha_vec = torch.sigmoid(self.vec_emb_att(img_emb))
+            
 
         aug_img_emb = torch.mul(proj_img_emb, alpha_img)
         aug_vec_emb = torch.mul(proj_vec_emb, alpha_vec)
