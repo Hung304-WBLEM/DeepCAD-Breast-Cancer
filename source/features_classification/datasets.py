@@ -421,10 +421,11 @@ class Five_Classes_Mass_Calc_Pathology_Dataset(Dataset):
 class  Four_Classes_Features_Pathology_Dataset(Dataset):
     classes = np.array(['BENIGN_MASS', 'MALIGNANT_MASS', 'BENIGN_CALC', 'MALIGNANT_CALC'])
 
-    def __init__(self, mass_annotation_file, mass_root_dir, calc_annotation_file, calc_root_dir, uncertainty=0, transform=None):
+    def __init__(self, mass_annotation_file, mass_root_dir, calc_annotation_file, calc_root_dir, uncertainty=0, missed_feats_num=0, transform=None):
         self.mass_annotations = pd.read_csv(mass_annotation_file)
         self.calc_annotations = pd.read_csv(calc_annotation_file)
         self.uncertainty = uncertainty
+        self.missed_feats_num = missed_feats_num
         self.transform = transform
 
         self.images_list = []
@@ -447,7 +448,11 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
                 self.lesion_types += ['CALC'] * len(calc_images)
 
     @staticmethod
-    def convert_mass_feats_1hot(breast_density, mass_shape, mass_margins):
+    def convert_mass_feats_1hot(breast_density, mass_shape, mass_margins, ignore_vector=None):
+        '''
+        parameters:
+        ignore_vector: the 3-d vector of zeros and ones. Each of the 3 dimension represents for either: breast_density, mass_shape or mass_margins
+        '''
         BREAST_DENSITY_TYPES = np.array([1, 2, 3, 4])
         BREAST_MASS_SHAPES = np.array(['ROUND', 'OVAL', 'IRREGULAR', 'LOBULATED', 'ARCHITECTURAL_DISTORTION',
                                        'ASYMMETRIC_BREAST_TISSUE', 'LYMPH_NODE', 'FOCAL_ASYMMETRIC_DENSITY'])
@@ -487,13 +492,27 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
                                         mass_margins).astype('int')
                 total_ones += 1
 
+        if ignore_vector is not None:
+            if ignore_vector[0] == 1:
+                one_hot_breast_density = np.zeros(one_hot_breast_density.shape)
+            if ignore_vector[1] == 1:
+                one_hot_mass_shape = np.zeros(one_hot_mass_shape.shape)
+            if ignore_vector[2] == 1:
+                one_hot_mass_margins = np.zeros(one_hot_mass_margins.shape)
+                
         ret = np.concatenate((one_hot_mass_shape, one_hot_mass_margins))
-        assert np.sum(ret) == total_ones
+
+        if ignore_vector is None:
+            assert np.sum(ret) == total_ones
 
         return ret, one_hot_breast_density 
 
     @staticmethod
-    def convert_calc_feats_1hot(breast_density, calc_type, calc_distribution):
+    def convert_calc_feats_1hot(breast_density, calc_type, calc_distribution, ignore_vector=None):
+        '''
+        parameters:
+        ignore_vector: the 3-d vector of zeros and ones. Each of the 3 dimension represents for either: breast_density, calc_type or calc_distribution
+        '''
         if breast_density == 0:
             breast_density = 1  # one test sample is false labelling
 
@@ -534,9 +553,19 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
                 one_hot_calc_distribution = (BREAST_CALC_DISTS == calc_distribution).astype('int')
                 total_ones += 1
 
+        if ignore_vector is not None:
+            if ignore_vector[0] == 1:
+                one_hot_breast_density = np.zeros(one_hot_breast_density.shape)
+            if ignore_vector[1] == 1:
+                one_hot_calc_type = np.zeros(one_hot_calc_type.shape)
+            if ignore_vector[2] == 1:
+                one_hot_calc_distribution = np.zeros(one_hot_calc_distribution.shape)
+
         ret = np.concatenate(
             (one_hot_calc_type, one_hot_calc_distribution))
-        assert np.sum(ret) == total_ones
+
+        if ignore_vector is None:
+            assert np.sum(ret) == total_ones
 
         return ret, one_hot_breast_density 
 
@@ -553,6 +582,13 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
         image = Image.open(img_path)
         label = self.labels[idx]
 
+        ignore_vector = None
+        if self.missed_feats_num > 0:
+            avail_feats_num = 3 - self.missed_feats_num
+            ignore_vector = [0] * avail_feats_num + [1] * self.missed_feats_num
+            ignore_vector = np.random.permutation(ignore_vector)
+
+
         if lesion_type == 'MASS':
             roi_idx = 0
             while True:
@@ -566,7 +602,7 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
             mass_shape = rslt_df['mass shape'].to_numpy()[0]
             mass_margins = rslt_df['mass margins'].to_numpy()[0]
             feature_vector, breast_density_1hot = Four_Classes_Features_Pathology_Dataset.convert_mass_feats_1hot(
-                breast_density, mass_shape, mass_margins)
+                breast_density, mass_shape, mass_margins, ignore_vector)
             feature_vector = np.concatenate((breast_density_1hot, feature_vector, np.zeros(19)))
 
             if random.random() < self.uncertainty:
@@ -584,7 +620,7 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
             calc_type = rslt_df['calc type'].to_numpy()[0]
             calc_distribution = rslt_df['calc distribution'].to_numpy()[0]
             feature_vector, breast_density_1hot = Four_Classes_Features_Pathology_Dataset.convert_calc_feats_1hot(
-                breast_density, calc_type, calc_distribution)
+                breast_density, calc_type, calc_distribution, ignore_vector)
             feature_vector = np.concatenate((breast_density_1hot, np.zeros(13), feature_vector))
 
             if random.random() < self.uncertainty:

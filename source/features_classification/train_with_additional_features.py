@@ -74,8 +74,18 @@ class Pathology_Model(nn.Module):
             self.cnn = models.resnet50(pretrained=use_pretrained)
             self.cnn = nn.Sequential(*list(self.cnn.children())[:-1])
 
-            self.fc1 = nn.Linear(2048 + input_vector_dim, 512)
-            self.fc2 = nn.Linear(512, num_classes)
+            # self.fc1 = nn.Linear(2048 + input_vector_dim, 512)
+            # self.fc2 = nn.Linear(512, num_classes)
+
+            #############################################################
+            # new code from here (will optimize later)
+            self.img_emb_proj = nn.Linear(2048, 100)
+            self.vec_emb_proj = nn.Linear(input_vector_dim, 100)
+
+            self.fc1 = nn.Linear(200, 200)
+            self.fc2 = nn.Linear(200, num_classes)
+            #############################################################
+
         elif model_name == 'vgg16':
             self.cnn = models.vgg16_bn(pretrained=use_pretrained)
             self.cnn.classifier = nn.Sequential(*list(self.cnn.classifier.children())[:-3])
@@ -90,15 +100,23 @@ class Pathology_Model(nn.Module):
 
         if self.model_name == 'resnet50':
             x1 = x1.squeeze()
+
+        ######################################################
+        # new code from here (will optimize later)
+        x1 = F.relu(self.img_emb_proj(x1))
+        x2 = F.relu(self.vec_emb_proj(x2))
+        ######################################################
+
         x = torch.cat((x1, x2), dim=1)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, p=0.5, training=training)
         x = self.fc2(x)
+
         return x
 
 
 class Attentive_Pathology_Model(nn.Module):
-    def __init__(self, model_name, input_vector_dim, num_classes, attention_type='cross-attention', use_pretrained=True):
+    def __init__(self, model_name, input_vector_dim, num_classes, attention_type='crossatt', use_pretrained=True):
         '''
         Parameters:
         attention_type - select type of attention. Available options includes: 
@@ -116,10 +134,10 @@ class Attentive_Pathology_Model(nn.Module):
             self.img_emb_proj = nn.Linear(2048, 100)
             self.vec_emb_proj = nn.Linear(input_vector_dim, 100)
 
-            if self.attention_type == 'co-attention':
+            if self.attention_type == 'coatt':
                 self.img_emb_att = nn.Linear(2048 + input_vector_dim, 100)
                 self.vec_emb_att = nn.Linear(2048 + input_vector_dim, 100)
-            elif self.attention_type == 'cross-attention':
+            elif self.attention_type == 'crossatt':
                 self.img_emb_att = nn.Linear(input_vector_dim, 100)
                 self.vec_emb_att = nn.Linear(2048, 100)
 
@@ -139,10 +157,10 @@ class Attentive_Pathology_Model(nn.Module):
         proj_img_emb = F.relu(self.img_emb_proj(img_emb))
         proj_vec_emb = F.relu(self.vec_emb_proj(vec_emb))
 
-        if self.attention_type == 'co-attention':
+        if self.attention_type == 'coatt':
             alpha_img = torch.sigmoid(self.img_emb_att(torch.cat((img_emb, vec_emb), dim=1)))
             alpha_vec = torch.sigmoid(self.vec_emb_att(torch.cat((img_emb, vec_emb), dim=1)))
-        elif self.attention_type == 'cross-attention':
+        elif self.attention_type == 'crossatt':
             alpha_img = torch.sigmoid(self.img_emb_att(vec_emb))
             alpha_vec = torch.sigmoid(self.vec_emb_att(img_emb))
             
@@ -155,6 +173,8 @@ class Attentive_Pathology_Model(nn.Module):
         x = F.relu(self.fc1(concat_emb))
         alpha_x = torch.sigmoid(self.fc1_att(concat_emb))
         aug_x = torch.mul(x, alpha_x)
+
+        aug_x = F.dropout(aug_x, p=0.5, training=training)
 
         x = self.fc2(aug_x)
         alpha_x = torch.sigmoid(self.fc2_att(aug_x))
@@ -494,22 +514,40 @@ if __name__ == '__main__':
         breast_density_cats = 4
         mass_shape_cats= 8
         mass_margins_cats = 5
-        model = Attentive_Pathology_Model(model_name,
-                                input_vector_dim=breast_density_cats+mass_shape_cats+mass_margins_cats, num_classes=num_classes)
+
+        if options.fusion_type == 'concat':
+            model = Pathology_Model(model_name,
+                                    input_vector_dim=breast_density_cats+mass_shape_cats+mass_margins_cats, num_classes=num_classes)
+        elif options.fusion_type in ['coatt', 'crossatt']:
+            model = \
+                Attentive_Pathology_Model(model_name,
+                                          input_vector_dim=breast_density_cats+mass_shape_cats+mass_margins_cats,
+                                          num_classes=num_classes,
+                                          attention_type=options.fusion_type)
     elif options.dataset in ['calc_pathology', 'calc_pathology_clean']:
         breast_density_cats = 4
         calc_type_cats = 14
         calc_dist_cats = 5
-        model = Attentive_Pathology_Model(model_name,
-                                input_vector_dim=breast_density_cats+calc_type_cats+calc_dist_cats, num_classes=num_classes)
+        if options.fusion_type == 'concat':
+            model = Pathology_Model(model_name,
+                                    input_vector_dim=breast_density_cats+calc_type_cats+calc_dist_cats, num_classes=num_classes)
+        elif options.fusion_type in ['coatt', 'crossatt']:
+            model = Attentive_Pathology_Model(model_name,
+                                              input_vector_dim=breast_density_cats+calc_type_cats+calc_dist_cats, num_classes=num_classes, attention_type=options.fusion_type)
+            
     elif options.dataset in ['four_classes_mass_calc_pathology']:
         breast_density_cats = 4
         mass_shape_cats= 8
         mass_margins_cats = 5
         calc_type_cats = 14
         calc_dist_cats = 5
-        model = Attentive_Pathology_Model(model_name, 
-                                input_vector_dim=breast_density_cats+mass_shape_cats+mass_margins_cats+calc_type_cats+calc_dist_cats, num_classes=num_classes)
+
+        if options.fusion_type == 'concat':
+            model = Pathology_Model(model_name, 
+                                    input_vector_dim=breast_density_cats+mass_shape_cats+mass_margins_cats+calc_type_cats+calc_dist_cats, num_classes=num_classes)
+        elif options.fusion_type in ['coatt', 'crossatt']:
+            model = Attentive_Pathology_Model(model_name, 
+                                              input_vector_dim=breast_density_cats+mass_shape_cats+mass_margins_cats+calc_type_cats+calc_dist_cats, num_classes=num_classes, attention_type=options.fusion_type)
         
 
     # print the model we just instantiated
@@ -597,6 +635,7 @@ if __name__ == '__main__':
                 calc_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train/calc_case_description_train_set.csv',
                 calc_root_dir=os.path.join(calc_data_dir, 'train'),
                 uncertainty=options.train_uncertainty,
+                missed_feats_num=options.missed_feats_num,
                 transform=data_transforms['train']
             ),
             'val': Four_Classes_Features_Pathology_Dataset(
@@ -605,6 +644,7 @@ if __name__ == '__main__':
                 calc_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train/calc_case_description_train_set.csv',
                 calc_root_dir=os.path.join(calc_data_dir, 'val'),
                 uncertainty=options.test_uncertainty,
+                missed_feats_num=options.missed_feats_num,
                 transform=data_transforms['val']
             )}
 
@@ -626,6 +666,7 @@ if __name__ == '__main__':
                 calc_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/test/calc_case_description_test_set.csv',
                 calc_root_dir=os.path.join(calc_data_dir, 'test'),
                 uncertainty=options.test_uncertainty,
+                missed_feats_num=options.missed_feats_num,
                 transform=data_transforms['test']
             )}
         

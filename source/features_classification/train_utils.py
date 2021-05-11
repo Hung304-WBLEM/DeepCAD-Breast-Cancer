@@ -159,7 +159,9 @@ def images_to_probs(net, images):
     # convert output probabilities to predicted class
     _, preds_tensor = torch.max(output, 1)
     preds = np.squeeze(preds_tensor.cpu().numpy())
-    return preds, [F.softmax(el, dim=0)[i].item() for i, el in zip(preds, output)]
+    return preds, \
+        [F.softmax(el, dim=0)[i].item() for i, el in zip(preds, output)], \
+        [F.softmax(el, dim=0).cpu().detach().numpy() for el in output]
 
 
 def images_to_probs_pathology(net, images, input_vectors):
@@ -185,6 +187,22 @@ def matplotlib_imshow(img, one_channel=False):
         plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 
+def show_score_bars(all_classes_prob, classes):
+    labels = ['classes']
+    x = np.arange(len(labels))
+    width = 0.05
+
+    num_classes = len(classes)
+
+    for idx, prob in enumerate(all_classes_prob.tolist()):
+        class_score = [prob]
+        rect = plt.bar(idx*width + width/2, class_score, width, label=classes[idx])
+
+        plt.yticks([0, 0.25, 0.5, 0.75, 1])
+
+    plt.legend(prop={'size': 6})
+
+
 def plot_classes_preds(net, images, labels, classes, num_images):
     '''
     Generates matplotlib Figure using a trained network, along with images
@@ -193,19 +211,28 @@ def plot_classes_preds(net, images, labels, classes, num_images):
     information based on whether the prediction was correct or not.
     Uses the "images_to_probs" function.
     '''
-    preds, probs = images_to_probs(net, images)
+    preds, probs, all_classes_probs = images_to_probs(net, images)
+    # print(all_classes_probs)
+    # while True:
+    #     continue
     # plot the images in the batch, along with predicted and true labels
-    fig = plt.figure(figsize=(15, 15))
-    for idx in np.arange(num_images):
+    fig = plt.figure(figsize=(15, 40))
+    # for idx in np.arange(num_images):
+    for idx in range(0, num_images):
         import math
-        ax = fig.add_subplot(math.ceil(num_images/4), 4, idx+1, xticks=[], yticks=[])
+        ax = fig.add_subplot(math.ceil(num_images/4)*2, 4, 2*idx+1, xticks=[], yticks=[])
         matplotlib_imshow(images[idx], one_channel=True)
+
         ax.set_title("{0}, {1:.1f}%\n(label: {2})".format(
             classes[preds[idx]],
             probs[idx] * 100.0,
             classes[labels[idx]]),
                      color=("green" if preds[idx]==labels[idx].item() else "red"),
                      fontsize=10)
+
+        ax = fig.add_subplot(math.ceil(num_images/4)*2, 4, 2*idx+2, xticks=[], yticks=[])
+        show_score_bars(all_classes_probs[idx], classes)
+
     return fig
 
 

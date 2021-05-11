@@ -12,6 +12,8 @@ parser.add_option("-s", "--save_path",
                     help="Path to save the trained model")
 parser.add_option("-m", "--model_name",
                     help="Select the backbone for training. Available backbones include: 'resnet', 'resnet50', 'alexnet', 'vgg', 'squeezenet', 'densenet', 'inception'")
+parser.add_option("--fuse",
+                  help="Choose fusion methods. Available options include: 'concat', 'coatt', 'crossatt'", dest="fusion_type")
 parser.add_option("-b", "--batch_size", type=int,
                     help="Batch size for training")
 parser.add_option("-e", "--epochs", type=int,
@@ -38,6 +40,8 @@ parser.add_option("--train_uct", "--train_uncertainty", dest="train_uncertainty"
                   default=0.0, help="Choose uncertainty thresholds to train without input features")
 parser.add_option("--test_uct", "--test_uncertainty", dest="test_uncertainty", type=float,
                   default=0.0, help="Choose uncertainty thresholds to test without input features")
+parser.add_option("--missed_feats_num", dest="missed_feats_num", type=int,
+                  default=0, help="Choose the number of missed clinical features")
 parser.add_option("--njobs", dest="num_workers", type=int,
                   default=0)
 
