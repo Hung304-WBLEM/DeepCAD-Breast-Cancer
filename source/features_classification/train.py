@@ -357,11 +357,16 @@ def train_stage(model_ft, model_name, criterion, optimizer_type, last_frozen_lay
 def get_all_preds(model, loader, device, classes=None, plot_test_images=False):
     all_preds = torch.tensor([])
     all_preds = all_preds.to(device)
+
     all_labels = torch.tensor([], dtype=torch.long)
     all_labels = all_labels.to(device)
+
+    all_paths = []
+
     for idx, data_info in enumerate(loader):
         images = data_info['image']
         labels = data_info['label']
+        image_paths = data_info['img_path']
 
         images = images.to(device)
         labels = labels.to(device)
@@ -377,8 +382,10 @@ def get_all_preds(model, loader, device, classes=None, plot_test_images=False):
         all_preds = torch.cat(
             (all_preds, preds), dim=0
         )
+
+        all_paths += image_paths
             
-    return all_preds, all_labels
+    return all_preds, all_labels, all_paths
 
 
 @torch.no_grad()
@@ -390,11 +397,11 @@ def evaluate(model, classes, device, writer, epoch):
         'test': torch.utils.data.DataLoader(
             image_datasets['test'], batch_size=32,
             shuffle=False,
-            worker_init_fn=np.random.seed(42), num_workers=0)}
+            worker_init_fn=np.random.seed(42), num_workers=options.num_workers)}
 
     with torch.no_grad():
         prediction_loader = test_dataloaders_dict['test']
-        preds, labels = get_all_preds(model_ft, prediction_loader, device)
+        preds, labels, _ = get_all_preds(model_ft, prediction_loader, device)
 
         softmaxs = torch.softmax(preds, dim=-1)
         binarized_labels = label_binarize(
@@ -432,11 +439,11 @@ def final_evaluate(model, classes, device, writer):
         'test': torch.utils.data.DataLoader(
             image_datasets['test'], batch_size=16,
             shuffle=False,
-            worker_init_fn=np.random.seed(42), num_workers=0)}
+            worker_init_fn=np.random.seed(42), num_workers=options.num_workers)}
 
     with torch.no_grad():
         prediction_loader = test_dataloaders_dict['test']
-        preds, labels = get_all_preds(model_ft, prediction_loader, device, classes, plot_test_images=True)
+        preds, labels, _ = get_all_preds(model_ft, prediction_loader, device, classes, plot_test_images=True)
 
         softmaxs = torch.softmax(preds, dim=-1)
         binarized_labels = label_binarize(
@@ -710,11 +717,11 @@ if __name__ == '__main__':
         'train': torch.utils.data.DataLoader(
             image_datasets['train'], batch_size=batch_size,
             worker_init_fn=np.random.seed(42),
-            shuffle=True, num_workers=0),
+            shuffle=True, num_workers=options.num_workers),
         'val': torch.utils.data.DataLoader(
             image_datasets['val'], batch_size=batch_size,
             worker_init_fn=np.random.seed(42),
-            shuffle=False, num_workers=0)
+            shuffle=False, num_workers=options.num_workers)
     }
 
     # Detect if we have a GPU available
@@ -853,13 +860,13 @@ if __name__ == '__main__':
         'test': torch.utils.data.DataLoader(
             image_datasets['test'], batch_size=batch_size,
             shuffle=False,
-            worker_init_fn=np.random.seed(42), num_workers=0)}
+            worker_init_fn=np.random.seed(42), num_workers=options.num_workers)}
 
     model_ft.eval()
 
     with torch.no_grad():
         prediction_loader = test_dataloaders_dict['test']
-        preds, labels = get_all_preds(model_ft, prediction_loader, device)
+        preds, labels, _ = get_all_preds(model_ft, prediction_loader, device)
 
         softmaxs = torch.softmax(preds, dim=-1)
         binarized_labels = label_binarize(

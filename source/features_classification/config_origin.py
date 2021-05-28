@@ -1,4 +1,5 @@
 import os
+import configparser
 
 from configparser import ConfigParser
 from optparse import OptionParser
@@ -12,11 +13,11 @@ parser.add_option("-s", "--save_path",
                     help="Path to save the trained model")
 parser.add_option("-m", "--model_name",
                     help="Select the backbone for training. Available backbones include: 'resnet', 'resnet50', 'alexnet', 'vgg', 'squeezenet', 'densenet', 'inception'")
-parser.add_option("-b", "--batch_size", type=int,
+parser.add_option("-b", "--batch_size", type=int, default=32,
                     help="Batch size for training")
-parser.add_option("-e", "--epochs", type=int,
+parser.add_option("-e", "--epochs", type=int, default=100,
                     help="the number of epochs for training")
-parser.add_option("-i", "--input_size", type=int,
+parser.add_option("-i", "--input_size", type=int, default=224,
                   help="resize the input image")
 parser.add_option("--wc", "--weighted_classes", dest="weighted_classes",
                     default=False, action='store_true',
@@ -24,8 +25,8 @@ parser.add_option("--wc", "--weighted_classes", dest="weighted_classes",
 parser.add_option("--ws", "--weighted_samples", dest="weighted_samples",
                     default=False, action='store_true',
                     help="enable if you want to weight samples within batch")
-parser.add_option("--lr", "--learning_rate", dest="learning_rate", type=float,
-                    help="Learning rate")
+parser.add_option("--lr", "--learning_rate", dest="learning_rate", type=float, default=0.01,
+                    help="Learning rate") # deprecated
 parser.add_option("--wd", "--weights_decay", dest="weights_decay", type=float, default=0,
                     help="Weights decay")
 parser.add_option("--opt", "--optimizer", dest="optimizer", type=str,
@@ -34,8 +35,8 @@ parser.add_option("--crt", "--criterion", dest="criterion", type=str, default="c
                   help="Choose criterion: ce, bce")
 parser.add_option("--aug_type", dest="augmentation_type", type=str,
                   default="torch", help="Choose augmentation type. Available augmentation types include: torch, albumentations")
-# parser.add_option("-f", "--freeze_type", dest="freeze_type",
-#                     help="For Resnet50, freeze_type could be: 'none', 'all', 'last_fc', 'top1_conv_block', 'top2_conv_block', 'top3_conv_block'. For VGG16, freeze_type could be: 'none', 'all', 'last_fc', 'fc2', 'fc1', 'top1_conv_block', 'top2_conv_block'")
+parser.add_option("--njobs", dest="num_workers", type=int,
+                  default=0)
 
 # Three-stages training hyperparams
 ## 1st stage
@@ -92,6 +93,54 @@ for opt in vars(options):
 
     config['hyperparams'][opt] = str(attr)
 
-os.makedirs(options.save_path, exist_ok=True)
-with open(os.path.join(options.save_path, 'config.ini'), 'w') as configfile:
-    config.write(configfile)
+# os.makedirs(options.save_path, exist_ok=True)
+# with open(os.path.join(options.save_path, 'config.ini'), 'w') as configfile:
+#     config.write(configfile)
+
+
+def read_config(config_path):
+    print(f'{config_path} exists?', os.path.exists(config_path))
+    saved_config = ConfigParser(allow_no_value=True)
+
+    saved_config.read(config_path)
+
+    
+    for opt in vars(options):
+        attr = getattr(options, opt)
+        keep_default = False
+
+        try:
+            if type(attr) is int:
+                saved_attr = saved_config.getint('hyperparams', opt)
+            elif type(attr) is float:
+                saved_attr = saved_config.getfloat('hyperparams', opt)
+            elif type(attr) is bool:
+                saved_attr = saved_config.getboolean('hyperparams', opt)
+            else:
+                saved_attr = saved_config.get('hyperparams', opt)
+        except ValueError: # For in the case when of the hyperparam 'learning_rate'
+            saved_attr = None
+        except configparser.NoOptionError:
+            # For handling when saved options file
+            # do not have some fields
+            keep_default = True
+            
+        # print(type(attr), type(saved_attr))
+
+        if keep_default is False:
+            if type(saved_attr) is type(None):
+                setattr(options, opt, None)
+            else:
+                setattr(options, opt, saved_attr)
+
+
+    return options
+
+
+if __name__ == '__main__':
+    print('MAIN')
+    saved_options = read_config(config_path='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/four_classes_mass_calc_pathology/r50_b32_e100_224x224_adam_wc_ws_Thu Apr  1 15:52:21 CDT 2021/config.ini')
+    for opt in vars(saved_options):
+        attr = getattr(saved_options, opt)
+        print(opt, attr, type(attr))
+
