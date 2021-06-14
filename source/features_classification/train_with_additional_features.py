@@ -346,17 +346,27 @@ def train_stage_pathology(model, model_name, criterion, optimizer_type, last_fro
                               num_epochs=num_epochs, weight_sample=weighted_samples, is_inception=(model_name == "inception"))
     return model, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist
 
+
 @torch.no_grad()
-def get_all_preds_pathology(model, loader, device, classes=None, plot_test_images=False):
+def get_all_preds_pathology(model, loader, device, classes=None, plot_test_images=False, use_predicted_feats=False):
     all_preds = torch.tensor([])
     all_preds = all_preds.to(device)
+
     all_labels = torch.tensor([], dtype=torch.long)
     all_labels = all_labels.to(device)
+
+    all_paths = []
 
     for idx, data_info in enumerate(loader):
         images = data_info['image']
         labels = data_info['label']
-        input_vectors = data_info['feature_vector']
+        image_paths = data_info['img_path']
+
+        if use_predicted_feats:
+            input_vectors = get_predicted_clinical_feats(lesion_paths=image_paths)
+        else:
+            input_vectors = data_info['feature_vector']
+
         input_vectors = input_vectors.type(torch.FloatTensor)
 
         images = images.to(device)
@@ -373,7 +383,108 @@ def get_all_preds_pathology(model, loader, device, classes=None, plot_test_image
         preds = model(images, input_vectors, training=False)
         all_preds = torch.cat((all_preds, preds), dim=0)
 
-    return all_preds, all_labels
+        all_paths += image_paths
+
+    return all_preds, all_labels, all_paths
+
+
+def get_predicted_clinical_feats(lesion_paths):
+    ################################################################
+    # passing PATHS to the predictions of the test set with optparse
+    mass_shape_path = options.pred_mass_shape
+    mass_margins_path = options.pred_mass_margins
+    mass_density_image_path = options.pred_mass_density_image
+
+    calc_type_path = options.pred_calc_type
+    calc_dist_path = options.pred_calc_dist
+    calc_density_image_path = options.pred_calc_density_image
+    ################################################################
+
+    from datasets import Mass_Shape_Dataset
+    mass_shape_classes = Mass_Shape_Dataset.classes
+
+    from datasets import Mass_Margins_Dataset
+    mass_margins_classes = Mass_Margins_Dataset.classes
+
+    from datasets import Calc_Type_Dataset
+    calc_type_classes = Calc_Type_Dataset.classes
+
+    from datasets import Calc_Dist_Dataset
+    calc_dist_classes = Calc_Dist_Dataset.classes
+
+    from datasets import Breast_Density_Dataset
+    breast_density_classses = Breast_Density_Dataset.classes
+
+    from datasets import Four_Classes_Features_Pathology_Dataset
+    mass_convert_func = Four_Classes_Features_Pathology_Dataset.convert_mass_feats_1hot
+    calc_convert_func = Four_Classes_Features_Pathology_Dataset.convert_calc_feats_1hot
+
+    ###############################################
+    mass_shape = pd.read_csv(mass_shape_path)
+    mass_margins = pd.read_csv(mass_margins_path)
+    mass_density = pd.read_csv(mass_density_image_path)
+
+    calc_type = pd.read_csv(calc_type_path)
+    calc_dist = pd.read_csv(calc_dist_path)
+    calc_density = pd.read_csv(calc_density_image_path)
+
+    feature_vectors_list = []
+
+    for lesion_path in lesion_paths:
+        lesion_filename, _ = os.path.splitext(os.path.basename(lesion_path))
+        mamm_filename = '_'.join(lesion_filename.split('.')[:-1])
+        lesion_type = mamm_filename.split('-')[0]
+
+        if lesion_type == 'Mass':
+
+            # Search for matched filenames
+            mass_shape_pred = mass_shape[mass_shape['Path'].str.match(rf'(.*{lesion_filename}.*)') == True].values.tolist()
+            mass_margins_pred = mass_margins[mass_margins['Path'].str.match(rf'(.*{lesion_filename}.*)') == True].values.tolist()
+            mass_density_pred = mass_density[mass_density['Path'].str.match(rf'(.*{lesion_filename}.*)') == True].values.tolist()
+
+            # Get predictions
+            mass_shape_pred_lbl = None if mass_shape_pred == [] else mass_shape_pred[-1]
+            mass_margins_pred_lbl = None if mass_margins_pred == [] else mass_margins_pred[-1]
+            mass_density_pred_lbl = None if mass_density_pred == [] else mass_density_pred[-1]
+
+            # convert predictions to 1-hot vector
+            feature_vector, breast_density_1hot = \
+                mass_convert_func(None if mass_density_pred_lbl is None
+                                  else breast_density_classses[mass_density_pred_lbl],
+                                  None if mass_shape_pred_lbl is None
+                                  else mass_shape_classes[mass_shape_pred_lbl],
+                                  None if mass_margins_pred_lbl is None
+                                  else mass_margins_classes[mass_margins_pred_lbl])
+            feature_vector = np.concatenate((breast_density_1hot, feature_vector, np.zeros(19)))
+
+        else:
+
+            # Search for matched filenames
+            calc_type_pred = calc_type[calc_type['Path'].str.match(rf'(.*{lesion_filename}.*)') == True].values.tolist()
+            calc_dist_pred = calc_dist[calc_dist['Path'].str.match(rf'(.*{lesion_filename}.*)') == True].values.tolist()
+            calc_density_pred = calc_density[calc_density['Path'].str.match(rf'(.*{lesion_filename}.*)') == True].values.tolist()
+
+            # Get predictions
+            calc_type_pred_lbl = None if calc_type_pred == [] else calc_type_pred[-1][-1]
+            calc_dist_pred_lbl = None if calc_dist_pred == [] else calc_dist_pred[-1][-1]
+            calc_density_pred_lbl = None if calc_density_pred == [] else calc_density_pred[-1][-1]
+        
+            # convert predictions to 1-hot vector
+            feature_vector, breast_density_1hot = \
+                calc_convert_func(None if calc_density_pred_lbl is None
+                                  else breast_density_classses[calc_density_pred_lbl],
+                                  None if calc_type_pred_lbl is None
+                                  else calc_type_classes[calc_type_pred_lbl],
+                                  None if calc_dist_pred_lbl is None
+                                  else calc_dist_classes[calc_dist_pred_lbl])
+            feature_vector = np.concatenate((breast_density_1hot, np.zeros(13), feature_vector))
+
+        feature_vectors_list.append(feature_vector)
+
+    
+    feature_vectors_list = torch.FloatTensor(feature_vectors_list)
+    return feature_vectors_list
+
 
 
 @torch.no_grad()
@@ -454,6 +565,7 @@ def final_evaluate_pathology(model, classes, device, writer):
                         evalplot_precision_recall_curve(binarized_y_true,
                                            y_proba_pred, classes, fig_only=True),
                         global_step=None)
+
 
 if __name__ == '__main__':
     data_root = proj_paths_json['DATA']['root']

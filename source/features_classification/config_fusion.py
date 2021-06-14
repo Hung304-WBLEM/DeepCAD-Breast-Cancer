@@ -1,4 +1,5 @@
 import os
+import configparser
 
 from configparser import ConfigParser
 from optparse import OptionParser
@@ -12,13 +13,13 @@ parser.add_option("-s", "--save_path",
                     help="Path to save the trained model")
 parser.add_option("-m", "--model_name",
                     help="Select the backbone for training. Available backbones include: 'resnet', 'resnet50', 'alexnet', 'vgg', 'squeezenet', 'densenet', 'inception'")
-parser.add_option("--fuse",
+parser.add_option("--fuse", default='concat',
                   help="Choose fusion methods. Available options include: 'concat', 'coatt', 'crossatt'", dest="fusion_type")
-parser.add_option("-b", "--batch_size", type=int,
+parser.add_option("-b", "--batch_size", type=int, default=32,
                     help="Batch size for training")
-parser.add_option("-e", "--epochs", type=int,
+parser.add_option("-e", "--epochs", type=int, default=100,
                     help="the number of epochs for training")
-parser.add_option("-i", "--input_size", type=int,
+parser.add_option("-i", "--input_size", type=int, default=224,
                   help="resize the input image")
 parser.add_option("--wc", "--weighted_classes", dest="weighted_classes",
                     default=False, action='store_true',
@@ -26,7 +27,7 @@ parser.add_option("--wc", "--weighted_classes", dest="weighted_classes",
 parser.add_option("--ws", "--weighted_samples", dest="weighted_samples",
                     default=False, action='store_true',
                     help="enable if you want to weight samples within batch")
-parser.add_option("--lr", "--learning_rate", dest="learning_rate", type=float,
+parser.add_option("--lr", "--learning_rate", dest="learning_rate", type=float, default=0.01,
                     help="Learning rate")
 parser.add_option("--wd", "--weights_decay", dest="weights_decay", type=float, default=0,
                     help="Weights decay")
@@ -90,7 +91,29 @@ parser.add_option("--rnet_dil_3rd",
 parser.add_option("--rnet_dil_4th",
                   dest="resnet_dilated_layer4",
                   default=False, action='store_true',
-                  help="enable if you want to dilate layer4 in the torchvision resnet model")
+                  help="enable if you want to dilate layer4 in the torchvision resnet models")
+
+## For Test with predicted features
+parser.add_option("--use_predicted_feats", dest="use_predicted_feats",
+                  default=False, action='store_true',
+                  help="enable if you want to use predicted clinical features for prediction")
+
+parser.add_option("--pred_mass_shape", dest="pred_mass_shape",
+                  type=str, help="Path to the prediction of mass shape of the test set")
+parser.add_option("--pred_mass_margins", dest="pred_mass_margins",
+                  type=str, help="Path to the prediction of mass margins of the test set")
+parser.add_option("--pred_mass_density_image", dest="pred_mass_density_image",
+                  type=str, help="Path to the prediction of mass density image of the test set")
+
+parser.add_option("--pred_calc_type", dest="pred_calc_type",
+                  type=str, help="Path to the prediction of calc type of the test set")
+parser.add_option("--pred_calc_dist", dest="pred_calc_dist",
+                  type=str, help="Path to the prediction of calc dist of the test set")
+parser.add_option("--pred_calc_density_image", dest="pred_calc_density_image",
+                  type=str, help="Path to the prediction of calc density image of the test set")
+
+
+
 
 options, _ = parser.parse_args()
 config['hyperparams'] = {}
@@ -100,6 +123,53 @@ for opt in vars(options):
 
     config['hyperparams'][opt] = str(attr)
 
-os.makedirs(options.save_path, exist_ok=True)
-with open(os.path.join(options.save_path, 'config.ini'), 'w') as configfile:
-    config.write(configfile)
+# os.makedirs(options.save_path, exist_ok=True)
+# with open(os.path.join(options.save_path, 'config.ini'), 'w') as configfile:
+#     config.write(configfile)
+
+
+def read_config(config_path):
+    print(f'{config_path} exists?', os.path.exists(config_path))
+    saved_config = ConfigParser(allow_no_value=True)
+
+    saved_config.read(config_path)
+
+    
+    for opt in vars(options):
+        attr = getattr(options, opt)
+        keep_default = False
+
+        try:
+            if type(attr) is int:
+                saved_attr = saved_config.getint('hyperparams', opt)
+            elif type(attr) is float:
+                saved_attr = saved_config.getfloat('hyperparams', opt)
+            elif type(attr) is bool:
+                saved_attr = saved_config.getboolean('hyperparams', opt)
+            else:
+                saved_attr = saved_config.get('hyperparams', opt)
+        except ValueError: # For in the case when of the hyperparam 'learning_rate'
+            saved_attr = None
+        except configparser.NoOptionError:
+            # For handling when saved options file
+            # do not have some fields
+            keep_default = True
+            
+        # print(type(attr), type(saved_attr))
+
+        if keep_default is False:
+            if type(saved_attr) is type(None):
+                setattr(options, opt, None)
+            else:
+                setattr(options, opt, saved_attr)
+
+
+    return options
+
+
+if __name__ == '__main__':
+    print('MAIN')
+    saved_options = read_config(config_path='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/four_classes_mass_calc_pathology/with_addtional_features_r50_b32_e100_224x224_adam_wc_ws_Mon May  3 06:08:38 CDT 2021/config.ini')
+    for opt in vars(saved_options):
+        attr = getattr(saved_options, opt)
+        print(opt, attr, type(attr))

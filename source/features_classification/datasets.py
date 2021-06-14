@@ -466,7 +466,7 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
         total_ones = 0
 
         # Mass Shape
-        if type(mass_shape) is float and math.isnan(mass_shape):
+        if (mass_shape is None) or (type(mass_shape) is float and math.isnan(mass_shape)):
             one_hot_mass_shape = np.zeros(BREAST_MASS_SHAPES.shape, dtype=int)
         else:
             if '-' in mass_shape:
@@ -479,7 +479,7 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
                 total_ones += 1
 
         # Mass Margin
-        if type(mass_margins) is float and math.isnan(mass_margins):
+        if (mass_margins is None) or (type(mass_margins) is float and math.isnan(mass_margins)):
             one_hot_mass_margins = np.zeros(BREAST_MASS_MARGINS.shape, dtype=int)
         else:
             if '-' in mass_margins:
@@ -528,7 +528,7 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
         total_ones = 0 
 
         # Calc Type
-        if type(calc_type) is float and math.isnan(calc_type):
+        if (calc_type is None) or (type(calc_type) is float and math.isnan(calc_type)):
             one_hot_calc_type = np.zeros(BREAST_CALC_TYPES.shape, dtype=int)
         else:
             if '-' in calc_type:
@@ -541,7 +541,7 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
                 total_ones += 1
 
         # Calc Dist
-        if type(calc_distribution) is float and math.isnan(calc_distribution):
+        if (calc_distribution is None) or (type(calc_distribution) is float and math.isnan(calc_distribution)):
             one_hot_calc_distribution = np.zeros(BREAST_CALC_DISTS.shape, dtype=int)
         else:
             if '-' in calc_distribution:
