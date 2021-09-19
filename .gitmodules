@@ -7,3 +7,6 @@
 [submodule "libs/cocoapi"]
 	path = libs/cocoapi
 	url = https://github.com/Hung304-WBLEM/cocoapi.git
+[submodule "libs/augmix"]
+	path = libs/augmix
+	url = https://github.com/Hung304-WBLEM/augmix.git
