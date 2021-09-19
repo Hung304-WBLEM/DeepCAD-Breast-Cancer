@@ -421,11 +421,12 @@ class Five_Classes_Mass_Calc_Pathology_Dataset(Dataset):
 class  Four_Classes_Features_Pathology_Dataset(Dataset):
     classes = np.array(['BENIGN_MASS', 'MALIGNANT_MASS', 'BENIGN_CALC', 'MALIGNANT_CALC'])
 
-    def __init__(self, mass_annotation_file, mass_root_dir, calc_annotation_file, calc_root_dir, uncertainty=0, missed_feats_num=0, transform=None):
+    def __init__(self, mass_annotation_file, mass_root_dir, calc_annotation_file, calc_root_dir, uncertainty=0, missed_feats_num=0, missing_feats_fill='zeroes', transform=None):
         self.mass_annotations = pd.read_csv(mass_annotation_file)
         self.calc_annotations = pd.read_csv(calc_annotation_file)
         self.uncertainty = uncertainty
         self.missed_feats_num = missed_feats_num
+        self.missing_feats_fill = missing_feats_fill
         self.transform = transform
 
         self.images_list = []
@@ -446,6 +447,11 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
                 self.images_list += calc_images
                 self.labels += [idx] * len(calc_images)
                 self.lesion_types += ['CALC'] * len(calc_images)
+
+        # For random feature values
+        self.mass_feats_dist = Four_Classes_Features_Pathology_Dataset.get_mass_feats_empirical_dist(self.images_list, self.lesion_types, self.mass_annotations)
+        self.calc_feats_dist = Four_Classes_Features_Pathology_Dataset.get_calc_feats_empirical_dist(self.images_list, self.lesion_types, self.calc_annotations)
+
 
     @staticmethod
     def convert_mass_feats_1hot(breast_density, mass_shape, mass_margins, ignore_vector=None):
@@ -567,7 +573,57 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
         if ignore_vector is None:
             assert np.sum(ret) == total_ones
 
-        return ret, one_hot_breast_density 
+        return ret, one_hot_breast_density
+
+    @staticmethod
+    def get_mass_feats_empirical_dist(images_list, lesion_types, mass_annotations):
+        mass_feats_empirical_dist = set()
+
+        for img_path, lesion_type in zip(images_list, lesion_types):
+            if lesion_type == 'CALC':
+                continue
+
+            img_name, _ = os.path.splitext(os.path.basename(img_path))
+
+            roi_idx = 0
+            while True:
+                roi_idx += 1
+                rslt_df = get_info_lesion(mass_annotations, f'{img_name}')
+
+                if len(rslt_df) > 0:
+                    break
+
+            mass_shape = rslt_df['mass shape'].to_numpy()[0]
+            mass_margins = rslt_df['mass margins'].to_numpy()[0]
+
+            mass_feats_empirical_dist.add((mass_shape, mass_margins))
+
+        return mass_feats_empirical_dist
+
+    @staticmethod
+    def get_calc_feats_empirical_dist(images_list, lesion_types, calc_annotations):
+        calc_feats_empirical_dist = set()
+
+        for img_path, lesion_type in zip(images_list, lesion_types):
+            if lesion_type == 'MASS':
+                continue
+
+            img_name, _ = os.path.splitext(os.path.basename(img_path))
+
+            roi_idx = 0
+            while True:
+                roi_idx += 1
+                rslt_df = get_info_lesion(calc_annotations, f'{img_name}')
+
+                if len(rslt_df) > 0:
+                    break
+
+            calc_type = rslt_df['calc type'].to_numpy()[0]
+            calc_distribution = rslt_df['calc distribution'].to_numpy()[0]
+
+            calc_feats_empirical_dist.add((calc_type, calc_distribution))
+
+        return calc_feats_empirical_dist
 
     def __len__(self):
         return len(self.images_list)
@@ -603,7 +659,15 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
             mass_margins = rslt_df['mass margins'].to_numpy()[0]
             feature_vector, breast_density_1hot = Four_Classes_Features_Pathology_Dataset.convert_mass_feats_1hot(
                 breast_density, mass_shape, mass_margins, ignore_vector)
-            feature_vector = np.concatenate((breast_density_1hot, feature_vector, np.zeros(19)))
+
+            if self.missing_feats_fill == 'zeroes':
+                feature_vector = np.concatenate((breast_density_1hot, feature_vector, np.zeros(19)))
+            elif self.missing_feats_fill == 'emp_sampling':
+                calc_type, calc_distribution = random.choice(tuple(self.calc_feats_dist))
+                missing_calc_feature_vector, _ = Four_Classes_Features_Pathology_Dataset.convert_calc_feats_1hot(
+                    1, calc_type, calc_distribution, ignore_vector=None) # We dont use the parameter 'Breast Density', so just
+                                                                    # set it to random value. (for e.g.: 1)
+                feature_vector = np.concatenate((breast_density_1hot, feature_vector, missing_calc_feature_vector))
 
             if random.random() < self.uncertainty:
                 feature_vector = np.zeros(feature_vector.shape)
@@ -621,7 +685,15 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
             calc_distribution = rslt_df['calc distribution'].to_numpy()[0]
             feature_vector, breast_density_1hot = Four_Classes_Features_Pathology_Dataset.convert_calc_feats_1hot(
                 breast_density, calc_type, calc_distribution, ignore_vector)
-            feature_vector = np.concatenate((breast_density_1hot, np.zeros(13), feature_vector))
+
+            if self.missing_feats_fill == 'zeroes':
+                feature_vector = np.concatenate((breast_density_1hot, np.zeros(13), feature_vector))
+            elif self.missing_feats_fill == 'emp_sampling':
+                mass_shape, mass_margins = random.choice(tuple(self.mass_feats_dist))
+                missing_mass_feature_vector, _ = Four_Classes_Features_Pathology_Dataset.convert_mass_feats_1hot(
+                    1, mass_shape, mass_margins, ignore_vector=None)
+
+                feature_vector = np.concatenate((breast_density_1hot, missing_mass_feature_vector, feature_vector))
 
             if random.random() < self.uncertainty:
                 feature_vector = np.zeros(feature_vector.shape)

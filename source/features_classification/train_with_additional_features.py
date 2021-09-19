@@ -500,7 +500,7 @@ def evaluate_pathology(model, classes, device, writer, epoch):
 
     with torch.no_grad():
         prediction_loader = test_dataloaders_dict['test']
-        preds, labels = get_all_preds_pathology(model, prediction_loader, device)
+        preds, labels, _ = get_all_preds_pathology(model, prediction_loader, device)
 
         softmaxs = torch.softmax(preds, dim=-1)
         binarized_labels = label_binarize(
@@ -542,7 +542,7 @@ def final_evaluate_pathology(model, classes, device, writer):
 
     with torch.no_grad():
         prediction_loader = test_dataloaders_dict['test']
-        preds, labels = get_all_preds_pathology(model, prediction_loader, device, classes, plot_test_images=True)
+        preds, labels, _ = get_all_preds_pathology(model, prediction_loader, device, classes, plot_test_images=True)
 
         softmaxs = torch.softmax(preds, dim=-1)
         binarized_labels = label_binarize(
@@ -732,53 +732,56 @@ if __name__ == '__main__':
     if options.dataset in ['mass_pathology', 'mass_pathology_clean']:
         pathology_datasets = \
             {x: Features_Pathology_Dataset(lesion_type='mass',
-                annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/train/mass_case_description_train_set.csv',
+                annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/mass/train/mass_case_description_train_set.csv',
                 root_dir=os.path.join(data_dir, x), transform=data_transforms[x]) for x in ['train', 'val']}
     elif options.dataset in ['calc_pathology', 'calc_pathology_clean']:
         pathology_datasets = \
             {x: Features_Pathology_Dataset(lesion_type='calc',
-                annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train/calc_case_description_train_set.csv',
+                annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/calc/train/calc_case_description_train_set.csv',
                 root_dir=os.path.join(data_dir, x), transform=data_transforms[x]) for x in ['train', 'val']}
     elif options.dataset in ['four_classes_mass_calc_pathology']:
         pathology_datasets = \
             {'train': Four_Classes_Features_Pathology_Dataset(
-                mass_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/train/mass_case_description_train_set.csv',
+                mass_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/mass/train/mass_case_description_train_set.csv',
                 mass_root_dir=os.path.join(mass_data_dir, 'train'),
-                calc_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train/calc_case_description_train_set.csv',
+                calc_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/calc/train/calc_case_description_train_set.csv',
                 calc_root_dir=os.path.join(calc_data_dir, 'train'),
                 uncertainty=options.train_uncertainty,
                 missed_feats_num=options.missed_feats_num,
+                missing_feats_fill=options.missing_feats_fill,
                 transform=data_transforms['train']
             ),
             'val': Four_Classes_Features_Pathology_Dataset(
-                mass_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/train/mass_case_description_train_set.csv',
+                mass_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/mass/train/mass_case_description_train_set.csv',
                 mass_root_dir=os.path.join(mass_data_dir, 'val'),
-                calc_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/train/calc_case_description_train_set.csv',
+                calc_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/calc/train/calc_case_description_train_set.csv',
                 calc_root_dir=os.path.join(calc_data_dir, 'val'),
                 uncertainty=options.test_uncertainty,
                 missed_feats_num=options.missed_feats_num,
+                missing_feats_fill=options.missing_feats_fill,
                 transform=data_transforms['val']
             )}
 
     if options.dataset in ['mass_pathology', 'mass_pathology_clean']:
         test_image_datasets = \
             {'test': Features_Pathology_Dataset(lesion_type='mass',
-                annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/test/mass_case_description_test_set.csv',
+                annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/mass/test/mass_case_description_test_set.csv',
                 root_dir=os.path.join(data_dir, 'test'), transform=data_transforms['test'])}
     elif options.dataset in ['calc_pathology', 'calc_pathology_clean']:
         test_image_datasets = \
             {'test': Features_Pathology_Dataset(lesion_type='calc',
-                annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/test/calc_case_description_test_set.csv',
+                annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/calc/test/calc_case_description_test_set.csv',
                 root_dir=os.path.join(data_dir, 'test'), transform=data_transforms['test'])}
     elif options.dataset in ['four_classes_mass_calc_pathology']:
         test_image_datasets = \
             {'test': Four_Classes_Features_Pathology_Dataset(
-                mass_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/mass/test/mass_case_description_test_set.csv',
+                mass_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/mass/test/mass_case_description_test_set.csv',
                 mass_root_dir=os.path.join(mass_data_dir, 'test'),
-                calc_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data/calc/test/calc_case_description_test_set.csv',
+                calc_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/calc/test/calc_case_description_test_set.csv',
                 calc_root_dir=os.path.join(calc_data_dir, 'test'),
                 uncertainty=options.test_uncertainty,
                 missed_feats_num=options.missed_feats_num,
+                missing_feats_fill=options.missing_feats_fill,
                 transform=data_transforms['test']
             )}
         
@@ -926,7 +929,7 @@ if __name__ == '__main__':
     
     with torch.no_grad():
         prediction_loader = test_dataloaders_dict['test']
-        preds, labels = get_all_preds_pathology(model, prediction_loader, device)
+        preds, labels, _ = get_all_preds_pathology(model, prediction_loader, device)
 
         softmaxs = torch.softmax(preds, dim=-1)
         binarized_labels = label_binarize(labels.cpu(), classes=[*range(num_classes)])

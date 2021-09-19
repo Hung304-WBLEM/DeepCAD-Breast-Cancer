@@ -32,6 +32,7 @@ from train_utils import set_seed, plot_train_val_loss
 from train_utils import images_to_probs, plot_classes_preds, add_pr_curve_tensorboard
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from augmentation import augmix_transform
 
 GLOBAL_EPOCH = 0
 image_datasets = None
@@ -693,6 +694,24 @@ if __name__ == '__main__':
             'test': albumentations.Compose([
                 albumentations.Resize(input_size, input_size),
                 albumentations.Normalize()
+            ])
+        }
+    elif options.augmentation_type == 'augmix':
+        
+        data_transforms = {
+            'train': transforms.Compose([
+                transforms.Resize((input_size, input_size)),
+                augmix_transform.AugMix(all_ops=False),
+            ]),
+            'val': transforms.Compose([
+                transforms.Resize((input_size, input_size)),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ]),
+            'test': transforms.Compose([
+                transforms.Resize((input_size, input_size)),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
         }
 

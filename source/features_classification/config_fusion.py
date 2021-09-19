@@ -43,6 +43,8 @@ parser.add_option("--test_uct", "--test_uncertainty", dest="test_uncertainty", t
                   default=0.0, help="Choose uncertainty thresholds to test without input features")
 parser.add_option("--missed_feats_num", dest="missed_feats_num", type=int,
                   default=0, help="Choose the number of missed clinical features")
+parser.add_option("--missing_feats_fill", dest="missing_feats_fill", type=str,
+                  default='zeroes', help='Fill missing clinical feats with zeroes or by empirical sampling')
 parser.add_option("--njobs", dest="num_workers", type=int,
                   default=0)
 

@@ -34,7 +34,7 @@ parser.add_option("--opt", "--optimizer", dest="optimizer", type=str,
 parser.add_option("--crt", "--criterion", dest="criterion", type=str, default="ce",
                   help="Choose criterion: ce, bce")
 parser.add_option("--aug_type", dest="augmentation_type", type=str,
-                  default="torch", help="Choose augmentation type. Available augmentation types include: torch, albumentations")
+                  default="torch", help="Choose augmentation type. Available augmentation types include: torch, albumentations, augmix")
 parser.add_option("--njobs", dest="num_workers", type=int,
                   default=0)
 

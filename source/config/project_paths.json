@@ -50,7 +50,11 @@
 		"calc_pathology_2048x2048-crop_zero-pad": "calc/cls/calc_pathology_2048x2048-crop_zero-pad"
 	    }
 	},
-        "methodist_data": "methodist_data"
+        "methodist_data": {
+            "root": "methodist_data",
+            "Deidentified_Positive_JPEG": "Deidentified_Positive_JPEG",
+            "Deidentified_Negative_JPEG": "Deidentified_Negative_JPEG"
+        }
     },
     "LIB": {
 	"mmdet": "/home/hqvo2/Projects/Breast_Cancer/libs/mmdetection"
@@ -58,7 +62,7 @@
     "EXPERIMENT": {
 	"root": "/home/hqvo2/Projects/Breast_Cancer/experiments",
 	"mmdet_processed_CBIS_DDSM": {
-	    "root": "mmdet_processed_data",
+	    "root": "cbis_ddsm_detection",
 	    "det_gt": "detection_groundtruth"
 	},
 	"CBIS_DDSM_feats_cls": {
@@ -73,7 +77,7 @@
 	    }
 	},
 	"mmdet_methodist": {
-	    "root": "mmdet_methodist_data"
+	    "root": "methodist_data_detection"
 	}
     }
 
