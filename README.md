@@ -2,13 +2,13 @@
 
 ## Install Dependencies
 ### Install python packages
-```
+```posh
 pip install pandas
 ```
 
 
 ### Install mmdetection
-```
+```posh
 conda create -n mmdet
 conda activate mmdet
 
@@ -27,7 +27,7 @@ pip install Pillow==7.0.0
 
 
 ### Install cocoapi
-```
+```posh
 cd ..
 
 git clone https://github.com/cocodataset/cocoapi.git
@@ -44,13 +44,13 @@ python setup.py build_ext --inplace
 ## How to run
 ### Training MMDet Detection Model
 Create a config file by following the instructions in the MMDet repository. For example, I have created a config file `faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py`. To train MMDet model using this config file, use this command:
-```
+```posh
 sh tools/dist_train.sh configs/cbis_ddsm_mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py 4
 ```
 
 ### Testing MMDet Detection Model
 Create a bash script test.sh with the following commands:
-```shell
+```posh
 save_root=/path/to/mmdet/experiment/result/directory
 
 # Visualize Train/Val Loss Curves
