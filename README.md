@@ -1,6 +1,12 @@
 # DeepCAD-Breast-Cancer
 
 ## Install Dependencies
+### Install python packages
+```
+pip install pandas
+```
+
+
 ### Install mmdetection
 ```
 conda create -n mmdet
@@ -35,7 +41,37 @@ python setup.py build_ext --inplace
 * For MatlabAPI, follow the link in the file README.txt of the forked COCOAPI repository
 ```
 
-### Install python packages
+## How to run
+### Training MMDet Detection Model
+Create a config file by following the instructions in the MMDet repository. For example, I have created a config file `faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py`. To train MMDet model using this config file, use this command:
 ```
-pip install pandas
+sh tools/dist_train.sh configs/cbis_ddsm_mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py 4
+```
+
+### Testing MMDet Detection Model
+Create a bash script test.sh with the following commands:
+```shell
+save_root=/path/to/mmdet/experiment/result/directory
+
+# Visualize Train/Val Loss Curves
+python tools/analysis_tools/analyze_logs.py plot_curve ${save_root}/*.json --keys loss_cls loss_bbox --legend loss_cls loss_bbox --out ${save_root}/losses.pdf
+
+# Get Bounding Boxes predictions for test set (either in `.pkl` or `.json` format
+sh  tools/dist_test.sh configs/cbis_ddsm_mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py \
+    ${save_root}/best_bbox_mAP_epoch_11.pth 1 \
+    --out ${save_root}/result.pkl
+
+sh  tools/dist_test.sh configs/cbis_ddsm_mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py \
+    ${save_root}/best_bbox_mAP_epoch_11.pth 1 \
+    --format-only --eval-options "jsonfile_prefix=${save_root}/result"
+
+# To visualize images with the highest and lowest detection scores. This is to debug your model.
+python  tools/analysis_tools/analyze_results.py \
+        configs/cbis_ddsm_mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py \
+        ${save_root}/result.pkl \
+        ${save_root}/results
+
+# Plot ROC curve and PR curve for evaluation
+mass_test_gt="/home/hqvo2/Datasets/processed_data2/mass/test/annotation_coco_with_classes.json"
+python plot_eval_curve.py -gt ${mass_test_gt} -p ${save_root}/result.bbox.json -bb all -s ${mass_detection_root}/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm/
 ```
