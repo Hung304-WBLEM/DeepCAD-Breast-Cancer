@@ -43,7 +43,9 @@ python setup.py build_ext --inplace
 
 ## How to run
 ### Training MMDet Detection Model
-Create a config file by following the instructions in the MMDet repository. For example, I have created a config file `faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py`. To train MMDet model using this config file, use this command:
+First, change to directory `libs/mmdetection` by running: `cd libs/mmdetection`
+
+Create a config file by following the instructions in the MMDet repository. For example, I have created a config file `faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py` in `configs/cbis_ddsm_mass/`. To train MMDet model using this config file, use this command:
 ```posh
 sh tools/dist_train.sh configs/cbis_ddsm_mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py 4
 ```
@@ -56,7 +58,7 @@ save_root=/path/to/mmdet/experiment/result/directory
 # Visualize Train/Val Loss Curves
 python tools/analysis_tools/analyze_logs.py plot_curve ${save_root}/*.json --keys loss_cls loss_bbox --legend loss_cls loss_bbox --out ${save_root}/losses.pdf
 
-# Get Bounding Boxes predictions for test set (either in `.pkl` or `.json` format
+# Get Bounding Boxes predictions for test set (either in `.pkl` or `.json` format)
 sh  tools/dist_test.sh configs/cbis_ddsm_mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm.py \
     ${save_root}/best_bbox_mAP_epoch_11.pth 1 \
     --out ${save_root}/result.pkl
