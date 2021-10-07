@@ -41,6 +41,15 @@ python setup.py build_ext --inplace
 * For MatlabAPI, follow the link in the file README.txt of the forked COCOAPI repository
 ```
 
+
+### Install Caffe & py-faster-rcnn (optional, for running frcnn-cad only)
+Install `Caffe` by following the instructions here: http://caffe.berkeleyvision.org/install_apt.html
+
+(If you want to compile `Caffe` without root privileges: https://infinitescript.com/2019/07/compile-caffe-without-root-privileges/)
+
+Install `py-faster-rcnn` by following the README.md in this repo: github.com/rbgirshick/py-faster-rcnn
+
+
 ## How to run
 ### Training MMDet Detection Model
 First, change to directory `libs/mmdetection` by running: `cd libs/mmdetection`
