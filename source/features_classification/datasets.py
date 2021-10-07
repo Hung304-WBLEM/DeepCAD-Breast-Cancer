@@ -25,15 +25,21 @@ class Mass_Shape_Dataset(Dataset):
         multilabel = (Mass_Shape_Dataset.classes == class_name).astype(float)
         return multilabel
 
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, train_rate=1):
         self.root_dir = root_dir
         self.transform = transform
+        self.train_rate = train_rate
 
         self.images_list = []
         self.labels = []
 
         for idx, mass_shape in enumerate(Mass_Shape_Dataset.classes):
             images = glob.glob(os.path.join(root_dir, mass_shape, '*.png'))
+
+            # For training using part of data
+            images_len = len(images)
+            images = images[:int(images_len*self.train_rate)]
+
             self.images_list += images
             self.labels += [idx] * len(images)
 
@@ -73,15 +79,21 @@ class Mass_Margins_Dataset(Dataset):
         multilabel = (Mass_Margins_Dataset.classes == class_name).astype(float)
         return multilabel
 
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, train_rate=1):
         self.root_dir = root_dir
         self.transform = transform
+        self.train_rate = train_rate
 
         self.images_list = []
         self.labels = []
 
         for idx, mass_margins in enumerate(Mass_Margins_Dataset.classes):
             images = glob.glob(os.path.join(root_dir, mass_margins, '*.png'))
+
+            # For training using part of data
+            images_len = len(images)
+            images = images[:int(images_len*self.train_rate)]
+
             self.images_list += images
             self.labels += [idx] * len(images)
 
@@ -122,15 +134,21 @@ class Calc_Type_Dataset(Dataset):
         multilabel = (Calc_Type_Dataset.classes == class_name).astype(float)
         return multilabel
 
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, train_rate=1):
         self.root_dir = root_dir
         self.transform = transform
+        self.train_rate = train_rate
 
         self.images_list = []
         self.labels = []
 
         for idx, calc_type in enumerate(Calc_Type_Dataset.classes):
             images = glob.glob(os.path.join(root_dir, calc_type, '*.png'))
+
+            # For training using part of data
+            images_len = len(images)
+            images = images[:int(images_len*self.train_rate)]
+
             self.images_list += images
             self.labels += [idx] * len(images)
 
@@ -170,15 +188,21 @@ class Calc_Dist_Dataset(Dataset):
         multilabel = (Calc_Dist_Dataset.classes == class_name).astype(float)
         return multilabel
 
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, train_rate=1):
         self.root_dir = root_dir
         self.transform = transform
+        self.train_rate = train_rate
 
         self.images_list = []
         self.labels = []
 
         for idx, calc_dist in enumerate(Calc_Dist_Dataset.classes):
             images = glob.glob(os.path.join(root_dir, calc_dist, '*.png'))
+
+            # For training using part of data
+            images_len = len(images)
+            images = images[:int(images_len*self.train_rate)]
+
             self.images_list += images
             self.labels += [idx] * len(images)
 
@@ -209,9 +233,10 @@ class Calc_Dist_Dataset(Dataset):
 class Breast_Density_Dataset(Dataset):
     classes = np.array(['1', '2', '3', '4'])
 
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, train_rate=1):
         self.root_dir = root_dir
         self.transform = transform
+        self.train_rate = train_rate
 
         self.images_list = []
         self.labels = []
@@ -219,6 +244,11 @@ class Breast_Density_Dataset(Dataset):
         for idx, breast_density in enumerate(Breast_Density_Dataset.classes):
             images = glob.glob(os.path.join(
                 root_dir, str(breast_density), '*.png'))
+
+            # For training using part of data
+            images_len = len(images)
+            images = images[:int(images_len*self.train_rate)]
+
             self.images_list += images
             self.labels += [idx] * len(images)
 
@@ -314,8 +344,13 @@ class Mass_Calc_Pathology_Dataset(Dataset):
 class Four_Classes_Mass_Calc_Pathology_Dataset(Dataset):
     classes = np.array(['BENIGN_MASS', 'MALIGNANT_MASS', 'BENIGN_CALC', 'MALIGNANT_CALC'])
 
-    def __init__(self, mass_root_dir, calc_root_dir, transform=None):
+    def __init__(self, mass_root_dir, calc_root_dir, transform=None, train_rate=1):
+        '''
+        Args:
+        train_rate(float) - part of training data you want to use for training. This is for plotting the learning curve
+        '''
         self.transform = transform
+        self.train_rate = train_rate
 
         self.images_list = []
         self.labels = []
@@ -326,11 +361,21 @@ class Four_Classes_Mass_Calc_Pathology_Dataset(Dataset):
             if lesion_type == 'MASS':
                 mass_images = glob.glob(os.path.join(
                     mass_root_dir, pathology, '*.png'))
+
+                if self.train_rate is not None:
+                    mass_images_len = len(mass_images)
+                    mass_images = mass_images[:int(mass_images_len * self.train_rate)]
+
                 self.images_list += mass_images
                 self.labels += [idx] * len(mass_images)
             elif lesion_type == 'CALC':
                 calc_images = glob.glob(os.path.join(
                     calc_root_dir, pathology, '*.png'))
+
+                if self.train_rate is not None:
+                    calc_images_len = len(calc_images)
+                    calc_images = calc_images[:int(calc_images_len * self.train_rate)]
+
                 self.images_list += calc_images
                 self.labels += [idx] * len(calc_images)
 
@@ -421,13 +466,14 @@ class Five_Classes_Mass_Calc_Pathology_Dataset(Dataset):
 class  Four_Classes_Features_Pathology_Dataset(Dataset):
     classes = np.array(['BENIGN_MASS', 'MALIGNANT_MASS', 'BENIGN_CALC', 'MALIGNANT_CALC'])
 
-    def __init__(self, mass_annotation_file, mass_root_dir, calc_annotation_file, calc_root_dir, uncertainty=0, missed_feats_num=0, missing_feats_fill='zeroes', transform=None):
+    def __init__(self, mass_annotation_file, mass_root_dir, calc_annotation_file, calc_root_dir, uncertainty=0, missed_feats_num=0, missing_feats_fill='zeroes', transform=None, train_rate=1):
         self.mass_annotations = pd.read_csv(mass_annotation_file)
         self.calc_annotations = pd.read_csv(calc_annotation_file)
         self.uncertainty = uncertainty
         self.missed_feats_num = missed_feats_num
         self.missing_feats_fill = missing_feats_fill
         self.transform = transform
+        self.train_rate = train_rate
 
         self.images_list = []
         self.labels = []
@@ -438,12 +484,22 @@ class  Four_Classes_Features_Pathology_Dataset(Dataset):
             if lesion_type == "MASS":
                 mass_images = glob.glob(os.path.join(
                     mass_root_dir, pathology, '*.png'))
+
+                if self.train_rate is not None:
+                    mass_images_len = len(mass_images)
+                    mass_images = mass_images[:int(mass_images_len * self.train_rate)]
+
                 self.images_list += mass_images
                 self.labels += [idx] * len(mass_images)
                 self.lesion_types += ['MASS'] * len(mass_images)
             else:
                 calc_images = glob.glob(os.path.join(
                     calc_root_dir, pathology, '*.png'))
+
+                if self.train_rate is not None:
+                    calc_images_len = len(calc_images)
+                    calc_images = calc_images[:int(calc_images_len * self.train_rate)]
+
                 self.images_list += calc_images
                 self.labels += [idx] * len(calc_images)
                 self.lesion_types += ['CALC'] * len(calc_images)

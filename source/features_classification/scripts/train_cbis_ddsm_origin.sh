@@ -64,16 +64,54 @@ cd ..
 # python train.py -d four_classes_mass_calc_pathology -m resnet50 -b 32 -e 100 -i 224 --opt adam -s ${four_classes_mass_calc_pathology_save_root}/r50_b32_e100_224x224_adam_"$(LC_TIME="EN.UTF-8" date)"
 # python train.py -d four_classes_mass_calc_pathology -m resnet50 --third_stage_freeze 50 -b 32 -e 100 -i 224 --opt adam -s ${four_classes_mass_calc_pathology_save_root}/r50_b32_e100_224x224_adam_"$(LC_TIME="EN.UTF-8" date)"
 
+
+# Four classes Mass Calcification Pathology (for plotting learning curve)
+# for i in {1..9}
+# do
+#     python train.py -d four_classes_mass_calc_pathology -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${four_classes_mass_calc_pathology_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+# done
+
 # python train.py -d mass_shape_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${mass_shape_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# for i in {1..9}
+# do
+#     python train.py -d mass_shape_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_shape_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+# done
 # python train.py -d mass_margins_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${mass_margins_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+for i in {1..9}
+do
+    python train.py -d mass_margins_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_margins_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+done
 # python train.py -d mass_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${mass_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+for i in {1..9}
+do
+    python train.py -d mass_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+done
 # python train.py --njobs 8 -d mass_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${mass_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+for i in {1..9}
+do
+    python train.py --njobs 8 -d mass_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+done
 
 # python train.py -d calc_type_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_type_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+for i in {1..9}
+do
+    python train.py -d calc_type_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_type_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+done
 # python train.py -d calc_dist_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_dist_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+for i in {1..9}
+do
+    python train.py -d calc_dist_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_dist_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+done
 # python train.py -d calc_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-# python train.py -d calc_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-# python train.py -d calc_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+for i in {1..9}
+do
+    python train.py -d calc_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+done
+# python train.py --njobs 8 -d calc_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+for i in {1..9}
+do
+    python train.py --njobs 8 -d calc_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+done
 
 # python train.py -d four_classes_mass_calc_pathology_histeq -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${four_classes_mass_calc_pathology_histeq_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 # python train.py -d four_classes_mass_calc_pathology_histeq -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${four_classes_mass_calc_pathology_histeq_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
@@ -111,7 +149,7 @@ cd ..
 
 # Train using augmix for augmentation
 # python train.py -d four_classes_mass_calc_pathology -m resnet50 -b 32 -e 100 -i 224 --wc --ws --opt adam --crt ce --aug_type augmix -s ${four_classes_mass_calc_pathology_save_root}/r50_b32_e100_224x224_adam_wc_ws_aug-augmix_"$(LC_TIME="EN.UTF-8" date)"
-python train.py -d four_classes_mass_calc_pathology -m resnet50 -b 32 -e 1000 -i 224 --wc --ws --opt adam --crt ce --aug_type augmix -s ${four_classes_mass_calc_pathology_save_root}/r50_b32_e1000_224x224_adam_wc_ws_aug-augmix_"$(LC_TIME="EN.UTF-8" date)"
+# python train.py -d four_classes_mass_calc_pathology -m resnet50 -b 32 -e 1000 -i 224 --wc --ws --opt adam --crt ce --aug_type augmix -s ${four_classes_mass_calc_pathology_save_root}/r50_b32_e1000_224x224_adam_wc_ws_aug-augmix_"$(LC_TIME="EN.UTF-8" date)"
 # python train.py -d four_classes_mass_calc_pathology -m resnet50 -b 32 -e 100 -i 224 --wc --ws --opt adam --crt ce --aug_type augmix -s ${four_classes_mass_calc_pathology_save_root}/r50_b32_e100_224x224_adam_wc_ws_aug-augmix-allops_"$(LC_TIME="EN.UTF-8" date)"
 
 # Train with dilated convolution

@@ -10,6 +10,7 @@ mass_breast_density_lesion_save_root='/home/hqvo2/Projects/Breast_Cancer/experim
 calc_type_comb_feats_omit_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/calc_type_comb_feats_omit'
 calc_dist_comb_feats_omit_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/calc_dist_comb_feats_omit'
 calc_breast_density_lesion_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/calc_breast_density_lesion'
+calc_breast_density_image_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/calc_breast_density_image'
 
 # with segmentation
 mass_shape_comb_feats_omit_segm_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/mass_shape_comb_feats_omit_segm'
@@ -53,82 +54,8 @@ mkdir -p ${calc_breast_density_lesion_mask_save_root}
 cd ..
 
 
-# python train.py -d mass_shape_comb_feats_omit \
-#        -m dilated_resnet50 \
-#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-#        -b 32 \
-#        -e 100 -i 224 --opt adam --wc --ws \
-#        -s ${mass_shape_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
-# python train.py -d mass_shape_comb_feats_omit \
-#        -m dilated_resnet50 \
-#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-#        -b 32 \
-#        -e 100 -i 256 --opt adam --wc --ws \
-#        -s ${mass_shape_comb_feats_omit_save_root}/dilated_r50_b32_e100_256x256_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-# python train.py -d mass_shape_comb_feats_omit \
-#        -m dilated_resnet50 \
-#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-#        -b 32 \
-#        -e 100 -i 224 --opt adam --wc --ws \
-#        --crt bce \
-#        -s ${mass_shape_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-# python train.py -d mass_shape_comb_feats_omit \
-#        -m dilated_resnet50 \
-#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-#        -b 32 \
-#        -e 100 -i 224 --opt adam --wc --ws \
-#        --aug_type albumentations \
-#        -s ${mass_shape_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_wc_ws_aug-albumentations_"$(LC_TIME="EN.UTF-8" date)"
-
-# python train.py -d mass_shape_comb_feats_omit \
-#        -m dilated_resnet50 \
-#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-#        -b 32 \
-#        -e 100 -i 224 --opt adam --wc --ws \
-#        --crt bce \
-#        --aug_type albumentations \
-#        -s ${mass_shape_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_aug-albumentations_"$(LC_TIME="EN.UTF-8" date)"
-
-# python train.py -d mass_shape_comb_feats_omit \
-#        -m dilated_resnet50 \
-#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-#        -b 32 \
-#        -e 100 -i 256 --opt adam --wc --ws \
-#        --crt bce \
-#        --aug_type albumentations \
-#        -s ${mass_shape_comb_feats_omit_save_root}/dilated_r50_b32_e100_256x256_adam_bce_wc_ws_aug-albumentations_"$(LC_TIME="EN.UTF-8" date)"
-
-# python train.py -d mass_shape_comb_feats_omit \
-#        -m dilated_resnet50 \
-#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-#        -b 32 \
-#        -e 100 -i 256 --opt adam --wc --ws \
-#        --crt bce \
-#        -s ${mass_shape_comb_feats_omit_save_root}/dilated_r50_b32_e100_256x256_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-# python train.py -d mass_margins_comb_feats_omit \
-#        -m dilated_resnet50 \
-#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-#        -b 32 \
-#        -e 100 -i 224 --opt adam --wc --ws \
-#        --crt bce \
-#        -s ${mass_margins_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-python train.py -d calc_type_comb_feats_omit \
-       -m dilated_resnet50 \
-       --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws \
-       --crt bce \
-       -s ${calc_type_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-# python train.py -d calc_dist_comb_feats_omit \
-#        -m dilated_resnet50 \
-#        --rnet_dil_2nd --rnet_dil_3rd --rnet_dil_4th\
-#        -b 32 \
-#        -e 100 -i 224 --opt adam --wc --ws \
-#        --crt bce \
-#        -s ${calc_dist_comb_feats_omit_save_root}/dilated_r50_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+for i in {5..9}
+do
+    python train.py --njobs 8 -d calc_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+done

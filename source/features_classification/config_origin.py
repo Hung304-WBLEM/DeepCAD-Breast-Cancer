@@ -9,6 +9,8 @@ parser = OptionParser()
 
 parser.add_option("-d", "--dataset",
                     help="Name of the available datasets")
+parser.add_option("--tr", "--train_rate", dest="train_rate", type=float, default=1,
+                  help="Part of the dataset that you want to train")
 parser.add_option("-s", "--save_path",
                     help="Path to save the trained model")
 parser.add_option("-m", "--model_name",

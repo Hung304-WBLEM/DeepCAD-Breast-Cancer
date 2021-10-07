@@ -222,7 +222,6 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
         """ Resnet18
         """
         model_ft = models.resnet18(pretrained=use_pretrained)
-        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
         input_size = 224
@@ -231,7 +230,6 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
         """ Resnet50
         """
         model_ft = models.resnet50(pretrained=use_pretrained)
-        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         num_ftrs = model_ft.fc.in_features
         # model_ft.fc = nn.Linear(num_ftrs, num_classes)
         model_ft.fc = nn.Sequential(
@@ -248,7 +246,6 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
                             replace_stride_with_dilation=[options.resnet_dilated_layer2,
                                                           options.resnet_dilated_layer3,
                                                           options.resnet_dilated_layer4])
-        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         num_ftrs = model_ft.fc.in_features
         # model_ft.fc = nn.Linear(num_ftrs, num_classes)
         model_ft.fc = nn.Sequential(
@@ -260,7 +257,6 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
         """ Alexnet
         """
         model_ft = models.alexnet(pretrained=use_pretrained)
-        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
         input_size = 224
@@ -269,14 +265,12 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
         """ VGG11_bn
         """
         model_ft = models.vgg11_bn(pretrained=use_pretrained)
-        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
         input_size = 224
     elif model_name == 'vgg16':
 
         model_ft = models.vgg16_bn(pretrained=use_pretrained)
-        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
         input_size = 224
@@ -285,7 +279,6 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
         """ Squeezenet
         """
         model_ft = models.squeezenet1_0(pretrained=use_pretrained)
-        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         model_ft.classifier[1] = nn.Conv2d(
             512, num_classes, kernel_size=(1, 1), stride=(1, 1))
         model_ft.num_classes = num_classes
@@ -295,7 +288,6 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
         """ Densenet
         """
         model_ft = models.densenet121(pretrained=use_pretrained)
-        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         num_ftrs = model_ft.classifier.in_features
         model_ft.classifier = nn.Linear(num_ftrs, num_classes)
         input_size = 224
@@ -305,7 +297,6 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
         Be careful, expects (299,299) sized images and has auxiliary output
         """
         model_ft = models.inception_v3(pretrained=use_pretrained)
-        # set_parameter_requires_grad(model_ft, model_name, freeze_type)
         # Handle the auxilary net
         num_ftrs = model_ft.AuxLogits.fc.in_features
         model_ft.AuxLogits.fc = nn.Linear(num_ftrs, num_classes)
@@ -721,14 +712,24 @@ if __name__ == '__main__':
         
     # Create Training, Validation and Test datasets
     if options.dataset in ['mass_calc_pathology', 'four_classes_mass_calc_pathology', 'four_classes_mass_calc_pathology_512x512-crop_zero-pad', 'four_classes_mass_calc_pathology_1024x1024-crop_zero-pad', 'four_classes_mass_calc_pathology_2048x2048-crop_zero-pad', 'four_classes_mass_calc_pathology_histeq', 'stoa_mass_calc_pathology']:
-        image_datasets = {x: data(os.path.join(mass_data_dir, x),
-                                  os.path.join(calc_data_dir, x),
-                                  transform=data_transforms[x])
-                          for x in ['train', 'val', 'test']}
+        train_image_datasets = {'train': data(os.path.join(mass_data_dir, 'train'),
+                                    os.path.join(calc_data_dir, 'train'),
+                                    transform=data_transforms['train'],
+                                    train_rate=options.train_rate)
+                                }
+        val_test_image_datasets = {x: data(os.path.join(mass_data_dir, x),
+                                        os.path.join(calc_data_dir, x),
+                                        transform=data_transforms[x])
+                                   for x in ['val', 'test']}
+        image_datasets = {**train_image_datasets, **val_test_image_datasets}
     else:
-        image_datasets = {x: data(os.path.join(data_dir, x),
-                                  data_transforms[x])
-                          for x in ['train', 'val', 'test']}
+        train_image_datasets = {'train': data(os.path.join(data_dir, 'train'),
+                                              data_transforms['train'],
+                                              train_rate=options.train_rate)}
+        val_test_image_datasets = {x: data(os.path.join(data_dir, x),
+                                           data_transforms[x])
+                                   for x in ['val', 'test']}
+        image_datasets = {**train_image_datasets, **val_test_image_datasets}
 
 
     # Create training and validation dataloaders

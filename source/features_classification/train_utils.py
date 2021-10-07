@@ -156,9 +156,14 @@ def images_to_probs(net, images):
     network and a list of images
     '''
     output = net(images)
+    
     # convert output probabilities to predicted class
     _, preds_tensor = torch.max(output, 1)
     preds = np.squeeze(preds_tensor.cpu().numpy())
+
+    if isinstance(preds.tolist(), int):
+        preds = [preds]
+
     return preds, \
         [F.softmax(el, dim=0)[i].item() for i, el in zip(preds, output)], \
         [F.softmax(el, dim=0).cpu().detach().numpy() for el in output]

@@ -749,7 +749,8 @@ if __name__ == '__main__':
                 uncertainty=options.train_uncertainty,
                 missed_feats_num=options.missed_feats_num,
                 missing_feats_fill=options.missing_feats_fill,
-                transform=data_transforms['train']
+                transform=data_transforms['train'],
+                train_rate=options.train_rate
             ),
             'val': Four_Classes_Features_Pathology_Dataset(
                 mass_annotation_file='/home/hqvo2/Projects/Breast_Cancer/data/processed_data2/mass/train/mass_case_description_train_set.csv',

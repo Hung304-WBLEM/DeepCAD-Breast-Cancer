@@ -14,30 +14,53 @@ from pycocotools import mask as coco_api_mask
 from sklearn.model_selection import StratifiedShuffleSplit
 from utilities.detectutil import bbox_util
 from PIL import Image
+from scipy import stats
 
 
-def convert_npz_to_png(data_path):
+def convert_npz_to_png(data_path, preprocessing=None):
+    '''
+    Args:
+    preprocessing - possible approaches: 1) 'mode_norm': (from Scientific Report Paper on INBreast)
+    '''
     for dir in glob.glob(os.path.join(data_path, '*')):
         num_files = len(glob.glob(os.path.join(dir, '*')))
         if num_files < 2:
             print(os.path.basename(dir), num_files)
             continue
 
-        save_path = os.path.join(dir, os.path.basename(dir)+'.png')
-        rgb_save_path = os.path.join(dir, 'rgb_' + os.path.basename(dir)+'.png')
+        if preprocessing is None:
+            save_path = os.path.join(dir, os.path.basename(dir)+'.png')
+        elif preprocessing == 'mode_norm':
+            save_path = os.path.join(dir, 'mode_8000_12800_' + os.path.basename(dir)+'.png')
+            
+        # rgb_save_path = os.path.join(dir, 'rgb_' + os.path.basename(dir)+'.png')
+
+        # check if image has existed
+        if os.path.exists(save_path):
+            continue
+        # if os.path.exists(rgb_save_path):
+        #     continue
 
         try:
             # For saving the original mammamogram
             if not os.path.exists(save_path):
                 mamm_img = np.load(os.path.join(dir, "image.npz"),
                                 allow_pickle=True)["image"]
+                if preprocessing == 'mode_norm':
+                    flat_img = mamm_img.flatten() 
+                    flat_img = flat_img[flat_img != 0]
+                    mode = stats.mode(flat_img).mode# ignore background value 0
+                    # mamm_img = np.clip(mamm_img, mode-500, mode+800) # for INbreast from the paper
+                    mamm_img = np.clip(mamm_img, mode-8000, mode+12800) # INbreast pixels value are from 0 to 4095
+                                                                          # CBIS_DDSM pixels value are from 0 to 65535
+
                 cv2.imwrite(save_path, mamm_img)
 
             # For saving the mammamogram which has been
             # converted to RGB image
-            if not os.path.exists(rgb_save_path):
-                png_mamm = mmcv.imread(save_path)
-                cv2.imwrite(rgb_save_path, png_mamm)
+            # if not os.path.exists(rgb_save_path):
+            #     png_mamm = mmcv.imread(save_path)
+            #     cv2.imwrite(rgb_save_path, png_mamm)
         except:
             print('zlip error:', dir)
 
@@ -70,7 +93,14 @@ def get_info_lesion(df, ROI_ID):
     return rslt_df
 
 
-def convert_ddsm_to_coco(categories, out_file, data_root, annotation_filename, extend_bb_ratio=None, keep_org_boxes=False, rgb_img=False):
+def convert_ddsm_to_coco(categories, out_file, data_root, annotation_filename, extend_bb_ratio=None, keep_org_boxes=False, rgb_img=False, return_size_rate=1.0):
+    '''
+    Args:
+    return_size_rate (float from 0 to 1.0): the numbers of images that you want to experiment with. This is used to plot the learning curve based on the size of data
+    
+    Returns:
+    None
+    '''
     save_path = os.path.join(data_root, out_file)
     if os.path.exists(save_path):
         warnings.warn(f"{save_path} has already existed")
@@ -82,7 +112,12 @@ def convert_ddsm_to_coco(categories, out_file, data_root, annotation_filename, e
 
     df = pandas.read_csv(os.path.join(data_root, annotation_filename))
 
+    total_imgs = len(glob.glob(os.path.join(data_root, '*')))
+
     for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
+        if idx > total_imgs * return_size_rate:
+            break
+
         filename = os.path.basename(dir_path)
         if rgb_img:
             img_path = os.path.join(dir_path, 'rgb_' + filename + '.png')
@@ -877,6 +912,7 @@ if __name__ == '__main__':
 
     convert_npz_to_png(data_path=mass_train_root)
     convert_npz_to_png(data_path=mass_test_root)
+    convert_npz_to_png(data_path=mass_test_root, preprocessing='mode_norm')
 
     categories = [{'id': 0, 'name': 'malignant-mass', 'supercategory': 'mass'}, {'id': 1, 'name': 'benign-mass', 'supercategory': 'mass'}]
 
@@ -908,30 +944,39 @@ if __name__ == '__main__':
     #                      data_root=mass_train_val_root,
     #                      annotation_filename='mass_case_description_train_set.csv')
 
-    # Default bbox size
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_rgb_coco_with_classes.json',
-                         data_root=mass_train_root,
-                         annotation_filename='mass_case_description_train_set.csv',
-                         rgb_img=True)
+    # Default bbox size (For different sizes of train_train set)
+    for size in range(0, 100, 10):
+        size = size / 100.0
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_sizerate={size}.json',
+                            data_root=mass_train_train_root,
+                            annotation_filename='mass_case_description_train_set.csv',
+                            return_size_rate=size)
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_rgb_coco_with_classes.json',
-                         data_root=mass_test_root,
-                         annotation_filename='mass_case_description_test_set.csv',
-                         rgb_img=True)
+    # Default bbox size (For RGB images)
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_rgb_coco_with_classes.json',
+    #                      data_root=mass_train_root,
+    #                      annotation_filename='mass_case_description_train_set.csv',
+    #                      rgb_img=True)
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_rgb_coco_with_classes.json',
-                         data_root=mass_train_train_root,
-                         annotation_filename='mass_case_description_train_set.csv',
-                         rgb_img=True)
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_rgb_coco_with_classes.json',
+    #                      data_root=mass_test_root,
+    #                      annotation_filename='mass_case_description_test_set.csv',
+    #                      rgb_img=True)
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_rgb_coco_with_classes.json',
-                         data_root=mass_train_val_root,
-                         annotation_filename='mass_case_description_train_set.csv',
-                         rgb_img=True)
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_rgb_coco_with_classes.json',
+    #                      data_root=mass_train_train_root,
+    #                      annotation_filename='mass_case_description_train_set.csv',
+    #                      rgb_img=True)
+
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_rgb_coco_with_classes.json',
+    #                      data_root=mass_train_val_root,
+    #                      annotation_filename='mass_case_description_train_set.csv',
+    #                      rgb_img=True)
 
     # # Extend bbox size by 0.1, 0.2, 0.3
     # for ratio in [0.1, 0.2, 0.3]:
@@ -1115,7 +1160,6 @@ if __name__ == '__main__':
     #                      out_file='annotation_coco_with_classes.json',
     #                      data_root=calc_train_root,
     #                      annotation_filename='calc_case_description_train_set.csv')
-
     # convert_ddsm_to_coco(categories=categories,
     #                      out_file='annotation_coco_with_classes.json',
     #                      data_root=calc_test_root,
@@ -1129,29 +1173,41 @@ if __name__ == '__main__':
     #                      data_root=calc_train_val_root,
     #                      annotation_filename='calc_case_description_train_set.csv')
 
-    # Default bbox size
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_rgb_coco_with_classes.json',
-                         data_root=calc_train_root,
-                         annotation_filename='calc_case_description_train_set.csv',
-                         rgb_img=True)
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_rgb_coco_with_classes.json',
-                         data_root=calc_test_root,
-                         annotation_filename='calc_case_description_test_set.csv',
-                         rgb_img=True)
+    # Default bbox size (For different sizes of train_train set)
+    for size in range(0, 100, 10):
+        size = size / 100.0
+        convert_ddsm_to_coco(categories=categories,
+                            out_file=f'annotation_coco_with_classes_sizerate={size}.json',
+                            data_root=calc_train_train_root,
+                            annotation_filename='calc_case_description_train_set.csv',
+                            return_size_rate=size)
 
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_rgb_coco_with_classes.json',
-                         data_root=calc_train_train_root,
-                         annotation_filename='calc_case_description_train_set.csv',
-                         rgb_img=True)
-    convert_ddsm_to_coco(categories=categories,
-                         out_file='annotation_rgb_coco_with_classes.json',
-                         data_root=calc_train_val_root,
-                         annotation_filename='calc_case_description_train_set.csv',
-                         rgb_img=True)
+    
+
+    # Default bbox size (for RGB images)
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_rgb_coco_with_classes.json',
+    #                      data_root=calc_train_root,
+    #                      annotation_filename='calc_case_description_train_set.csv',
+    #                      rgb_img=True)
+
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_rgb_coco_with_classes.json',
+    #                      data_root=calc_test_root,
+    #                      annotation_filename='calc_case_description_test_set.csv',
+    #                      rgb_img=True)
+
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_rgb_coco_with_classes.json',
+    #                      data_root=calc_train_train_root,
+    #                      annotation_filename='calc_case_description_train_set.csv',
+    #                      rgb_img=True)
+    # convert_ddsm_to_coco(categories=categories,
+    #                      out_file='annotation_rgb_coco_with_classes.json',
+    #                      data_root=calc_train_val_root,
+    #                      annotation_filename='calc_case_description_train_set.csv',
+    #                      rgb_img=True)
 
     # # Extend bbox size by 0.1, 0.2, 0.3
     # for ratio in [0.1, 0.2, 0.3]:
