@@ -77,41 +77,41 @@ cd ..
 #     python train.py -d mass_shape_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_shape_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
 # done
 # python train.py -d mass_margins_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${mass_margins_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-for i in {1..9}
-do
-    python train.py -d mass_margins_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_margins_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
-done
+# for i in {1..9}
+# do
+#     python train.py -d mass_margins_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_margins_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+# done
 # python train.py -d mass_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${mass_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-for i in {1..9}
-do
-    python train.py -d mass_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
-done
+# for i in {1..9}
+# do
+#     python train.py -d mass_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+# done
 # python train.py --njobs 8 -d mass_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${mass_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-for i in {1..9}
-do
-    python train.py --njobs 8 -d mass_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
-done
+# for i in {1..9}
+# do
+#     python train.py --njobs 8 -d mass_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${mass_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+# done
 
 # python train.py -d calc_type_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_type_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-for i in {1..9}
-do
-    python train.py -d calc_type_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_type_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
-done
+# for i in {1..9}
+# do
+#     python train.py -d calc_type_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_type_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+# done
 # python train.py -d calc_dist_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_dist_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-for i in {1..9}
-do
-    python train.py -d calc_dist_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_dist_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
-done
+# for i in {1..9}
+# do
+#     python train.py -d calc_dist_comb_feats_omit -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_dist_comb_feats_omit_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+# done
 # python train.py -d calc_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-for i in {1..9}
-do
-    python train.py -d calc_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
-done
+# for i in {1..9}
+# do
+#     python train.py -d calc_breast_density_lesion -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_breast_density_lesion_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+# done
 # python train.py --njobs 8 -d calc_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${calc_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-for i in {1..9}
-do
-    python train.py --njobs 8 -d calc_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
-done
+# for i in {1..9}
+# do
+#     python train.py --njobs 8 -d calc_breast_density_image -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws --tr 0.${i} -s ${calc_breast_density_image_save_root}/r50_b32_e100_224x224_adam_wc_ws_tr0.${i}_"$(LC_TIME="EN.UTF-8" date)"
+# done
 
 # python train.py -d four_classes_mass_calc_pathology_histeq -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${four_classes_mass_calc_pathology_histeq_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 # python train.py -d four_classes_mass_calc_pathology_histeq -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${four_classes_mass_calc_pathology_histeq_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
@@ -194,3 +194,298 @@ done
 #        -b 32 \
 #        -e 100 -i 224 --opt adam --wc --ws \
 #        -s ${four_classes_mass_calc_pathology_save_root}/dilated_r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# EfficientNet
+# python train.py --save \
+#        -d four_classes_mass_calc_pathology \
+#        --njobs 5 \
+#        -m 'efficientnet-b0' \
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws \
+#        --first_stage_freeze 210 \
+#        --second_stage_freeze 168 \
+#        -s ${four_classes_mass_calc_pathology_save_root}/efficientnet-b0_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d four_classes_mass_calc_pathology \
+#        --njobs 5 \
+#        -m 'efficientnet-b4' \
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws \
+#        --first_stage_freeze 415 \
+#        --second_stage_freeze 360 \
+#        -s ${four_classes_mass_calc_pathology_save_root}/efficientnet-b4_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'efficientnet-b0' \
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 210 \
+#        --second_stage_freeze 168 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/efficientnet-b0_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'efficientnet-b4' \
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 210 \
+#        --second_stage_freeze 168 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/efficientnet-b4_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# # EfficientNet V2
+# python train.py --save \
+#        -d four_classes_mass_calc_pathology \
+#        --njobs 5 \
+#        -m 'tf_efficientnetv2_s_in21ft1k'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws \
+#        --first_stage_freeze 449 \
+#        --second_stage_freeze 381 \
+#        -s ${four_classes_mass_calc_pathology_save_root}/tf-efficientnetv2-s-in21ft1k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d four_classes_mass_calc_pathology \
+#        --njobs 5 \
+#        -m 'tf_efficientnetv2_m_in21ft1k'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws \
+#        --first_stage_freeze 449 \
+#        --second_stage_freeze 381 \
+#        -s ${four_classes_mass_calc_pathology_save_root}/tf-efficientnetv2-m-in21ft1k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'tf_efficientnetv2_s_in21ft1k'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 210 \
+#        --second_stage_freeze 168 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/tf-efficientnetv2-s-in21ft1k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'tf_efficientnetv2_m_in21ft1k'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 210 \
+#        --second_stage_freeze 168 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/tf-efficientnetv2-m-in21ft1k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# EfficientNet NoisyStudent
+# python train.py --save \
+#        -d four_classes_mass_calc_pathology \
+#        --njobs 5 \
+#        -m 'tf_efficientnet_b0_ns'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws \
+#        --first_stage_freeze 210 \
+#        --second_stage_freeze 142 \
+#        -s ${four_classes_mass_calc_pathology_save_root}/tf-efficientnet-b0-ns_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d four_classes_mass_calc_pathology \
+#        --njobs 5 \
+#        -m 'tf_efficientnet_b4_ns'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws \
+#        --first_stage_freeze 415 \
+#        --second_stage_freeze 360 \
+#        -s ${four_classes_mass_calc_pathology_save_root}/tf-efficientnet-b4-ns_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d mass_shape_comb_feats_omit \
+       --njobs 5 \
+       -m 'tf_efficientnet_b0_ns'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 210 \
+       --second_stage_freeze 142 \
+       -s ${mass_shape_comb_feats_omit_save_root}/tf-efficientnet-b0-ns_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'tf_efficientnet_b4_ns'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 415 \
+#        --second_stage_freeze 360 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/tf-efficientnet-b4-ns_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+
+# Vision Transformer
+# python train.py --save \
+#        -d four_classes_mass_calc_pathology \
+#        --njobs 5 \
+#        -m 'vit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws \
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${four_classes_mass_calc_pathology_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'vit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+
+python train.py --save \
+       -d four_classes_mass_calc_pathology \
+       --njobs 5 \
+       -m 'vit_base_patch16_384'\
+       -i 384 \
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 149 \
+       --second_stage_freeze 99 \
+       -s ${four_classes_mass_calc_pathology_save_root}/vit-base-patch16-384_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d four_classes_mass_calc_pathology \
+       --njobs 5 \
+       -m 'vit_base_patch16_224_in21k'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 149 \
+       --second_stage_freeze 99 \
+       -s ${four_classes_mass_calc_pathology_save_root}/vit-base-patch16-224-in21k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+
+python train.py --save \
+       -d four_classes_mass_calc_pathology \
+       --njobs 5 \
+       -m 'vit_huge_patch14_224_in21k'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 391 \
+       --second_stage_freeze 339 \
+       -s ${four_classes_mass_calc_pathology_save_root}/vit-huge-patch14-224-in21k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d four_classes_mass_calc_pathology \
+       --njobs 5 \
+       -m 'vit_large_patch16_224_in21k'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 293 \
+       --second_stage_freeze 243 \
+       -s ${four_classes_mass_calc_pathology_save_root}/vit-large-patch16-224-in21k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# Mass shape
+python train.py --save \
+       -d mass_shape_comb_feats_omit \
+       --njobs 5 \
+       -m 'vit_base_patch16_384'\
+       -i 384 \
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 149 \
+       --second_stage_freeze 99 \
+       -s ${mass_shape_comb_feats_omit_save_root}/vit-base-patch16-384_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d mass_shape_comb_feats_omit \
+       --njobs 5 \
+       -m 'vit_base_patch16_224_in21k'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 149 \
+       --second_stage_freeze 99 \
+       -s ${mass_shape_comb_feats_omit_save_root}/vit-base-patch16-224-in21k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+
+python train.py --save \
+       -d mass_shape_comb_feats_omit \
+       --njobs 5 \
+       -m 'vit_huge_patch14_224_in21k'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 391 \
+       --second_stage_freeze 339 \
+       -s ${mass_shape_comb_feats_omit_save_root}/vit-huge-patch14-224-in21k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d mass_shape_comb_feats_omit \
+       --njobs 5 \
+       -m 'vit_large_patch16_224_in21k'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 293 \
+       --second_stage_freeze 243 \
+       -s ${mass_shape_comb_feats_omit_save_root}/vit-large-patch16-224-in21k_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# Convit
+python train.py --save \
+       -d four_classes_mass_calc_pathology \
+       --njobs 5 \
+       -m 'convit-base'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 177 \
+       --second_stage_freeze 123 \
+       -s ${four_classes_mass_calc_pathology_save_root}/convit-base_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d mass_shape_comb_feats_omit \
+       --njobs 5 \
+       -m 'convit-base'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 177 \
+       --second_stage_freeze 123 \
+       -s ${mass_shape_comb_feats_omit_save_root}/convit-base_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# Twins
+python train.py --save \
+       -d four_classes_mass_calc_pathology \
+       --njobs 5 \
+       -m 'twins_svt_base'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 381 \
+       --second_stage_freeze 327 \
+       -s ${four_classes_mass_calc_pathology_save_root}/twins-svt-base_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d mass_shape_comb_feats_omit \
+       --njobs 5 \
+       -m 'twins_svt_base'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 381 \
+       --second_stage_freeze 327 \
+       -s ${mass_shape_comb_feats_omit_save_root}/twins-svt-base_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+
+# Bit
+python train.py --save \
+       -d four_classes_mass_calc_pathology \
+       --njobs 5 \
+       -m 'resnetv2_101x1_bitm'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 303 \
+       --second_stage_freeze 246 \
+       -s ${four_classes_mass_calc_pathology_save_root}/resnetv2-101x1-bitm_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d mass_shape_comb_feats_omit \
+       --njobs 5 \
+       -m 'resnetv2_101x1_bitm'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws \
+       --first_stage_freeze 303 \
+       --second_stage_freeze 246 \
+       -s ${mass_shape_comb_feats_omit_save_root}/resnetv2-101x1-bitm_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"

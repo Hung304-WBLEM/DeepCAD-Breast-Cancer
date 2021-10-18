@@ -17,6 +17,7 @@ import random
 import custom_transforms
 import math
 import albumentations
+import timm
 matplotlib.use('Agg')
 
 from config_origin import options
@@ -33,6 +34,7 @@ from train_utils import images_to_probs, plot_classes_preds, add_pr_curve_tensor
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from augmentation import augmix_transform
+from efficientnet_pytorch import EfficientNet
 
 GLOBAL_EPOCH = 0
 image_datasets = None
@@ -189,27 +191,14 @@ def set_parameter_requires_grad(model, model_name, last_frozen_layer):
     model_name - can be 'vgg16' or 'resnet50'
     freeze_type - can be 'none', 'all'
     '''
-    if model_name in ['resnet50', 'dilated_resnet50']:
-        for idx, (name, param) in enumerate(model.named_parameters()):
-            param.requires_grad = True
+    for idx, (name, param) in enumerate(model.named_parameters()):
+        param.requires_grad = True
 
-        # last_frozen_idx = {'none': -1, 'all': 160, 'last_fc': 158, 'top1_conv_block': 149,
-        #                     'top2_conv_block': 140, 'top3_conv_block': 128,
-        #                     'first_freeze': 158, 'second_freeze': 87,
-        #                     'third_freeze': -1}
-        for idx, (name, param) in enumerate(model.named_parameters()):
-            print(idx, name)
-            # if idx <= last_frozen_idx[freeze_type]:
-            if idx <= last_frozen_layer:
-                param.requires_grad = False
-    elif model_name == 'vgg16':
-        if freeze_type != 'none':
-            last_frozen_idx = {'all': 57, 'last_fc': 55, 'fc2': 53,
-                               'fc1': 51, 'top1_conv_block': 45, 'top2_conv_block': 39}
-            for idx, (name, param) in enumerate(model.named_parameters()):
-                # print(idx, name)
-                if idx <= last_frozen_idx[freeze_type]:
-                    param.requires_grad = False
+    for idx, (name, param) in enumerate(model.named_parameters()):
+        print(idx, name)
+
+        if idx <= last_frozen_layer:
+            param.requires_grad = False
 
 
 def initialize_model(model_name, num_classes, use_pretrained=True):
@@ -252,6 +241,24 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
             nn.Dropout(0.5),
             nn.Linear(num_ftrs, num_classes)
         )
+
+    elif 'efficientnet' in model_name:
+
+        if 'tf_efficientnet' in model_name:
+            model_ft = timm.create_model(model_name,
+                                         pretrained=True, num_classes=num_classes)
+            input_size = 224
+        else:
+            model_ft = EfficientNet.from_pretrained(model_name)
+            num_ftrs = model_ft._fc.in_features
+            model_ft._fc = nn.Linear(num_ftrs, num_classes)
+            input_size = 224
+
+    elif 'vit' in model_name \
+         or 'twins' in model_name \
+         or 'bit' in model_name:
+        model_ft = timm.create_model(model_name, pretrained=True, num_classes=num_classes)
+        input_size = 224
 
     elif model_name == "alexnet":
         """ Alexnet

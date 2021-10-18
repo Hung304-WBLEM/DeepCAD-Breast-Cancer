@@ -11,6 +11,7 @@ parser.add_option("-d", "--dataset",
                     help="Name of the available datasets")
 parser.add_option("--tr", "--train_rate", dest="train_rate", type=float, default=1,
                   help="Part of the dataset that you want to train")
+parser.add_option("--save", action='store_true')
 parser.add_option("-s", "--save_path",
                     help="Path to save the trained model")
 parser.add_option("-m", "--model_name",
@@ -127,9 +128,10 @@ for opt in vars(options):
 
     config['hyperparams'][opt] = str(attr)
 
-# os.makedirs(options.save_path, exist_ok=True)
-# with open(os.path.join(options.save_path, 'config.ini'), 'w') as configfile:
-#     config.write(configfile)
+if options.save is True:
+    os.makedirs(options.save_path, exist_ok=True)
+    with open(os.path.join(options.save_path, 'config.ini'), 'w') as configfile:
+        config.write(configfile)
 
 
 def read_config(config_path):
