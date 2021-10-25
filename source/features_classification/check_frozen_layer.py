@@ -68,7 +68,7 @@ second_stage = 1050
 vit_model = timm.create_model('resnetv2_101x1_bitm', pretrained=True)
 for idx, (name, para) in enumerate(vit_model.named_parameters()):
     print(idx, name)
-all_vit_models = timm.list_models('*bit*', pretrained=True)
+all_vit_models = timm.list_models('*convit*', pretrained=True)
 print(all_vit_models)
 
 # vit_base_patch16_224

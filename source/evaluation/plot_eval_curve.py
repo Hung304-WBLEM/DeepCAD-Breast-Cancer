@@ -240,8 +240,8 @@ def all_classes_detection_loose_prec_rec(gt_categories, _gt_bboxes_json, _pred_b
     return eval_log, eval_plot
 
 
-def plot_pr_curve_true_pos_metric(_save_path, _bbox_select, gt_categories, iou75_eval_plot, iou50_eval_plot, iou25_eval_plot, center_eval_plot, fig_only=False):
-    writer = SummaryWriter(os.path.join(_save_path, 'tensorboard_logs'))
+def plot_pr_curve_true_pos_metric(_save_path, _bbox_select, gt_categories, iou75_eval_plot, iou50_eval_plot, iou25_eval_plot, center_eval_plot, log_title, fig_only=False):
+    # writer = SummaryWriter(os.path.join(_save_path, 'tensorboard_logs'))
 
     for class_info in gt_categories:
         class_id = class_info['id']
@@ -288,19 +288,20 @@ def plot_pr_curve_true_pos_metric(_save_path, _bbox_select, gt_categories, iou75
         plt.title(f'PR curves for class: {class_name}')
 
         if _save_path is not None:
+            os.makedirs(_save_path, exist_ok=True)
             plt.savefig(os.path.join(
-                _save_path, f'precision-recall_curve_{class_name}_{_bbox_select}_cmp_tp_metrics.png'))
+                _save_path, f'precision-recall_curve_{log_title}_{class_name}_{_bbox_select}_cmp_tp_metrics.png'))
 
-        if fig_only:
-            writer.add_figure(f'test pr curve - {class_name}', fig, global_step=None)
+        # if fig_only:
+        #     writer.add_figure(f'{log_title} PR curves - {class_name}', fig, global_step=None)
 
         plt.close()
 
     
 
 
-def plot_froc_curve_true_pos_metric(_save_path, _bbox_select, gt_categories, iou75_eval_plot, iou50_eval_plot, iou25_eval_plot, center_eval_plot, fig_only=False):
-    writer = SummaryWriter(os.path.join(_save_path, 'tensorboard_logs'))
+def plot_froc_curve_true_pos_metric(_save_path, _bbox_select, gt_categories, iou75_eval_plot, iou50_eval_plot, iou25_eval_plot, center_eval_plot, log_title, fig_only=False):
+    # writer = SummaryWriter(os.path.join(_save_path, 'tensorboard_logs'))
 
     for class_info in gt_categories:
         class_id = class_info['id']
@@ -346,11 +347,12 @@ def plot_froc_curve_true_pos_metric(_save_path, _bbox_select, gt_categories, iou
         plt.title(f'FROC curves for class: {class_name}')
 
         if _save_path is not None:
+            os.makedirs(_save_path, exist_ok=True)
             plt.savefig(os.path.join(
-                _save_path, f'froc_curve_{class_name}_{_bbox_select}_cmp_tp_metrics.png'))
+                _save_path, f'froc_curve_{log_title}_{class_name}_{_bbox_select}_cmp_tp_metrics.png'))
 
-        if fig_only:
-            writer.add_figure(f'test froc curve - {class_name}', fig, global_step=None)
+        # if fig_only:
+        #     writer.add_figure(f'{log_title} FROC curves - {class_name}', fig, global_step=None)
 
         plt.close()
 
@@ -431,6 +433,7 @@ if __name__ == '__main__':
     parser.add_argument("-bb", "--bbox_select", choices={"all", "opi"},
                         help="either `all` or `opi` for choose positive bounding boxes during evaluation")
     parser.add_argument("-s", "--save_path", help="choose path to save figure")
+    parser.add_argument("--log_title")
 
     args = parser.parse_args()
     vars_dict = vars(args)
@@ -472,17 +475,19 @@ if __name__ == '__main__':
                                   iou50_eval_plot,
                                   iou25_eval_plot,
                                   center_eval_plot,
-                                  fig_only=True)
+                                  log_title=args.log_title,
+                                  fig_only=False)
 
     # Plot FROC curves
     plot_froc_curve_true_pos_metric(args.save_path,
-                                  args.bbox_select,
-                                  gt_categories,
-                                  iou75_eval_plot,
-                                  iou50_eval_plot,
-                                  iou25_eval_plot,
-                                  center_eval_plot,
-                                  fig_only=True)
+                                    args.bbox_select,
+                                    gt_categories,
+                                    iou75_eval_plot,
+                                    iou50_eval_plot,
+                                    iou25_eval_plot,
+                                    center_eval_plot,
+                                    log_title=args.log_title,
+                                    fig_only=False)
 
     json.write({'categories': gt_categories,
                 'center': center_eval_log,
