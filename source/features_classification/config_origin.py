@@ -14,6 +14,8 @@ parser.add_option("--tr", "--train_rate", dest="train_rate", type=float, default
 parser.add_option("--save", action='store_true')
 parser.add_option("-s", "--save_path",
                     help="Path to save the trained model")
+parser.add_option("--not_use_pretrained", action='store_true', default=False,
+                    help="Path to save the trained model")
 parser.add_option("-m", "--model_name",
                     help="Select the backbone for training. Available backbones include: 'resnet', 'resnet50', 'alexnet', 'vgg', 'squeezenet', 'densenet', 'inception'")
 parser.add_option("-b", "--batch_size", type=int, default=32,

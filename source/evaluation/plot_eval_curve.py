@@ -48,7 +48,7 @@ def isCenterInGTbbox(pred_bbox, gt_bbox):
     return False
 
 
-def all_classes_detection_prec_rec(gt_categories, _gt_bboxes_json, _pred_bboxes_json, _bbox_select, _iou_thres):
+def all_classes_detection_prec_rec(gt_categories, _gt_bboxes_json, _pred_bboxes_json, _bbox_select, _iou_thres, bbox_thres=None):
     def detection_prec_rec(gt_bboxes_list, pred_bboxes_list, iou_thres):
         ''' Get precision and recall values
         pred_bboxes_list - list of sublists of predicted bounding boxes.
@@ -131,7 +131,8 @@ def all_classes_detection_prec_rec(gt_categories, _gt_bboxes_json, _pred_bboxes_
         gt_bboxes_list, pred_bboxes_list  = \
             get_bboxes_lists(gt_bboxes_json=_gt_bboxes_json,
                              pred_bboxes_json=_pred_bboxes_json,
-                             category_id=_category_id, bbox_select=_bbox_select)
+                             category_id=_category_id, bbox_select=_bbox_select,
+                             thres=bbox_thres)
         p_vals, r_vals, fp_img_vals, ap, img_filenames = detection_prec_rec(
             gt_bboxes_list, pred_bboxes_list, _iou_thres)
         eval_log[_category_id] = {'AP': ap}
@@ -144,7 +145,7 @@ def all_classes_detection_prec_rec(gt_categories, _gt_bboxes_json, _pred_bboxes_
     return eval_log, eval_plot
 
 
-def all_classes_detection_loose_prec_rec(gt_categories, _gt_bboxes_json, _pred_bboxes_json, _bbox_select):
+def all_classes_detection_loose_prec_rec(gt_categories, _gt_bboxes_json, _pred_bboxes_json, _bbox_select, bbox_thres):
     def detection_loose_prec_rec(gt_bboxes_list, pred_bboxes_list):
         ''' Plot precision-recall curve using the center metric, i.e.,
         if the center of the predicted box is in the ground-truth box, is
@@ -227,7 +228,8 @@ def all_classes_detection_loose_prec_rec(gt_categories, _gt_bboxes_json, _pred_b
         gt_bboxes_list, pred_bboxes_list = \
             get_bboxes_lists(gt_bboxes_json=_gt_bboxes_json,
                              pred_bboxes_json=_pred_bboxes_json,
-                             category_id=_category_id, bbox_select=_bbox_select)
+                             category_id=_category_id, bbox_select=_bbox_select,
+                             thres=bbox_thres)
         p_vals, r_vals, fp_img_vals, ap, img_filenames = detection_loose_prec_rec(
             gt_bboxes_list, pred_bboxes_list)
         eval_log[_category_id] = {'AP': ap}
@@ -357,7 +359,7 @@ def plot_froc_curve_true_pos_metric(_save_path, _bbox_select, gt_categories, iou
         plt.close()
 
 
-def get_bboxes_lists(gt_bboxes_json, pred_bboxes_json, category_id, bbox_select='all'):
+def get_bboxes_lists(gt_bboxes_json, pred_bboxes_json, category_id, bbox_select='all', thres=None):
     ''' Load ground-truth and predicted bounding boxes data of specific
     category ID for evaluation
 
@@ -410,6 +412,9 @@ def get_bboxes_lists(gt_bboxes_json, pred_bboxes_json, category_id, bbox_select=
                 y2 = y1 + h - 1
                 s = pred['score']
 
+                if thres is not None and s <= thres:
+                    continue
+
                 if bbox_select == 'opi' and s > best_score:
                     best_score = s
                     selected_bb = (x1, y1, x2, y2, s, filename)
@@ -433,6 +438,7 @@ if __name__ == '__main__':
     parser.add_argument("-bb", "--bbox_select", choices={"all", "opi"},
                         help="either `all` or `opi` for choose positive bounding boxes during evaluation")
     parser.add_argument("-s", "--save_path", help="choose path to save figure")
+    parser.add_argument("--bbox_thres", type=float, help="choose threshold score for selecting bboxes")
     parser.add_argument("--log_title")
 
     args = parser.parse_args()
@@ -447,25 +453,29 @@ if __name__ == '__main__':
         args.gt_bboxes_json,
         args.pred_bboxes_json,
         args.bbox_select,
-        _iou_thres=0.75)
+        _iou_thres=0.75,
+        bbox_thres=args.bbox_thres)
     iou50_eval_log, iou50_eval_plot = all_classes_detection_prec_rec(
         gt_categories,
         args.gt_bboxes_json,
         args.pred_bboxes_json,
         args.bbox_select,
-        _iou_thres=0.5)
+        _iou_thres=0.5,
+        bbox_thres=args.bbox_thres)
     iou25_eval_log, iou25_eval_plot = all_classes_detection_prec_rec(
         gt_categories,
         args.gt_bboxes_json,
         args.pred_bboxes_json,
         args.bbox_select,
-        _iou_thres=0.25)
+        _iou_thres=0.25,
+        bbox_thres=args.bbox_thres)
     print(list(zip(iou25_eval_plot[1]['recalls'], iou25_eval_plot[1]['img_filenames'])))
     center_eval_log, center_eval_plot = all_classes_detection_loose_prec_rec(
         gt_categories,
         args.gt_bboxes_json,
         args.pred_bboxes_json,
-        args.bbox_select)
+        args.bbox_select,
+        bbox_thres=args.bbox_thres)
 
     # Plot PR curves
     plot_pr_curve_true_pos_metric(args.save_path,

@@ -49,10 +49,11 @@ if __name__ == '__main__':
         # '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/deformable_detr_r50_16x2_50e_ddsm',
         # '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/deformable_detr_refine_r50_16x2_50e_ddsm',
         # '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/deformable_detr_twostage_refine_r50_16x2_50e_ddsm',
-        '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/vfnet_x101_64x4d_fpn_mdconv_c3-c5_mstrain_2x_ddsm',
+        # '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/vfnet_x101_64x4d_fpn_mdconv_c3-c5_mstrain_2x_ddsm',
         # '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm_albu',
         # '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm',
-        '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/faster_rcnn_x101_64x4d_fpn_1x_ddsm'
+        # '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/faster_rcnn_x101_64x4d_fpn_1x_ddsm'
+        '/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm_detection/mass/faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm_norm-inbreast-test'
     ]
 
     for save_root in save_root_list:
@@ -97,6 +98,18 @@ if __name__ == '__main__':
                                         '-s', os.path.join(save_root, 'curves')])
             process.wait()
 
+            # process = subprocess.Popen(['python', 'plot_eval_curve.py',
+            #                             '-gt', config_mod.TEST_ANNOTATION,
+            #                             '-p', os.path.join(save_root, 'result.bbox.json'),
+            #                             '--log_title', 'test_thres0.2',
+            #                             '-bb', 'all',
+            #                             '--bbox_thres', '0.22',
+            #                             '-s', os.path.join(save_root, 'curves')])
+            process.wait()
+
+            for curve_img in glob.glob(os.path.join(save_root, 'curves', '*.png')):
+                visualize_curve_tensorboard(curve_img)
+
 
         os.chdir(mmdet_root)
 
@@ -108,29 +121,6 @@ if __name__ == '__main__':
                                         os.path.join(save_root, 'results')])
             process.wait()
 
-            # for idx, img_path in enumerate(glob.glob(os.path.join(save_root, 'results', 'good', '*.png'))):
-            #     fig = plt.figure(figsize=(10, 18))
-            #     img = mpimg.imread(img_path)
-            #     imgplot = plt.imshow(img)
-            #     plt.show()
-            #     plt.title(os.path.basename(img_path))
-            #     plt.tight_layout()
-            #     plt.axis('off')
-            #     writer.add_figure('Debugging Visualization - Good Cases',
-            #                     fig, global_step=idx)
-            #     plt.close()
-
-            # for idx, img_path in enumerate(glob.glob(os.path.join(save_root, 'results', 'bad', '*.png'))):
-            #     fig = plt.figure(figsize=(10, 18))
-            #     img = mpimg.imread(img_path)
-            #     imgplot = plt.imshow(img)
-            #     plt.show()
-            #     plt.title(os.path.basename(img_path))
-            #     plt.tight_layout()
-            #     plt.axis('off')
-            #     writer.add_figure('Debugging Visualization - Bad Cases',
-            #                     fig, global_step=idx)
-            #     plt.close()
             visualize_img_tensorboard(save_path=os.path.join(save_root, 'results', 'good'),
                                       log_title='Debugging Visualization - Good Cases')
             visualize_img_tensorboard(save_path=os.path.join(save_root, 'results', 'bad'),
@@ -145,29 +135,6 @@ if __name__ == '__main__':
                                         '--show-score-thr', '0.3'])
             process.wait()
 
-            # for idx, img_path in enumerate(glob.glob(os.path.join(save_root, 'results_threshold', 'good', '*.png'))):
-            #     fig = plt.figure(figsize=(10, 18))
-            #     img = mpimg.imread(img_path)
-            #     imgplot = plt.imshow(img)
-            #     plt.show()
-            #     plt.title(os.path.basename(img_path))
-            #     plt.tight_layout()
-            #     plt.axis('off')
-            #     writer.add_figure('Debugging Visualization - Good Cases (thres 0.3)',
-            #                     fig, global_step=idx)
-            #     plt.close()
-
-            # for idx, img_path in enumerate(glob.glob(os.path.join(save_root, 'results_threshold', 'bad', '*.png'))):
-            #     fig = plt.figure(figsize=(10, 18))
-            #     img = mpimg.imread(img_path)
-            #     imgplot = plt.imshow(img)
-            #     plt.show()
-            #     plt.title(os.path.basename(img_path))
-            #     plt.tight_layout()
-            #     plt.axis('off')
-            #     writer.add_figure('Debugging Visualization - Bad Cases (thres 0.3)',
-            #                     fig, global_step=idx)
-            #     plt.close()
 
             visualize_img_tensorboard(save_path=os.path.join(save_root, 'results_threshold', 'good'),
                                       log_title='Debugging Visualization - Good Cases (thres 0.3)')
@@ -182,43 +149,12 @@ if __name__ == '__main__':
                                         '--not-show'])
             process.wait()
 
-            # for idx, img_path in enumerate(natsorted(glob.glob(os.path.join(save_root, 'visualization', '*.png')))):
-            #     if idx == 30:
-            #         break
-
-            #     fig = plt.figure(figsize=(10, 18))
-            #     img = mpimg.imread(img_path)
-            #     imgplot = plt.imshow(img)
-            #     plt.show()
-            #     plt.title(os.path.basename(img_path))
-            #     plt.tight_layout()
-            #     plt.axis('off')
-            #     writer.add_figure('Train Data',
-            #                     fig, global_step=idx)
-            #     plt.close()
 
             visualize_img_tensorboard(save_path=os.path.join(save_root, 'visualization'),
                                       log_title='Train Data',
                                       num_imgs=30)
 
 
-
-
-        # Plot FROC curve and PR curve
-        # if not os.path.exists(os.path.join(save_root, 'result.bbox.json')):
-        #     os.chdir(save_root)
-        #     sys.path.append(save_root)
-        #     # from faster_rcnn_r50_caffe_fpn_mstrain_1x_ddsm import DDSM_TEST_ANNOTATION
-        #     config_mod = importlib.import_module(os.path.basename(config_file.split('.')[0]))
-
-        #     os.chdir(eval_src_root)
-        #     process = subprocess.Popen(['python', 'plot_eval_curve.py',
-        #                                 '-gt', config_mod.TEST_ANNOTATION,
-        #                                 '-p', os.path.join(save_root, 'result.bbox.json'),
-        #                                 '--log_title', 'test',
-        #                                 '-bb', 'all',
-        #                                 '-s', os.path.join(save_root, 'curves')])
-        #     process.wait()
 
 
         if not os.path.exists(os.path.join(save_root, 'train_result.bbox.json')):

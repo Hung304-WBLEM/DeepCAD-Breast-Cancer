@@ -18,6 +18,7 @@ import custom_transforms
 import math
 import albumentations
 import timm
+import importlib
 matplotlib.use('Agg')
 
 from config_origin import options
@@ -35,6 +36,8 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from augmentation import augmix_transform
 from efficientnet_pytorch import EfficientNet
+t2t_vit = importlib.import_module('T2T-ViT.models.t2t_vit')
+t2t_vit_utils = importlib.import_module('T2T-ViT.utils')
 
 GLOBAL_EPOCH = 0
 image_datasets = None
@@ -256,8 +259,49 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
 
     elif 'vit' in model_name \
          or 'twins' in model_name \
-         or 'bit' in model_name:
-        model_ft = timm.create_model(model_name, pretrained=True, num_classes=num_classes)
+         or 'bit' in model_name \
+         or 'T2T-ViT' in model_name:
+
+        if 'T2T-ViT' in model_name:
+            if model_name == 'T2T-ViT-14':
+                model_ft = t2t_vit.t2t_vit_14(num_classes=num_classes)
+                t2t_vit_utils.load_for_transfer_learning(model_ft,
+                                                         '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/81.5_T2T_ViT_14.pth.tar',
+                                                         use_ema=True,
+                                                         strict=False,
+                                                         num_classes=num_classes)  
+            elif model_name == 'T2T-ViT-19':
+                model_ft = t2t_vit.t2t_vit_19(num_classes=num_classes)
+                t2t_vit_utils.load_for_transfer_learning(model_ft,
+                                                         '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/81.9_T2T_ViT_19.pth.tar',
+                                                         use_ema=True,
+                                                         strict=False,
+                                                         num_classes=num_classes)  
+            elif model_name == 'T2T-ViT-14_384':
+                model_ft = t2t_vit.t2t_vit_14(img_size=384,
+                                              num_classes=num_classes)
+                t2t_vit_utils.load_for_transfer_learning(model_ft,
+                                                         '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/83.3_T2T_ViT_14.pth.tar',
+                                                         use_ema=True,
+                                                         strict=False,
+                                                         num_classes=num_classes)  
+            elif model_name == 'T2T-ViT_t-14':
+                model_ft = t2t_vit.t2t_vit_t_14(num_classes=num_classes)
+                t2t_vit_utils.load_for_transfer_learning(model_ft,
+                                                         '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/81.7_T2T_ViTt_14.pth.tar',
+                                                         use_ema=True,
+                                                         strict=False,
+                                                         num_classes=num_classes)  
+            elif model_name == 'T2T-ViT_t-19':
+                model_ft = t2t_vit.t2t_vit_t_19(num_classes=num_classes)
+                t2t_vit_utils.load_for_transfer_learning(model_ft,
+                                                         '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/82.4_T2T_ViTt_19.pth.tar',
+                                                         use_ema=True,
+                                                         strict=False,
+                                                         num_classes=num_classes)  
+        else:
+            model_ft = timm.create_model(model_name, pretrained=use_pretrained, num_classes=num_classes)
+
         input_size = 224
 
     elif model_name == "alexnet":
@@ -628,7 +672,7 @@ if __name__ == '__main__':
 
     # Initialize the model for this run
     model_ft, input_size = initialize_model(
-        model_name, num_classes, use_pretrained=True)
+        model_name, num_classes, use_pretrained=(options.not_use_pretrained == False))
 
     # Print the model we just instantiated
     print(model_ft)
@@ -775,8 +819,15 @@ if __name__ == '__main__':
                 classes_names=classes
             )
         else:
-            classes_weights = compute_classes_weights(
-                data_root=os.path.join(data_dir, 'train'), classes_names=classes)
+            if options.criterion == 'ce':
+                classes_weights = compute_classes_weights(
+                    data_root=os.path.join(data_dir, 'train'), classes_names=classes)
+            elif options.criterion == 'bce':
+                classes_weights = compute_classes_weights(
+                    data_root=os.path.join(data_dir, 'train'), classes_names=classes,
+                    use_with_bce=True
+                )
+                
 
         print('Classes weights:', list(zip(classes, classes_weights)))
         

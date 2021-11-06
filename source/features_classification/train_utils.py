@@ -11,7 +11,7 @@ from collections import Counter
 import torch.nn.functional as F
 
 
-def compute_classes_weights(data_root, classes_names):
+def compute_classes_weights(data_root, classes_names, use_with_bce=False):
     num_classes = len(classes_names)
 
     weights = np.zeros(num_classes)
@@ -21,7 +21,10 @@ def compute_classes_weights(data_root, classes_names):
 
     total_samples = np.sum(weights)
 
-    weights = (1/weights) * total_samples / num_classes
+    if use_with_bce:
+        weights = (1/weights) * total_samples
+    else:
+        weights = (1/weights) * total_samples / num_classes
 
     return weights
 
