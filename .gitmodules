@@ -10,3 +10,9 @@
 [submodule "libs/augmix"]
 	path = libs/augmix
 	url = https://github.com/Hung304-WBLEM/augmix.git
+[submodule "libs/T2T-ViT"]
+	path = libs/T2T-ViT
+	url = https://github.com/Hung304-WBLEM/T2T-ViT.git
+[submodule "libs/TransFG"]
+	path = libs/TransFG
+	url = https://github.com/Hung304-WBLEM/TransFG.git
