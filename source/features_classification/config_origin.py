@@ -40,6 +40,9 @@ parser.add_option("--crt", "--criterion", dest="criterion", type=str, default="c
                   help="Choose criterion: ce, bce")
 parser.add_option("--aug_type", dest="augmentation_type", type=str,
                   default="torch", help="Choose augmentation type. Available augmentation types include: torch, albumentations, augmix")
+parser.add_option("--best_ckpt_metric", dest="best_ckpt_metric", 
+                  default="loss", choices=['loss', 'acc'],
+                  help="Choose metric to select best model for ckpt")
 parser.add_option("--njobs", dest="num_workers", type=int,
                   default=0)
 

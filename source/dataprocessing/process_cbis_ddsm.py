@@ -231,7 +231,7 @@ def convert_ddsm_to_coco(categories, out_file, data_root, annotation_filename, e
     mmcv.dump(coco_format_json, os.path.join(data_root, out_file))
 
 
-def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_root, annotation_filename, lesion_type, segmented=False, add_mask_channel=False):
+def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_root, annotation_filename, lesion_type, segmented=False, add_mask_channel=False, patch_ext='exact'):
     '''
     1) If lesion type is 'mass', we have 4 features: Mass Shape, Mass Margins, Breast Density Lesion-Level, Breast Density Image-Level
     2) Else if lesion type is 'calcification', we have 4 features: Calc Type, Calc Distribution, Breast Density Lesion-Level, Breast Density Image-Level
@@ -271,6 +271,7 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
             continue
 
         img = mmcv.imread(img_path)
+        height, width = img.shape[:2]
 
         for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
             while True:
@@ -308,10 +309,38 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
             py = flat_seg_poly[1::2]
             x_min, y_min, x_max, y_max = (min(px), min(py), max(px), max(py))
 
+            if patch_ext == 'center':
+                patch_width = x_max - x_min + 1
+                patch_height = y_max - y_min + 1
+
+                center_x = (x_min + x_max)/2.0
+                center_y = (y_min + y_max)/2.0
+
+                patch_size = max(patch_width, patch_height)
+
+                new_x_min = max(0, int(center_x - patch_size/2))
+                new_y_min = max(0, int(center_y - patch_size/2))
+                new_x_max = min(int(width), int(center_x + patch_size/2))
+                new_y_max = min(int(height), int(center_y + patch_size/2))
+
+
             if segmented:
                 img = cv2.bitwise_and(img, img, mask=mask_arr)
 
-            lesion_patch = img[y_min:(y_max+1), x_min:(x_max+1)]
+            if patch_ext == 'exact':
+                lesion_patch = img[y_min:(y_max+1), x_min:(x_max+1)]
+
+            elif patch_ext == 'center':
+                lesion_patch = img[new_y_min:(new_y_max+1), new_x_min:(new_x_max+1)]
+                pad_width_size = patch_size - (new_x_max - new_x_min)
+                pad_height_size = patch_size - (new_y_max - new_y_min)
+
+                lesion_patch = np.pad(lesion_patch,
+                                    [(pad_height_size//2, pad_height_size - pad_height_size//2),
+                                     (pad_width_size//2, pad_width_size - pad_width_size//2),
+                                     (0, 0)], 'constant')
+
+
 
             if add_mask_channel:
                 mask_patch = mask_arr[y_min:(y_max+1), x_min:(x_max+1)]
@@ -399,7 +428,7 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, feat4_root, data_roo
                             cv2.imwrite(save_calc_density_img_path, img)
 
 
-def stoa_get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type):
+def stoa_get_lesions_pathology(save_root, data_root, annotation_filename, lesion_type, new_size=(896, 1152), patch_size=224):
     df = pandas.read_csv(os.path.join(data_root, annotation_filename))
 
     for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
@@ -410,7 +439,8 @@ def stoa_get_lesions_pathology(save_root, data_root, annotation_filename, lesion
 
         img = mmcv.imread(img_path)
         old_height, old_width = img.shape[:2]
-        img = cv2.resize(img, (896, 1152))
+        if new_size is not None:
+            img = cv2.resize(img, (new_size[0], new_size[1]))
         new_height, new_width = img.shape[:2]
 
         for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
@@ -448,18 +478,31 @@ def stoa_get_lesions_pathology(save_root, data_root, annotation_filename, lesion
             px = flat_seg_poly[::2]
             py = flat_seg_poly[1::2]
             x_min, y_min, x_max, y_max = (min(px), min(py), max(px), max(py))
+            patch_width = x_max - x_min + 1
+            patch_height = y_max - y_min + 1
+
             center_x = (x_min + x_max)/2.0
             center_y = (y_min + y_max)/2.0
 
             new_center_x = (center_x/old_width)*new_width
             new_center_y = (center_y/old_height)*new_height
+            if patch_size is not None:
+                new_patch_size = patch_size
+            else:
+                new_patch_size = max(patch_width, patch_height) # set new_patch_size to fixed value 224 to match scientific report paper
 
-            new_x_min = max(0, int(new_center_x - 224/2))
-            new_y_min = max(0, int(new_center_y - 224/2))
-            new_x_max = min(int(new_width), int(new_center_x + 224/2))
-            new_y_max = min(int(new_height), int(new_center_y + 224/2))
+            new_x_min = max(0, int(new_center_x - new_patch_size/2))
+            new_y_min = max(0, int(new_center_y - new_patch_size/2))
+            new_x_max = min(int(new_width), int(new_center_x + new_patch_size/2))
+            new_y_max = min(int(new_height), int(new_center_y + new_patch_size/2))
 
             lesion_patch = img[new_y_min:(new_y_max+1), new_x_min:(new_x_max+1)]
+
+            pad_width_size = patch_size - (new_x_max - new_x_min + 1)
+            pad_height_size = patch_size - (new_y_max - new_y_min + 1)
+            lesion_patch = np.pad(lesion_patch,
+                                  [(pad_height_size//2, pad_height_size - pad_height_size//2),
+                                   (pad_width_size//2, pad_width_size - pad_width_size//2)], 'constant')
 
             if cat_id == 0:
                 save_path = os.path.join(save_root, 'MALIGNANT')
@@ -945,13 +988,13 @@ if __name__ == '__main__':
     #                      annotation_filename='mass_case_description_train_set.csv')
 
     # Default bbox size (For different sizes of train_train set)
-    for size in range(0, 100, 10):
-        size = size / 100.0
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_sizerate={size}.json',
-                            data_root=mass_train_train_root,
-                            annotation_filename='mass_case_description_train_set.csv',
-                            return_size_rate=size)
+    # for size in range(0, 100, 10):
+    #     size = size / 100.0
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_sizerate={size}.json',
+    #                         data_root=mass_train_train_root,
+    #                         annotation_filename='mass_case_description_train_set.csv',
+    #                         return_size_rate=size)
 
     # Default bbox size (For RGB images)
     # convert_ddsm_to_coco(categories=categories,
@@ -1028,6 +1071,30 @@ if __name__ == '__main__':
     #                         data_root=data_root,
     #                         annotation_filename=annotation_filename,
     #                         lesion_type='mass')
+
+    # split lesion patches based on: mass shape, mass margins, breast density
+    # mass_shape_comb_feats_omit_centercrop_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_shape_comb_feats_omit_centercrop'])
+    # mass_margins_comb_feats_omit_centercrop_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_margins_comb_feats_omit_centercrop'])
+    # mass_breast_density_lesion_centercrop_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_lesion_centercrop'])
+
+    # for split in ['train', 'val', 'test']:
+    #     if split == 'train':
+    #         data_root = mass_train_train_root
+    #         annotation_filename = 'mass_case_description_train_set.csv'
+    #     elif split == 'val':
+    #         data_root = mass_train_val_root
+    #         annotation_filename = 'mass_case_description_train_set.csv'
+    #     elif split == 'test':
+    #         data_root = mass_test_root
+    #         annotation_filename = 'mass_case_description_test_set.csv'
+    #     get_lesions_feature(feat1_root=os.path.join(mass_shape_comb_feats_omit_centercrop_root, split),
+    #                         feat2_root=os.path.join(mass_margins_comb_feats_omit_centercrop_root, split),
+    #                         feat3_root=os.path.join(mass_breast_density_lesion_centercrop_root, split),
+    #                         feat4_root=None,
+    #                         data_root=data_root,
+    #                         annotation_filename=annotation_filename,
+    #                         lesion_type='mass',
+    #                         patch_ext='center')
 
     # split lesion patches based on: mass shape, mass margins, breast density (with segmentation)
     # mass_shape_comb_feats_omit_segm_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_shape_comb_feats_omit_segm'])
@@ -1175,13 +1242,13 @@ if __name__ == '__main__':
 
 
     # Default bbox size (For different sizes of train_train set)
-    for size in range(0, 100, 10):
-        size = size / 100.0
-        convert_ddsm_to_coco(categories=categories,
-                            out_file=f'annotation_coco_with_classes_sizerate={size}.json',
-                            data_root=calc_train_train_root,
-                            annotation_filename='calc_case_description_train_set.csv',
-                            return_size_rate=size)
+    # for size in range(0, 100, 10):
+    #     size = size / 100.0
+    #     convert_ddsm_to_coco(categories=categories,
+    #                         out_file=f'annotation_coco_with_classes_sizerate={size}.json',
+    #                         data_root=calc_train_train_root,
+    #                         annotation_filename='calc_case_description_train_set.csv',
+    #                         return_size_rate=size)
 
     
 
@@ -1270,6 +1337,30 @@ if __name__ == '__main__':
     #                         data_root=data_root,
     #                         annotation_filename=annotation_filename,
     #                         lesion_type='calc')
+
+    # split lesion patches based on: mass shape, mass margins, breast density (centercrop)
+    calc_type_comb_feats_omit_centercrop_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_type_comb_feats_omit_centercrop'])
+    calc_dist_comb_feats_omit_centercrop_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_dist_comb_feats_omit_centercrop'])
+    calc_breast_density_lesion_centercrop_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_lesion_centercrop'])
+
+    for split in ['train', 'val', 'test']:
+        if split == 'train':
+            data_root = calc_train_train_root
+            annotation_filename = 'calc_case_description_train_set.csv'
+        elif split == 'val':
+            data_root = calc_train_val_root
+            annotation_filename = 'calc_case_description_train_set.csv'
+        elif split == 'test':
+            data_root = calc_test_root
+            annotation_filename = 'calc_case_description_test_set.csv'
+        get_lesions_feature(feat1_root=os.path.join(calc_type_comb_feats_omit_centercrop_root, split),
+                            feat2_root=os.path.join(calc_dist_comb_feats_omit_centercrop_root, split),
+                            feat3_root=os.path.join(calc_breast_density_lesion_centercrop_root, split),
+                            feat4_root=None,
+                            data_root=data_root,
+                            annotation_filename=annotation_filename,
+                            lesion_type='calc',
+                            patch_ext='center')
 
     # split lesion patches based on: mass shape, mass margins, breast density (with segmentation)
     # calc_type_comb_feats_omit_segm_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_type_comb_feats_omit_segm'])

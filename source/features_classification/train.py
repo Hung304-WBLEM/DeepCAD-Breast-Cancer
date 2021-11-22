@@ -156,21 +156,23 @@ def train_model(model, dataloaders, criterion, optimizer, writer, num_epochs=25,
             evaluate(model, classes, device, writer, epoch=GLOBAL_EPOCH)
 
             # deep copy the model
-            # if phase == 'val' and epoch_acc > best_acc:
-            #     best_loss = epoch_loss
-            #     best_acc = epoch_acc
-            #     best_model_wts = copy.deepcopy(model.state_dict())
-            if phase == 'val' and epoch_loss < best_loss:
+            if options.best_ckpt_metric == 'acc' and \
+               phase == 'val' and epoch_acc > best_acc:
+                best_loss = epoch_loss
+                best_acc = epoch_acc
+                best_model_wts = copy.deepcopy(model.state_dict())
+            if options.best_ckpt_metric == 'loss' and \
+               phase == 'val' and epoch_loss < best_loss:
                 best_loss = epoch_loss
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
                 
             if phase == 'val':
                 val_loss_history.append(epoch_loss)
-                val_acc_history.append(epoch_acc)
+                val_acc_history.append(epoch_acc.cpu())
             if phase == 'train':
                 train_loss_history.append(epoch_loss)
-                train_acc_history.append(epoch_acc)
+                train_acc_history.append(epoch_acc.cpu())
 
         print()
 
@@ -185,6 +187,9 @@ def train_model(model, dataloaders, criterion, optimizer, writer, num_epochs=25,
 
     # load best model weights
     model.load_state_dict(best_model_wts)
+
+    print(type(train_loss_history), type(train_acc_history),
+          type(val_loss_history), type(val_acc_history))
     return model, train_loss_history, train_acc_history, val_loss_history, val_acc_history
 
 
@@ -260,7 +265,14 @@ def initialize_model(model_name, num_classes, use_pretrained=True):
     elif 'vit' in model_name \
          or 'twins' in model_name \
          or 'bit' in model_name \
-         or 'T2T-ViT' in model_name:
+         or 'T2T-ViT' in model_name \
+         or 'cait' in model_name \
+         or 'coat' in model_name \
+         or 'deit' in model_name \
+         or 'pit' in model_name \
+         or 'tnt' in model_name \
+         or 'swin' in model_name \
+         or 'xcit' in model_name:
 
         if 'T2T-ViT' in model_name:
             if model_name == 'T2T-ViT-14':
@@ -530,24 +542,30 @@ if __name__ == '__main__':
         from datasets import Five_Classes_Mass_Calc_Pathology_Dataset as data
     elif options.dataset in ['mass_shape_comb_feats_omit',
                              'mass_shape_comb_feats_omit_segm',
-                             'mass_shape_comb_feats_omit_mask']:
+                             'mass_shape_comb_feats_omit_mask',
+                             'mass_shape_comb_feats_omit_centercrop']:
         from datasets import Mass_Shape_Dataset as data
     elif options.dataset in ['mass_margins_comb_feats_omit',
                              'mass_margins_comb_feats_omit_segm',
-                             'mass_margins_comb_feats_omit_mask']:
+                             'mass_margins_comb_feats_omit_mask',
+                             'mass_margins_comb_feats_omit_centercrop']:
         from datasets import Mass_Margins_Dataset as data
     elif options.dataset in ['calc_type_comb_feats_omit',
                              'calc_type_comb_feats_omit_segm',
-                             'calc_type_comb_feats_omit_mask']:
+                             'calc_type_comb_feats_omit_mask',
+                             'calc_type_comb_feats_omit_centercrop']:
         from datasets import Calc_Type_Dataset as data
     elif options.dataset in ['calc_dist_comb_feats_omit',
                              'calc_dist_comb_feats_omit_segm',
-                             'calc_dist_comb_feats_omit_mask']:
+                             'calc_dist_comb_feats_omit_mask',
+                             'calc_dist_comb_feats_omit_centercrop']:
         from datasets import Calc_Dist_Dataset as data
     elif options.dataset in ['mass_breast_density_lesion', 'mass_breast_density_image',
                              'calc_breast_density_lesion', 'calc_breast_density_image',
                              'mass_breast_density_lesion_segm', 'calc_breast_density_lesion_segm',
-                             'mass_breast_density_lesion_mask', 'calc_breast_density_lesion_mask']:
+                             'mass_breast_density_lesion_mask', 'calc_breast_density_lesion_mask',
+                             'mass_breast_density_lesion_centercrop', 'calc_breast_density_lesion_centercrop'
+                             ]:
         from datasets import Breast_Density_Dataset as data
     
     # Get classes
@@ -564,6 +582,9 @@ if __name__ == '__main__':
                            'mass_shape_comb_feats_omit_mask',
                            'mass_margins_comb_feats_omit_mask',
                            'mass_breast_density_lesion_mask',
+                           'mass_shape_comb_feats_omit_centercrop',
+                           'mass_margins_comb_feats_omit_centercrop',
+                           'mass_breast_density_lesion_centercrop',
                            'mass_breast_density_image']:
         data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,
@@ -579,6 +600,9 @@ if __name__ == '__main__':
                              'calc_type_comb_feats_omit_mask',
                              'calc_dist_comb_feats_omit_mask',
                              'calc_breast_density_lesion_mask',
+                             'calc_type_comb_feats_omit_centercrop',
+                             'calc_dist_comb_feats_omit_centercrop',
+                             'calc_breast_density_lesion_centercrop',
                              'calc_breast_density_image']:
         data_dir = os.path.join(
             data_root, processed_cbis_ddsm_root,

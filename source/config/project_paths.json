@@ -9,6 +9,10 @@
 		"mass_breast_density_lesion": "mass/cls/mass_breast_density_lesion",
 		"mass_breast_density_image": "mass/cls/mass_breast_density_image",
 
+		"mass_shape_comb_feats_omit_centercrop": "mass/cls/mass_shape_comb_feats_omit_centercrop",
+		"mass_margins_comb_feats_omit_centercrop": "mass/cls/mass_margins_comb_feats_omit_centercrop",
+		"mass_breast_density_lesion_centercrop": "mass/cls/mass_breast_density_lesion_centercrop",
+
 		"mass_shape_comb_feats_omit_segm": "mass/cls/mass_shape_comb_feats_omit_segm",
 		"mass_margins_comb_feats_omit_segm": "mass/cls/mass_margins_comb_feats_omit_segm",
 		"mass_breast_density_lesion_segm": "mass/cls/mass_breast_density_lesion_segm",
@@ -31,6 +35,10 @@
 		"calc_dist_comb_feats_omit": "calc/cls/calc_dist_comb_feats_omit",
 		"calc_breast_density_lesion": "calc/cls/calc_breast_density_lesion",
 		"calc_breast_density_image": "calc/cls/calc_breast_density_image",
+
+		"calc_type_comb_feats_omit_centercrop": "calc/cls/calc_type_comb_feats_omit_centercrop",
+		"calc_dist_comb_feats_omit_centercrop": "calc/cls/calc_dist_comb_feats_omit_centercrop",
+		"calc_breast_density_lesion_centercrop": "calc/cls/calc_breast_density_lesion_centercrop",
 
 		"calc_type_comb_feats_omit_segm": "calc/cls/calc_type_comb_feats_omit_segm",
 		"calc_dist_comb_feats_omit_segm": "calc/cls/calc_dist_comb_feats_omit_segm",

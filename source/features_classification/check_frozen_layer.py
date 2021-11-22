@@ -1,6 +1,7 @@
 import timm
 import sys
 import importlib
+import torch
 
 # from efficientnet_pytorch import EfficientNet
 from torchvision import models
@@ -114,35 +115,102 @@ t2t_vit_utils = importlib.import_module('T2T-ViT.utils')
 # model = t2t_vit.t2t_vit_19(num_classes=3)
 # model = t2t_vit.t2t_vit_14(num_classes=3)
 # model = t2t_vit.t2t_vit_t_14(num_classes=3)
-model = t2t_vit.t2t_vit_t_19(num_classes=3)
+# model = t2t_vit.t2t_vit_t_19(num_classes=3)
 
-# load the pretrained weights
-t2t_vit_utils.load_for_transfer_learning(model,
-                                         # '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/81.5_T2T_ViT_14.pth.tar',
-                                         # '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/81.9_T2T_ViT_19.pth.tar',
-                                         # '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/83.3_T2T_ViT_14.pth.tar',
-                                         # '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/81.7_T2T_ViTt_14.pth.tar',
-                                         '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/82.4_T2T_ViTt_19.pth.tar',
-                                         use_ema=True,
-                                         strict=False,
-                                         num_classes=3)  # change num_classes based on dataset, can work for different image size as we interpolate the position embeding for different image size.
+# # load the pretrained weights
+# t2t_vit_utils.load_for_transfer_learning(model,
+#                                          # '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/81.5_T2T_ViT_14.pth.tar',
+#                                          # '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/81.9_T2T_ViT_19.pth.tar',
+#                                          # '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/83.3_T2T_ViT_14.pth.tar',
+#                                          # '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/81.7_T2T_ViTt_14.pth.tar',
+#                                          '/home/hqvo2/Projects/Breast_Cancer/libs/T2T-ViT/ckpts/82.4_T2T_ViTt_19.pth.tar',
+#                                          use_ema=True,
+#                                          strict=False,
+#                                          num_classes=3)  # change num_classes based on dataset, can work for different image size as we interpolate the position embeding for different image size.
 
 
-for idx, (name, param) in enumerate(model.named_parameters()):
+# for idx, (name, param) in enumerate(model.named_parameters()):
+#     print(idx, name)
+
+# # T2T-ViT-14 and T2T-ViT-14_384
+# first_stage = 185
+# second_stage = 128
+              
+# # T2T-ViT-19
+# first_stage = 240
+# second_stage = 194
+
+# # T2T-ViT_t-14
+# first_stage = 181
+# second_stage = 124
+
+# # T2T-ViT_t-19
+# first_stage = 236
+# second_stage = 190
+
+# CaiT, CoaT, DeiT, PiT, TNT, Swin, XCiT
+model = timm.create_model('cait_m48_448', pretrained=True)
+for idx, (name, para) in enumerate(model.named_parameters()):
     print(idx, name)
 
-# T2T-ViT-14 and T2T-ViT-14_384
-first_stage = 185
-second_stage = 128
-              
-# T2T-ViT-19
-first_stage = 240
-second_stage = 194
+all_cait_models = timm.list_models('*xcit_small*', pretrained=True)
+print(all_cait_models)
 
-# T2T-ViT_t-14
-first_stage = 181
-second_stage = 124
+# cait_m36_384
+first_stage = 689
+second_stage = 633
+third_stage = 300
 
-# T2T-ViT_t-19
-first_stage = 236
-second_stage = 190
+# cait_s36_384
+first_stage = 689
+second_stage = 633
+
+# coat_lite_small
+first_stage = 245
+second_stage = 195
+
+# deit_base_patch16_224
+first_stage = 149
+second_stage = 99
+
+# deit_base_patch16_384
+first_stage = 149
+second_stage = 99
+
+# pit_b_224
+first_stage = 169
+second_stage = 119
+
+# pit_b_distilled_224
+first_stage = 171
+second_stage = 119
+
+# tnt_s_patch16_224
+first_stage = 348
+second_stage = 290
+
+# swin_base_patch4_window7_224
+first_stage = 326
+second_stage = 269
+
+# swin_base_patch4_window12_384
+first_stage = 326
+second_stage = 269
+
+# crossvit_18_240
+first_stage = 371
+second_stage = 319
+
+# #######
+# cait_m48_448
+first_stage = 905
+second_stage = 849
+third_stage = 543
+
+# xcit_small_24_p8_224
+first_stage = 625
+second_stage = 563
+
+# xcit_small_24_p16_224
+first_stage = 628
+second_stage = 566

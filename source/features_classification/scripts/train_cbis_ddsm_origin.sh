@@ -13,6 +13,15 @@ calc_dist_comb_feats_omit_save_root='/home/hqvo2/Projects/Breast_Cancer/experime
 calc_breast_density_lesion_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/calc_breast_density_lesion'
 calc_breast_density_image_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/calc_breast_density_image'
 
+# with centercrop
+mass_shape_comb_feats_omit_centercrop_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/mass_shape_comb_feats_omit_centercrop'
+mass_margins_comb_feats_omit_centercrop_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/mass_margins_comb_feats_omit_centercrop'
+mass_breast_density_lesion_centercrop_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/mass_breast_density_lesion_centercrop'
+
+calc_type_comb_feats_omit_centercrop_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/calc_type_comb_feats_omit_centercrop'
+calc_dist_comb_feats_omit_centercrop_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/calc_dist_comb_feats_omit_centercrop'
+calc_breast_density_lesion_centercrop_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/calc_breast_density_lesion_centercrop'
+
 # with segmentation
 mass_shape_comb_feats_omit_segm_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/mass_shape_comb_feats_omit_segm'
 mass_margins_comb_feats_omit_segm_save_root='/home/hqvo2/Projects/Breast_Cancer/experiments/cbis_ddsm/mass_margins_comb_feats_omit_segm'
@@ -330,15 +339,15 @@ cd ..
 #        --second_stage_freeze 99 \
 #        -s ${four_classes_mass_calc_pathology_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
-python train.py --save \
-       -d mass_shape_comb_feats_omit \
-       --njobs 5 \
-       -m 'vit_base_patch16_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 149 \
-       --second_stage_freeze 99 \
-       -s ${mass_shape_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'vit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 
 # python train.py --save \
@@ -425,15 +434,15 @@ python train.py --save \
 #        -s ${mass_shape_comb_feats_omit_save_root}/vit-large-patch16-224-in21k_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 # Mass Margins
-python train.py --save \
-       -d mass_margins_comb_feats_omit \
-       --njobs 5 \
-       -m 'vit_base_patch16_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 149 \
-       --second_stage_freeze 99 \
-       -s ${mass_margins_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'vit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 # python train.py --save \
 #        -d mass_margins_comb_feats_omit \
@@ -467,15 +476,15 @@ python train.py --save \
 #        -s ${mass_breast_density_image_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 # Calc Type
-python train.py --save \
-       -d calc_type_comb_feats_omit \
-       --njobs 5 \
-       -m 'vit_base_patch16_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 149 \
-       --second_stage_freeze 99 \
-       -s ${calc_type_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'vit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${calc_type_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 # python train.py --save \
 #        -d calc_type_comb_feats_omit \
@@ -488,15 +497,15 @@ python train.py --save \
 #        -s ${calc_type_comb_feats_omit_save_root}/vit-base-patch16-384_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 # Calc Dist
-python train.py --save \
-       -d calc_dist_comb_feats_omit \
-       --njobs 5 \
-       -m 'vit_base_patch16_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 149 \
-       --second_stage_freeze 99 \
-       -s ${calc_dist_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'vit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 # python train.py --save \
 #        -d calc_dist_comb_feats_omit \
@@ -863,3 +872,683 @@ python train.py --save \
 #        --second_stage_freeze -1 --second_stage_wd 0.1 --second_stage_lr 0.01\
 #        --third_stage_freeze -1 --third_stage_wd 0.1 --third_stage_lr 0.001\
 #        -s ${mass_shape_comb_feats_omit_save_root}/vit-base-patch16-224_nopretrained_b256_e1000_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# # CaiT
+# ## cait_m36_384
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'cait_m36_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 689 \
+#        --second_stage_freeze 633 \
+#        --third_stage_freeze 300 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/cait-m36-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'cait_m36_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 689 \
+#        --second_stage_freeze 633 \
+#        --third_stage_freeze 300 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/cait-m36-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'cait_m36_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 689 \
+#        --second_stage_freeze 633 \
+#        --third_stage_freeze 300 \
+#        -s ${calc_type_comb_feats_omit_save_root}/cait-m36-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'cait_m36_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 689 \
+#        --second_stage_freeze 633 \
+#        --third_stage_freeze 300 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/cait-m36-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# ## cait_s36_384
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'cait_s36_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 689 \
+#        --second_stage_freeze 633 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/cait-s36-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'cait_s36_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 689 \
+#        --second_stage_freeze 633 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/cait-s36-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'cait_s36_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 689 \
+#        --second_stage_freeze 633 \
+#        -s ${calc_type_comb_feats_omit_save_root}/cait-s36-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'cait_s36_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 689 \
+#        --second_stage_freeze 633 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/cait-s36-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# # coat
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'coat_lite_small'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 245 \
+#        --second_stage_freeze 195 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/coat-lite-small_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'coat_lite_small'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 245 \
+#        --second_stage_freeze 195 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/coat-lite-small_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'coat_lite_small'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 245 \
+#        --second_stage_freeze 195 \
+#        -s ${calc_type_comb_feats_omit_save_root}/coat-lite-small_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'coat_lite_small'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 245 \
+#        --second_stage_freeze 195 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/coat-lite-small_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# # deit
+# ## deit_base_patch16_224
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'deit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/deit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'deit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/deit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'deit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${calc_type_comb_feats_omit_save_root}/deit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'deit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/deit-base-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# ## deit_base_patch16_384
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'deit_base_patch16_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/deit-base-patch16-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'deit_base_patch16_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/deit-base-patch16-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'deit_base_patch16_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${calc_type_comb_feats_omit_save_root}/deit-base-patch16-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'deit_base_patch16_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/deit-base-patch16-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# # pit
+# ## pit_b_224
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'pit_b_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 169 \
+#        --second_stage_freeze 119 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/pit-b-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'pit_b_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 169 \
+#        --second_stage_freeze 119 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/pit-b-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'pit_b_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 169 \
+#        --second_stage_freeze 119 \
+#        -s ${calc_type_comb_feats_omit_save_root}/pit-b-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'pit_b_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 169 \
+#        --second_stage_freeze 119 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/pit-b-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# ## pit_b_distilled_224
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'pit_b_distilled_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 171 \
+#        --second_stage_freeze 119 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/pit-b-distilled-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'pit_b_distilled_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 171 \
+#        --second_stage_freeze 119 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/pit-b-distilled-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'pit_b_distilled_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 171 \
+#        --second_stage_freeze 119 \
+#        -s ${calc_type_comb_feats_omit_save_root}/pit-b-distilled-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'pit_b_distilled_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 171 \
+#        --second_stage_freeze 119 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/pit-b-distilled-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+
+# # tnt
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'tnt_s_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 348 \
+#        --second_stage_freeze 290 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/tnt-s-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'tnt_s_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 348 \
+#        --second_stage_freeze 290 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/tnt-s-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'tnt_s_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 348 \
+#        --second_stage_freeze 290 \
+#        -s ${calc_type_comb_feats_omit_save_root}/tnt-s-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'tnt_s_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 348 \
+#        --second_stage_freeze 290 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/tnt-s-patch16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# # swin
+# ## swin_base_patch4_window7_224
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window7_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/swin-base-patch4-window7-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window7_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/swin-base-patch4-window7-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window7_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        -s ${calc_type_comb_feats_omit_save_root}/swin-base-patch4-window7-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window7_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/swin-base-patch4-window7-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# ## swin_base_patch4_window12_384
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/swin-base-patch4-window12-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        -s ${mass_margins_comb_feats_omit_save_root}/swin-base-patch4-window12-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        -s ${calc_type_comb_feats_omit_save_root}/swin-base-patch4-window12-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        -s ${calc_dist_comb_feats_omit_save_root}/swin-base-patch4-window12-384_b32_e100_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# CrossViT
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'crossvit_18_240'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 371 \
+#        --second_stage_freeze 319 \
+#        -s ${mass_shape_comb_feats_omit_save_root}/crossvit-18-240_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# best ckpt (val acc)
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'vit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${mass_shape_comb_feats_omit_save_root}/vit-base-patch16-224_b32_e100_bestacc_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window7_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${mass_shape_comb_feats_omit_save_root}/swin-base-patch4-window7-224_b32_e100_bestacc_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'vit_base_patch16_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${mass_shape_comb_feats_omit_save_root}/vit-base-patch16-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${mass_shape_comb_feats_omit_save_root}/swin-base-patch4-window12-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${mass_margins_comb_feats_omit_save_root}/swin-base-patch4-window12-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${calc_type_comb_feats_omit_save_root}/swin-base-patch4-window12-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${calc_dist_comb_feats_omit_save_root}/swin-base-patch4-window12-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# center-crop
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${mass_shape_comb_feats_omit_centercrop_save_root}/swin-base-patch4-window12-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${mass_margins_comb_feats_omit_centercrop_save_root}/swin-base-patch4-window12-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_type_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${calc_type_comb_feats_omit_centercrop_save_root}/swin-base-patch4-window12-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'swin_base_patch4_window12_384'\
+#        -b 32 \
+#        -e 100 -i 384 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 326 \
+#        --second_stage_freeze 269 \
+#        --best_ckpt_metric 'acc' \
+#        -s ${calc_dist_comb_feats_omit_centercrop_save_root}/swin-base-patch4-window12-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# cait_m48_448
+python train.py --save \
+       -d mass_shape_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'cait_m48_448'\
+       -b 32 \
+       -e 100 -i 448 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 905 \
+       --second_stage_freeze 849 \
+       --third_stage_freeze 633 \
+       -s ${mass_shape_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d mass_margins_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'cait_m48_448'\
+       -b 32 \
+       -e 100 -i 448 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 905 \
+       --second_stage_freeze 849 \
+       --third_stage_freeze 633 \
+       -s ${mass_margins_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d calc_type_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'cait_m48_448'\
+       -b 32 \
+       -e 100 -i 448 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 905 \
+       --second_stage_freeze 849 \
+       --third_stage_freeze 633 \
+       -s ${calc_type_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d calc_dist_shape_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'cait_m48_448'\
+       -b 32 \
+       -e 100 -i 448 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 905 \
+       --second_stage_freeze 849 \
+       --third_stage_freeze 633 \
+       -s ${calc_dist_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# xcit_small_24_p8_224
+python train.py --save \
+       -d mass_shape_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'xcit_small_24_p8_224'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 625 \
+       --second_stage_freeze 563 \
+       -s ${mass_shape_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d mass_margins_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'xcit_small_24_p8_224'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 625 \
+       --second_stage_freeze 563 \
+       -s ${mass_margins_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d calc_type_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'xcit_small_24_p8_224'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 625 \
+       --second_stage_freeze 563 \
+       -s ${calc_type_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d calc_dist_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'xcit_small_24_p8_224'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 625 \
+       --second_stage_freeze 563 \
+       -s ${calc_dist_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+# xcit_small_24_p16_224
+python train.py --save \
+       -d mass_shape_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'xcit_small_24_p16_224'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 628 \
+       --second_stage_freeze 566 \
+       -s ${mass_shape_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d mass_margins_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'xcit_small_24_p16_224'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 628 \
+       --second_stage_freeze 566 \
+       -s ${mass_margins_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d calc_type_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'xcit_small_24_p16_224'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 628 \
+       --second_stage_freeze 566 \
+       -s ${calc_type_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+
+python train.py --save \
+       -d calc_dist_comb_feats_omit_centercrop \
+       --njobs 5 \
+       -m 'xcit_small_24_p16_224'\
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --first_stage_freeze 628 \
+       --second_stage_freeze 566 \
+       -s ${calc_dist_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
