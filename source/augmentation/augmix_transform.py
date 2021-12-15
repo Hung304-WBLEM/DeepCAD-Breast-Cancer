@@ -1,8 +1,8 @@
 import numpy as np
-import augmentations
 import torch
 
 from torchvision import transforms
+from augmix import augmentations
 
 
 class AugMix(object):

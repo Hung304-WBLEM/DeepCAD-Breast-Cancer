@@ -1,62 +1,30 @@
 {
     "DATA": {
 	"root": "/home/hqvo2/Projects/Breast_Cancer/data",
-	"processed_CBIS_DDSM": "processed_data2",
+	"processed_CBIS_DDSM": "CBIS_DDSM",
 	"CBIS_DDSM_lesions": {
 	    "mass_feats": {
-		"mass_shape_comb_feats_omit": "mass/cls/mass_shape_comb_feats_omit",
-		"mass_margins_comb_feats_omit": "mass/cls/mass_margins_comb_feats_omit",
-		"mass_breast_density_lesion": "mass/cls/mass_breast_density_lesion",
+		"mass_shape": "mass/cls/mass_shape",
+		"mass_margins": "mass/cls/mass_margins",
 		"mass_breast_density_image": "mass/cls/mass_breast_density_image",
 
-		"mass_shape_comb_feats_omit_centercrop": "mass/cls/mass_shape_comb_feats_omit_centercrop",
-		"mass_margins_comb_feats_omit_centercrop": "mass/cls/mass_margins_comb_feats_omit_centercrop",
-		"mass_breast_density_lesion_centercrop": "mass/cls/mass_breast_density_lesion_centercrop",
-
-		"mass_shape_comb_feats_omit_segm": "mass/cls/mass_shape_comb_feats_omit_segm",
-		"mass_margins_comb_feats_omit_segm": "mass/cls/mass_margins_comb_feats_omit_segm",
-		"mass_breast_density_lesion_segm": "mass/cls/mass_breast_density_lesion_segm",
-
-		"mass_shape_comb_feats_omit_mask": "mass/cls/mass_shape_comb_feats_omit_mask",
-		"mass_margins_comb_feats_omit_mask": "mass/cls/mass_margins_comb_feats_omit_mask",
-		"mass_breast_density_lesion_mask": "mass/cls/mass_breast_density_lesion_mask",
-
 		"mass_pathology": "mass/cls/mass_pathology",
-		"mass_pathology_histeq": "mass/cls/mass_pathology_histeq",
-		"mass_pathology_clahe": "mass/cls/mass_pathology_clahe",
-		"mass_pathology_clean": "mass/cls/mass_pathology_clean",
-		"stoa_mass_pathology": "mass/cls/stoa_mass_pathology",
-		"mass_pathology_512x512-crop_zero-pad": "mass/cls/mass_pathology_512x512-crop_zero-pad",
-		"mass_pathology_1024x1024-crop_zero-pad": "mass/cls/mass_pathology_1024x1024-crop_zero-pad",
-		"mass_pathology_2048x2048-crop_zero-pad": "mass/cls/mass_pathology_2048x2048-crop_zero-pad"
+                "mass_pathology_tfds": "mass/cls/mass_pathology_tfds",
+		"stoa_mass_pathology": "mass/cls/stoa_mass_pathology"
 	    },
 	    "calc_feats": {
-		"calc_type_comb_feats_omit": "calc/cls/calc_type_comb_feats_omit",
-		"calc_dist_comb_feats_omit": "calc/cls/calc_dist_comb_feats_omit",
-		"calc_breast_density_lesion": "calc/cls/calc_breast_density_lesion",
+		"calc_type": "calc/cls/calc_type",
+		"calc_dist": "calc/cls/calc_dist",
 		"calc_breast_density_image": "calc/cls/calc_breast_density_image",
 
-		"calc_type_comb_feats_omit_centercrop": "calc/cls/calc_type_comb_feats_omit_centercrop",
-		"calc_dist_comb_feats_omit_centercrop": "calc/cls/calc_dist_comb_feats_omit_centercrop",
-		"calc_breast_density_lesion_centercrop": "calc/cls/calc_breast_density_lesion_centercrop",
-
-		"calc_type_comb_feats_omit_segm": "calc/cls/calc_type_comb_feats_omit_segm",
-		"calc_dist_comb_feats_omit_segm": "calc/cls/calc_dist_comb_feats_omit_segm",
-		"calc_breast_density_lesion_segm": "calc/cls/calc_breast_density_lesion_segm",
-
-		"calc_type_comb_feats_omit_mask": "calc/cls/calc_type_comb_feats_omit_mask",
-		"calc_dist_comb_feats_omit_mask": "calc/cls/calc_dist_comb_feats_omit_mask",
-		"calc_breast_density_lesion_mask": "calc/cls/calc_breast_density_lesion_mask",
 
 		"calc_pathology": "calc/cls/calc_pathology",
-		"calc_pathology_histeq": "calc/cls/calc_pathology_histeq",
-		"calc_pathology_clahe": "calc/cls/calc_pathology_clahe",
-		"calc_pathology_clean": "calc/cls/calc_pathology_clean",
-		"stoa_calc_pathology": "calc/cls/stoa_calc_pathology",
-		"calc_pathology_512x512-crop_zero-pad": "calc/cls/calc_pathology_512x512-crop_zero-pad",
-		"calc_pathology_1024x1024-crop_zero-pad": "calc/cls/calc_pathology_1024x1024-crop_zero-pad",
-		"calc_pathology_2048x2048-crop_zero-pad": "calc/cls/calc_pathology_2048x2048-crop_zero-pad"
-	    }
+                "calc_pathology_tfds": "calc/cls/calc_pathology_tfds",
+		"stoa_calc_pathology": "calc/cls/stoa_calc_pathology"
+	    },
+            "background": {
+                "bg_tfds": "background/cls/background_tfds"
+            }
 	},
         "methodist_data": {
             "root": "methodist_data",
