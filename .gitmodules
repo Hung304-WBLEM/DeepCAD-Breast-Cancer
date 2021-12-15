@@ -16,3 +16,6 @@
 [submodule "libs/TransFG"]
 	path = libs/TransFG
 	url = https://github.com/Hung304-WBLEM/TransFG.git
+[submodule "libs/dino"]
+	path = libs/dino
+	url = https://github.com/Hung304-WBLEM/dino.git

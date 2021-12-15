@@ -7,15 +7,12 @@ from optparse import OptionParser
 config = ConfigParser()
 parser = OptionParser()
 
+parser.add_option("--exp_name", dest='experiment_name',
+                    help="Name of the experiment for mlflow")
 parser.add_option("-d", "--dataset",
                     help="Name of the available datasets")
 parser.add_option("--tr", "--train_rate", dest="train_rate", type=float, default=1,
                   help="Part of the dataset that you want to train")
-parser.add_option("--save", action='store_true')
-parser.add_option("-s", "--save_path",
-                    help="Path to save the trained model")
-parser.add_option("--not_use_pretrained", action='store_true', default=False,
-                    help="Path to save the trained model")
 parser.add_option("-m", "--model_name",
                     help="Select the backbone for training. Available backbones include: 'resnet', 'resnet50', 'alexnet', 'vgg', 'squeezenet', 'densenet', 'inception'")
 parser.add_option("-b", "--batch_size", type=int, default=32,
@@ -43,6 +40,8 @@ parser.add_option("--aug_type", dest="augmentation_type", type=str,
 parser.add_option("--best_ckpt_metric", dest="best_ckpt_metric", 
                   default="loss", choices=['loss', 'acc'],
                   help="Choose metric to select best model for ckpt")
+parser.add_option("--ckpt", dest="ckpt_path",
+                  default=None, help="Path to load the model checkpoint")
 parser.add_option("--njobs", dest="num_workers", type=int,
                   default=0)
 
@@ -94,17 +93,17 @@ parser.add_option("--rnet_dil_4th",
                   help="enable if you want to dilate layer4 in the torchvision resnet model")
 
 options, _ = parser.parse_args()
-config['hyperparams'] = {}
-for opt in vars(options):
-    attr = getattr(options, opt)
-    print(opt, attr, type(attr))
+# config['hyperparams'] = {}
+# for opt in vars(options):
+#     attr = getattr(options, opt)
+#     print(opt, attr, type(attr))
+# 
+#     config['hyperparams'][opt] = str(attr)
 
-    config['hyperparams'][opt] = str(attr)
-
-if options.save is True:
-    os.makedirs(options.save_path, exist_ok=True)
-    with open(os.path.join(options.save_path, 'config.ini'), 'w') as configfile:
-        config.write(configfile)
+# if options.save is True:
+#     os.makedirs(options.save_path, exist_ok=True)
+#     with open(os.path.join(options.save_path, 'config.ini'), 'w') as configfile:
+#         config.write(configfile)
 
 
 def read_config(config_path):

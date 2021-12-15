@@ -61,7 +61,6 @@ mkdir -p ${calc_type_comb_feats_omit_mask_save_root}
 mkdir -p ${calc_dist_comb_feats_omit_mask_save_root}
 mkdir -p ${calc_breast_density_lesion_mask_save_root}
 
-cd ..
 
 # Four classes Mass Calcification Pathology
 # python train.py -d four_classes_mass_calc_pathology -m resnet50 -b 32 -e 100 -i 224 --opt adam --wc --ws -s ${four_classes_mass_calc_pathology_save_root}/r50_b32_e100_224x224_adam_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
@@ -1427,128 +1426,128 @@ cd ..
 #        -s ${calc_dist_comb_feats_omit_centercrop_save_root}/swin-base-patch4-window12-384_b32_e100_bestacc_384x384_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 # cait_m48_448
-python train.py --save \
-       -d mass_shape_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'cait_m48_448'\
-       -b 32 \
-       -e 100 -i 448 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 905 \
-       --second_stage_freeze 849 \
-       --third_stage_freeze 633 \
-       -s ${mass_shape_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-python train.py --save \
-       -d mass_margins_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'cait_m48_448'\
-       -b 32 \
-       -e 100 -i 448 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 905 \
-       --second_stage_freeze 849 \
-       --third_stage_freeze 633 \
-       -s ${mass_margins_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-python train.py --save \
-       -d calc_type_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'cait_m48_448'\
-       -b 32 \
-       -e 100 -i 448 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 905 \
-       --second_stage_freeze 849 \
-       --third_stage_freeze 633 \
-       -s ${calc_type_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-python train.py --save \
-       -d calc_dist_shape_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'cait_m48_448'\
-       -b 32 \
-       -e 100 -i 448 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 905 \
-       --second_stage_freeze 849 \
-       --third_stage_freeze 633 \
-       -s ${calc_dist_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'cait_m48_448'\
+#        -b 32 \
+#        -e 100 -i 448 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 905 \
+#        --second_stage_freeze 849 \
+#        --third_stage_freeze 633 \
+#        -s ${mass_shape_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# 
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'cait_m48_448'\
+#        -b 32 \
+#        -e 100 -i 448 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 905 \
+#        --second_stage_freeze 849 \
+#        --third_stage_freeze 633 \
+#        -s ${mass_margins_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# 
+# python train.py --save \
+#        -d calc_type_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'cait_m48_448'\
+#        -b 32 \
+#        -e 100 -i 448 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 905 \
+#        --second_stage_freeze 849 \
+#        --third_stage_freeze 633 \
+#        -s ${calc_type_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# 
+# python train.py --save \
+#        -d calc_dist_shape_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'cait_m48_448'\
+#        -b 32 \
+#        -e 100 -i 448 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 905 \
+#        --second_stage_freeze 849 \
+#        --third_stage_freeze 633 \
+#        -s ${calc_dist_comb_feats_omit_centercrop_save_root}/cait-m48-448_b32_e100_448x448_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 # xcit_small_24_p8_224
-python train.py --save \
-       -d mass_shape_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'xcit_small_24_p8_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 625 \
-       --second_stage_freeze 563 \
-       -s ${mass_shape_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-python train.py --save \
-       -d mass_margins_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'xcit_small_24_p8_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 625 \
-       --second_stage_freeze 563 \
-       -s ${mass_margins_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-python train.py --save \
-       -d calc_type_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'xcit_small_24_p8_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 625 \
-       --second_stage_freeze 563 \
-       -s ${calc_type_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-python train.py --save \
-       -d calc_dist_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'xcit_small_24_p8_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 625 \
-       --second_stage_freeze 563 \
-       -s ${calc_dist_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# python train.py --save \
+#        -d mass_shape_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'xcit_small_24_p8_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 625 \
+#        --second_stage_freeze 563 \
+#        -s ${mass_shape_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# 
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'xcit_small_24_p8_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 625 \
+#        --second_stage_freeze 563 \
+#        -s ${mass_margins_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# 
+# python train.py --save \
+#        -d calc_type_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'xcit_small_24_p8_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 625 \
+#        --second_stage_freeze 563 \
+#        -s ${calc_type_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# 
+# python train.py --save \
+#        -d calc_dist_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'xcit_small_24_p8_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 625 \
+#        --second_stage_freeze 563 \
+#        -s ${calc_dist_comb_feats_omit_centercrop_save_root}/xcit-small-24-p8-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
 # xcit_small_24_p16_224
-python train.py --save \
-       -d mass_shape_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'xcit_small_24_p16_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 628 \
-       --second_stage_freeze 566 \
-       -s ${mass_shape_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-python train.py --save \
-       -d mass_margins_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'xcit_small_24_p16_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 628 \
-       --second_stage_freeze 566 \
-       -s ${mass_margins_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
-
-python train.py --save \
+# python run.py --save \
+#        -d mass_shape_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'xcit_small_24_p16_224'\
+#        -b 32 \
+#        -e 3 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 628 \
+#        --second_stage_freeze 566 \
+#        -s ${mass_shape_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# 
+# python train.py --save \
+#        -d mass_margins_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'xcit_small_24_p16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 628 \
+#        --second_stage_freeze 566 \
+#        -s ${mass_margins_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# 
+python run.py --save \
        -d calc_type_comb_feats_omit_centercrop \
        --njobs 5 \
        -m 'xcit_small_24_p16_224'\
        -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       -e 3 -i 224 --opt adam --wc --ws --crt bce\
        --first_stage_freeze 628 \
        --second_stage_freeze 566 \
        -s ${calc_type_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
 
-python train.py --save \
-       -d calc_dist_comb_feats_omit_centercrop \
-       --njobs 5 \
-       -m 'xcit_small_24_p16_224'\
-       -b 32 \
-       -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 628 \
-       --second_stage_freeze 566 \
-       -s ${calc_dist_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"
+# python run.py --save \
+#        -d calc_dist_comb_feats_omit_centercrop \
+#        --njobs 5 \
+#        -m 'xcit_small_24_p16_224'\
+#        -b 32 \
+#        -e 3 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 628 \
+#        --second_stage_freeze 566 \
+#        -s ${calc_dist_comb_feats_omit_centercrop_save_root}/xcit-small-24-p16-224_b32_e100_224x224_adam_bce_wc_ws_"$(LC_TIME="EN.UTF-8" date)"

@@ -5,23 +5,25 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
+import torch
+import torch.nn.functional as F
 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import precision_recall_curve, average_precision_score
 from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import auc
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import label_binarize
-from datasets import Pathology_Dataset, Mass_Calc_Pathology_Dataset, Four_Classes_Mass_Calc_Pathology_Dataset, Five_Classes_Mass_Calc_Pathology_Dataset
-from datasets import Four_Classes_Features_Pathology_Dataset, Features_Pathology_Dataset
-from datasets import Mass_Shape_Dataset, Mass_Margins_Dataset, Calc_Type_Dataset, Calc_Dist_Dataset, Breast_Density_Dataset
+from scipy import interp
 
 
-def plot_confusion_matrix(cm, classes, normalize=False, cmap=plt.cm.Blues):
+def plot_confusion_matrix(cm, classes, normalize=False, cmap=plt.cm.RdPu):
     # if normalize:
     #     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     #     print("Normalized confusion matrix")
     # else:
     #     print('Confusion matrix, without normalization')
+    classes = list(map(lambda x: x.lower(), classes))
 
     norm_cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     norm_cm = np.nan_to_num(norm_cm)
@@ -32,7 +34,7 @@ def plot_confusion_matrix(cm, classes, normalize=False, cmap=plt.cm.Blues):
 
     plt.colorbar()
     tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
+    plt.xticks(tick_marks, classes, rotation=45, ha='right')
     plt.yticks(tick_marks, classes)
 
     # fmt = '.2f' if normalize else 'd'
@@ -51,6 +53,8 @@ def plot_confusion_matrix(cm, classes, normalize=False, cmap=plt.cm.Blues):
 
 
 def evalplot_confusion_matrix(y_true, y_pred, classes, save_root=None, fig_only=False):
+    classes = list(map(lambda x: x.lower(), classes))
+
     # Confusion Matrix
     cm = confusion_matrix(y_true, y_pred)
 
@@ -87,7 +91,7 @@ def evalplot_confusion_matrix(y_true, y_pred, classes, save_root=None, fig_only=
     return cm
 
 
-def plot_precision_recall_curve(binarized_y_true, y_proba_pred, class_name):
+def plot_precision_recall_curve(binarized_y_true, y_proba_pred, class_name, color):
     precisions, recalls, thresholds = precision_recall_curve(
         binarized_y_true, y_proba_pred)
     ap = average_precision_score(binarized_y_true, y_proba_pred)
@@ -105,20 +109,24 @@ def plot_precision_recall_curve(binarized_y_true, y_proba_pred, class_name):
         interpolated_precisions[idx] = max(precisions[idx:])
 
     plt.plot(recalls[:], interpolated_precisions[:],
-             label=f"{class_name} (AP={ap})")
+             label=f"{class_name} (AP={ap})", color=color, linewidth=2)
 
     return precisions, recalls, ap
 
 
-def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, save_root=None, fig_only=False):
+def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, save_root=None, fig_only=False, cmap=[plt.cm.tab20, plt.cm.tab20b]):
+    classes = list(map(lambda x: x.lower(), classes))
+    n_classes = len(classes)
+
     precisions_list = []
     recalls_list = []
     average_precisions_list = []
 
     if fig_only:
-        fig = plt.figure(figsize=(6, 6))
+        fig = plt.figure(figsize=(8, 6))
     else:
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure(figsize=(8, 6))
+
 
     if binarized_y_true.shape[1] == 1:  # For binary clasification
         precisions, recalls, average_precisions = plot_precision_recall_curve(
@@ -127,13 +135,40 @@ def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, sav
         recalls_list.append(recalls)
         average_precisions_list.append(average_precisions)
     else:  # For multiclass classification
+        colors = [cmap[0](np.linspace(0, 1, n_classes-n_classes//2)),
+                  cmap[1](np.linspace(0, 1, n_classes//2))]
+
         for class_id, class_name in enumerate(classes):
             if np.sum(binarized_y_true[:, class_id]) > 0:
                 precisions, recalls, average_precisions = plot_precision_recall_curve(
-                    binarized_y_true[:, class_id], y_proba_pred[:, class_id], class_name)
+                    binarized_y_true[:, class_id], y_proba_pred[:, class_id], class_name,
+                    color=colors[class_id%2][class_id//2])
                 precisions_list.append(precisions)
                 recalls_list.append(recalls)
                 average_precisions_list.append(average_precisions)
+
+    # Plot micro-average PR curve
+    micro_precisions, micro_recalls, _ = precision_recall_curve(
+        binarized_y_true.ravel(), y_proba_pred.ravel())
+    micro_average_precision = round(average_precision_score(binarized_y_true,
+                                                            y_proba_pred, average="micro"), 2)
+
+    micro_precisions = micro_precisions[:-1].tolist()
+    micro_precisions.reverse()
+    micro_recalls = micro_recalls[:-1].tolist()
+    micro_recalls.reverse()
+
+    interpolated_micro_precisions = [0] * len(micro_precisions)
+    for idx in range(0, len(micro_precisions) - 1):
+        interpolated_micro_precisions[idx] = max(micro_precisions[idx:])
+    plt.plot(micro_recalls[:], interpolated_micro_precisions[:],
+             label=f"Micro-average (AP={micro_average_precision})", color='blue',
+             linewidth=1, linestyle='dashed')
+
+    # Calculate macro-average AP
+    macro_average_precision = round(average_precision_score(binarized_y_true,
+                                                            y_proba_pred, average="macro"), 2)
+    # --------------------------------------------------------------------------
 
     plt.xlabel("Recall")
     plt.ylabel("Precision")
@@ -141,7 +176,7 @@ def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, sav
 
     plt.xlim([0, 1])
     plt.ylim([0, 1])
-    plt.grid(True)
+    # plt.grid(True)
     plt.tight_layout()
 
     if save_root is not None:
@@ -151,41 +186,84 @@ def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, sav
         return fig
 
     plt.close()
-    return precisions_list, recalls_list, average_precisions_list
+
+    log_info = { 
+        'micro_average_precision': micro_average_precision,
+        'macro_average_precision': macro_average_precision,
+        'average_precisions_list': average_precisions_list
+    }
+
+    return precisions_list, recalls_list, average_precisions_list, log_info
 
 
-def plot_roc_curve(binarized_y_true, y_proba_pred, class_name):
+def plot_roc_curve(binarized_y_true, y_proba_pred, class_name, color):
     fpr, tpr, thresholds = roc_curve(binarized_y_true, y_proba_pred)
     auc = roc_auc_score(binarized_y_true, y_proba_pred)
     auc = round(auc, 2)
 
-    plt.plot(fpr, tpr, label=f"{class_name} (AUC={auc})")
+    plt.plot(fpr, tpr, label=f"{class_name} (AUC={auc})", color=color, linewidth=2)
 
     return fpr, tpr, auc
 
 
-def evalplot_roc_curve(binarized_y_true, y_proba_pred, classes, save_root=None, fig_only=False):
+def evalplot_roc_curve(binarized_y_true, y_proba_pred, classes, save_root=None, fig_only=False, cmap=[plt.cm.tab20, plt.cm.tab20b]):
+    classes = list(map(lambda x: x.lower(), classes))
+    n_classes = len(classes)
+
     fprs_list, tprs_list, aucs_list = [], [], []
 
     if fig_only:
-        fig = plt.figure(figsize=(6, 6))
+        fig = plt.figure(figsize=(8, 6))
     else:
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure(figsize=(8, 6))
     if binarized_y_true.shape[1] == 1:  # For binary classification
-        fpr, tpr, auc = plot_roc_curve(
+        fpr, tpr, _auc = plot_roc_curve(
             binarized_y_true, y_proba_pred[:, 1], class_name=classes[1])
         fprs_list.append(fpr)
         tprs_list.append(tpr)
-        aucs_list.append(auc)
+        aucs_list.append(_auc)
     else:  # For multiclass classification
+        colors = [cmap[0](np.linspace(0, 1, n_classes-n_classes//2)),
+                  cmap[1](np.linspace(0, 1, n_classes//2))]
+
         for class_id, class_name in enumerate(classes):
             if np.sum(binarized_y_true[:, class_id]) > 0:
-                fpr, tpr, auc = plot_roc_curve(
-                    binarized_y_true[:, class_id], y_proba_pred[:, class_id], class_name)
+                fpr, tpr, _auc = plot_roc_curve(
+                    binarized_y_true[:, class_id], y_proba_pred[:, class_id], class_name,
+                    color=colors[class_id%2][class_id//2])
                 fprs_list.append(fpr)
                 tprs_list.append(tpr)
-                aucs_list.append(auc)
+                aucs_list.append(_auc)
 
+
+    # --------------------------------------------------------------------------
+    # plotting micro-average ROC curve
+    micro_fpr, micro_tpr, _ = roc_curve(binarized_y_true.ravel(), y_proba_pred.ravel())
+    micro_roc_auc = round(auc(micro_fpr, micro_tpr), 2)
+    plt.plot(micro_fpr, micro_tpr, label=f"Micro-average (AUC={micro_roc_auc})", color='blue',
+             linewidth=1, linestyle='dashed')
+
+    # plotting macro-average ROC curve
+    all_fpr = []
+    for idx in range(len(fprs_list)):
+        all_fpr.append(fprs_list[idx])
+
+    all_fpr = np.unique(np.concatenate(all_fpr))
+    mean_tpr = np.zeros_like(all_fpr)
+
+    for idx in range(len(fprs_list)):
+        mean_tpr += interp(all_fpr, fprs_list[idx], tprs_list[idx])
+
+    mean_tpr /= n_classes
+
+    macro_fpr = all_fpr
+    macro_tpr = mean_tpr
+    macro_roc_auc = round(auc(macro_fpr, macro_tpr), 2)
+
+    plt.plot(macro_fpr, macro_tpr, label=f"Macro-average (AUC={macro_roc_auc})", color='red',
+             linewidth=1, linestyle='dashed')
+
+    # --------------------------------------------------------------------------
     plt.plot([0, 1], [0, 1], 'k--')
     plt.xlabel("1 - Specificity")
     plt.ylabel("Sensitivity")
@@ -203,68 +281,81 @@ def evalplot_roc_curve(binarized_y_true, y_proba_pred, classes, save_root=None, 
         return fig
 
     plt.close()
-    return fprs_list, tprs_list, aucs_list
+
+    log_info = {
+        'micro_roc_auc': micro_roc_auc,
+        'macro_roc_auc': macro_roc_auc,
+        'aucs_list': aucs_list
+    }
+    return fprs_list, tprs_list, aucs_list, log_info
 
 
-def eval_all(y_true, y_proba_pred, classes, save_root):
+@torch.no_grad()
+def eval_all(y_true, preds, classes, save_root, multilabel_mode, dataset):
     matplotlib.use('Agg')
 
     binarized_y_true = label_binarize(y_true, classes=[*range(len(classes))])
-    y_pred = y_proba_pred.argmax(axis=1)
 
-    acc = accuracy_score(y_true, y_pred)
+    if not multilabel_mode:
+        y_proba_pred = torch.softmax(torch.from_numpy(preds), dim=-1).detach().numpy()
+        y_pred = y_proba_pred.argmax(axis=1)
+        acc = accuracy_score(y_true, y_pred)
+    else:
+        y_proba_pred_softmax = torch.softmax(torch.from_numpy(preds), dim=-1).detach().numpy()
+        y_pred = y_proba_pred_softmax.argmax(axis=1)
+        acc = accuracy_score(y_true, y_pred)
 
-    cm = evalplot_confusion_matrix(y_true, y_pred, classes, save_root)
-    precisions_list, recalls_list, average_precisions_list = evalplot_precision_recall_curve(
-        binarized_y_true, y_proba_pred, classes, save_root)
-    fprs_list, tprs_list, aucs_list = evalplot_roc_curve(
-        binarized_y_true, y_proba_pred, classes, save_root)
+        y_proba_pred = torch.sigmoid(torch.from_numpy(preds)).detach().numpy()
+
+    if hasattr(dataset, 'combined_classes'):
+        all_classes = np.concatenate((classes, dataset.combined_classes))
+    else:
+        all_classes = classes
+
+    cm = evalplot_confusion_matrix(y_true, y_pred, all_classes, save_root)
+    precisions_list, recalls_list, average_precisions_list, pr_log_info = \
+        evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, save_root)
+    fprs_list, tprs_list, aucs_list, roc_log_info = \
+        evalplot_roc_curve(binarized_y_true, y_proba_pred, classes, save_root)
 
     plot_data = {'accuracy': acc,
                  'confusion_matrix': cm,
+
                  'classes_precisions_list': precisions_list,
                  'classes_recalls_list': recalls_list,
                  'classes_average_precisions_list': average_precisions_list,
+                 'macro_average_precision': pr_log_info['macro_average_precision'],
+                 'micro_average_precision': pr_log_info['micro_average_precision'],
+
                  'classes_fprs_list': fprs_list,
                  'classes_tprs_list': tprs_list,
-                 'classes_aucs_list': aucs_list}
+                 'classes_aucs_list': aucs_list,
+                 'macro_roc_auc': roc_log_info['macro_roc_auc'],
+                 'micro_roc_auc': roc_log_info['micro_roc_auc'],
+
+                 'classes': classes,
+                 'all_classes': all_classes}
 
     with open(os.path.join(save_root, 'plot_data.pkl'), 'wb') as f:
         pickle.dump(plot_data, f)
 
+    return acc, \
+        pr_log_info['macro_average_precision'], pr_log_info['micro_average_precision'], \
+        pr_log_info['average_precisions_list'], \
+        roc_log_info['macro_roc_auc'], roc_log_info['micro_roc_auc'], \
+        roc_log_info['aucs_list']
 
-def plot_learning_curve(save_root, metric, dataset, *result_paths):
+
+def plot_learning_curve(save_root, metric, dataset, classes, *result_paths):
     '''Plot the learning curve for different experimental results directories
     
     Args:
     metric(str) - metric that you want to plot
     dataset(str) - dataset that you want to plot, this is to get information
     about classes of this dataset
+    classes - list of class names
     *result_paths - list of tuples, each tuple contains the path and the corresponding data percentage 
     '''
-
-    if dataset == 'mass_shape':
-        classes = Mass_Shape_Dataset.classes
-    elif dataset == 'mass_margins':
-        classes = Mass_Margins_Dataset.classes
-    elif dataset == 'calc_type':
-        classes = Calc_Type_Dataset.classes
-    elif dataset == 'calc_dist':
-        classes = Calc_Dist_Dataset.classes
-    elif dataset == 'breast_density':
-        classes = Breast_Density_Dataset.classes
-    elif dataset == 'pathology':
-        classes = Pathology_Dataset.classes
-    elif dataset == 'mass_calc_pathology':
-        classes = Mass_Calc_Pathology_Dataset.classes
-    elif dataset == 'four_classes_mass_calc_pathology':
-        classes = Four_Classes_Mass_Calc_Pathology_Dataset.classes
-    elif dataset == 'five_classes_mass_calc_pathology':
-        classes = Five_Classes_Mass_Calc_Pathology_Dataset.classes
-    elif dataset == 'four_classes_features_pathology':
-        classes = Four_Classes_Features_Pathology_Dataset.classes
-    elif dataset == 'features_pathology_dataset':
-        classes = Features_Pathology_Dataset.classes
 
     if metric == 'classes_aucs_list':
         ylabel = 'AUC_ROC'
@@ -303,6 +394,202 @@ def plot_learning_curve(save_root, metric, dataset, *result_paths):
     plt.close()
 
 
+def plot_train_val_loss(num_epochs, train_loss_hist, val_loss_hist, train_acc_hist, val_acc_hist, save_path):
+    fig = plt.figure()
+    plt.plot(range(num_epochs), train_loss_hist, label='train loss')
+    plt.plot(range(num_epochs), val_loss_hist, label='val loss')
+    plt.xlabel('#epochs')
+    plt.ylabel('loss')
+    plt.legend()
+    plt.savefig(os.path.join(save_path, 'loss_plot.png'))
+    plt.close()
+
+    fig = plt.figure()
+    plt.plot(range(num_epochs), train_acc_hist, label='train accuracy')
+    plt.plot(range(num_epochs), val_acc_hist, label='val accuracy')
+    plt.xlabel('#epochs')
+    plt.ylabel('accuracy')
+    plt.legend()
+    plt.savefig(os.path.join(save_path, 'acc_plot.png'))
+    plt.close()
+
+
+def matplotlib_imshow(img, one_channel=False):
+    if one_channel:
+        img = img.mean(dim=0)
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.cpu().numpy()
+    if one_channel:
+        plt.imshow(npimg, cmap="Greys")
+    else:
+        plt.imshow(np.transpose(npimg, (1, 2, 0)))
+
+
+def show_score_bars(ax, all_classes_prob, classes, ignore_label=True):
+    classes = list(map(lambda x: x.lower(), classes))
+
+    labels = ['classes']
+    x = np.arange(len(labels))
+    width = 0.05
+
+    num_classes = len(classes)
+
+    for idx, prob in enumerate(all_classes_prob.tolist()):
+        class_score = [prob]
+        if ignore_label:
+            rect = ax.bar(idx*width + width/2, class_score, width)
+        else:
+            rect = ax.bar(idx*width + width/2, class_score, width, label=classes[idx])
+
+        ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
+        ax.set_xticks([])
+
+    # ax.legend(prop={'size': 5})
+
+
+@torch.no_grad()
+def images_to_probs(net, images, multilabel_mode):
+    '''
+    Generates predictions and corresponding probabilities from a trained
+    network and a list of images
+    '''
+    output = net(images)
+    
+    # convert output probabilities to predicted class
+    if not multilabel_mode:
+        _, preds_tensor = torch.max(output, 1)
+        preds_tensor = preds_tensor.cpu().numpy()
+    else:
+        preds_tensor = (torch.sigmoid(output).cpu().numpy() > 0.5).astype(int)
+    
+    preds = np.squeeze(preds_tensor)
+
+
+    if isinstance(preds.tolist(), int):
+        preds = [preds]
+
+    # probs = [F.softmax(el, dim=0)[i].item() for i, el in zip(preds, output)]
+    if not multilabel_mode:
+        all_classes_probs = [F.softmax(el, dim=0).cpu().detach().numpy() for el in output]
+    else:
+        all_classes_probs = [F.sigmoid(el).cpu().detach().numpy() for el in output]
+
+    return preds, all_classes_probs
+
+
+def plot_classes_preds(net, images, labels, num_images,
+                       multilabel_mode, dataset):
+    '''
+    Generates matplotlib Figure using a trained network, along with images
+    and labels from a batch, that shows the network's top prediction along
+    with its probability, alongside the actual label, coloring this
+    information based on whether the prediction was correct or not.
+    Uses the "images_to_probs" function.
+    '''
+    if not multilabel_mode:
+        classes = dataset.classes
+    else:
+        classes = np.concatenate((dataset.classes, dataset.combined_classes))
+
+    classes = list(map(lambda x: x.lower(), classes))
+
+    preds, all_classes_probs = images_to_probs(net, images, multilabel_mode)
+
+    width_ratios = [el for _ in range(6) for el in [2, 1]]
+    fig, a = plt.subplots(6, 12, figsize=(14, 8),
+                        gridspec_kw={'width_ratios': width_ratios,
+                                        'height_ratios': [1 for _ in range(6)]})
+    fig.tight_layout()
+
+    for k in range(num_images):
+        img = images[k].mean(dim=0) # for one-chanel image
+
+        img = img / 2 + 0.5
+        img = img.cpu().numpy()
+
+        r = (2*k)//12
+        c = (2*k)%12
+        a[r, c].axis('off')
+
+        a[r, c].imshow(img, cmap='Greys') # for one-chanel image
+        # a[r, c].imshow(np.transpose(npimg, (1, 2, 0))) # for RGB image
+
+        label = labels[k].item()
+
+        if not multilabel_mode:
+            pred_class = classes[preds[k]]
+        else:
+            pred_class = dataset.convert_multilabel_to_label(preds[k])
+
+
+        a[r, c].set_title("{0}\n(label: {1})".format(
+            pred_class,
+            classes[label]),
+                          color=("green" if pred_class==classes[label] else "red"),
+                          fontsize=6)
+
+        show_score_bars(a[(2*k+1)//12, (2*k+1)%12],
+                        all_classes_probs[k],
+                        classes=classes,
+                        ignore_label=(k!=0))
+
+
+    fig.legend(loc="upper center", ncol=7, prop={'size': 6})
+
+    return fig
+
+@torch.no_grad()
+def images_to_probs_pathology(net, images, input_vectors):
+    '''
+    Generates predictions and corresponding probabilities from a trained
+    network and a list of images
+    '''
+    output = net(images, input_vectors, training=False)
+    # convert output probabilities to predicted class
+    _, preds_tensor = torch.max(output, 1)
+    preds = np.squeeze(preds_tensor.cpu().numpy())
+    return preds, [F.softmax(el, dim=0)[i].item() for i, el in zip(preds, output)]
+
+
+def plot_classes_preds_pathology(net, images, input_vectors, labels, classes, num_images):
+    '''
+    Generates matplotlib Figure using a trained network, along with images
+    and labels from a batch, that shows the network's top prediction along
+    with its probability, alongside the actual label, coloring this
+    information based on whether the prediction was correct or not.
+    Uses the "images_to_probs" function.
+    '''
+    preds, probs = images_to_probs_pathology(net, images, input_vectors)
+    # plot the images in the batch, along with predicted and true labels
+    fig = plt.figure(figsize=(15, 15))
+    for idx in np.arange(num_images):
+        import math
+        ax = fig.add_subplot(math.ceil(num_images/4), 4, idx+1, xticks=[], yticks=[])
+        matplotlib_imshow(images[idx], one_channel=True)
+        ax.set_title("{0}, {1:.1f}%\n(label: {2})".format(
+            classes[preds[idx]],
+            probs[idx] * 100.0,
+            classes[labels[idx]]),
+                     color=("green" if preds[idx]==labels[idx].item() else "red"),
+                     fontsize=10)
+    return fig
+
+
+def add_pr_curve_tensorboard(writer, classes, class_index, test_labels, test_probs, global_step=0):
+    '''
+    Takes in a "class_index" from 0 to 9 and plots the corresponding
+    precision-recall curve
+    '''
+    tensorboard_labels = test_labels == class_index
+    tensorboard_probs = test_probs[:, class_index]
+
+    writer.add_pr_curve(classes[class_index],
+                        tensorboard_labels,
+                        tensorboard_probs,
+                        global_step=global_step)
+    writer.close()
+
+
 if __name__ == '__main__':
     MASS_SHAPE_TRAINING_SIZE = 875
     MASS_MARGINS_TRAINING_SIZE = 817
@@ -320,14 +607,6 @@ if __name__ == '__main__':
     mass_shape_dirs = [
         'r50_b32_e100_224x224_adam_wc_ws_Thu Apr  1 17:00:47 CDT 2021',
         'r50_b32_e100_224x224_adam_wc_ws_tr0.9_Sat Sep 25 03:26:16 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.8_Sat Sep 25 02:58:21 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.7_Sat Sep 25 20:30:15 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.6_Sat Sep 25 02:33:53 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.5_Sat Sep 25 02:08:23 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.4_Sat Sep 25 01:44:12 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.3_Sat Sep 25 01:24:35 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.2_Sat Sep 25 01:04:02 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.1_Sat Sep 25 00:44:00 CDT 2021',
     ]
     mass_shape_dirs = [os.path.join(mass_shape_result_root, resdir)
                          for resdir in mass_shape_dirs]
@@ -344,14 +623,6 @@ if __name__ == '__main__':
     mass_margins_dirs = [
         'r50_b32_e100_224x224_adam_wc_ws_Thu Apr  1 17:29:06 CDT 2021',
         'r50_b32_e100_224x224_adam_wc_ws_tr0.9_Sun Sep 26 04:01:56 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.8_Sun Sep 26 03:38:33 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.7_Sun Sep 26 03:15:33 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.6_Sun Sep 26 02:55:00 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.5_Sun Sep 26 02:34:10 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.4_Sun Sep 26 02:16:17 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.3_Sun Sep 26 01:57:28 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.2_Sun Sep 26 01:42:25 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.1_Sun Sep 26 01:25:50 CDT 2021',
     ]
     mass_margins_dirs = [os.path.join(mass_margins_result_root, resdir)
                          for resdir in mass_margins_dirs]
@@ -368,14 +639,6 @@ if __name__ == '__main__':
     mass_breast_density_lesion_dirs = [
         'r50_b32_e100_224x224_adam_wc_ws_Thu Apr  1 17:58:05 CDT 2021',
         'r50_b32_e100_224x224_adam_wc_ws_tr0.9_Sun Sep 26 07:04:51 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.8_Sun Sep 26 06:41:45 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.7_Sun Sep 26 06:19:32 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.6_Sun Sep 26 05:57:59 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.5_Sun Sep 26 05:37:28 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.4_Sun Sep 26 05:18:06 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.3_Sun Sep 26 04:59:56 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.2_Sun Sep 26 04:42:52 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.1_Sun Sep 26 04:27:03 CDT 2021'
     ]
     mass_breast_density_lesion_dirs = [os.path.join(mass_breast_density_lesion_result_root, resdir) for resdir in mass_breast_density_lesion_dirs]
     mass_breast_density_lesion_dirs = [(resdir, (10-idx)*0.1*MASS_BREAST_DENSITY_LESION_TRAINING_SIZE) for idx, resdir in enumerate(mass_breast_density_lesion_dirs)]
@@ -390,14 +653,6 @@ if __name__ == '__main__':
     mass_breast_density_image_dirs = [
         'r50_b32_e100_224x224_adam_wc_ws_Sun May 23 09:37:33 CDT 2021',
         'r50_b32_e100_224x224_adam_wc_ws_tr0.9_Mon Sep 27 00:52:15 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.8_Sun Sep 26 22:26:01 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.7_Sun Sep 26 20:00:58 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.6_Sun Sep 26 17:37:57 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.5_Sun Sep 26 15:28:05 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.4_Sun Sep 26 13:19:19 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.3_Sun Sep 26 11:19:06 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.2_Sun Sep 26 09:29:12 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.1_Sun Sep 26 07:28:40 CDT 2021'
     ]
     mass_breast_density_image_dirs = [os.path.join(mass_breast_density_image_result_root, resdir) for resdir in mass_breast_density_image_dirs]
     mass_breast_density_image_dirs = [(resdir, (10-idx)*0.1*MASS_BREAST_DENSITY_IMAGE_TRAINING_SIZE) for idx, resdir in enumerate(mass_breast_density_image_dirs)]
@@ -412,14 +667,6 @@ if __name__ == '__main__':
     calc_type_dirs = [
         'r50_b32_e100_224x224_adam_wc_ws_Thu Apr  1 18:26:07 CDT 2021',
         'r50_b32_e100_224x224_adam_wc_ws_tr0.9_Mon Sep 27 07:56:04 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.8_Mon Sep 27 07:15:32 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.7_Mon Sep 27 06:36:51 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.6_Mon Sep 27 06:03:21 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.5_Mon Sep 27 05:29:27 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.4_Mon Sep 27 04:56:59 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.3_Mon Sep 27 04:26:35 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.2_Mon Sep 27 03:59:21 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.1_Mon Sep 27 03:32:39 CDT 2021',
     ]
     calc_type_dirs = [os.path.join(calc_type_result_root, resdir) for resdir in calc_type_dirs]
     calc_type_dirs = [(resdir, (10-idx)*0.1*CALC_TYPE_TRAINING_SIZE) for idx, resdir in enumerate(calc_type_dirs)]
@@ -434,14 +681,6 @@ if __name__ == '__main__':
     calc_dist_dirs = [
         'r50_b32_e100_224x224_adam_wc_ws_Thu Apr  1 19:07:11 CDT 2021',
         'r50_b32_e100_224x224_adam_wc_ws_tr0.9_Mon Sep 27 12:00:04 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.8_Mon Sep 27 11:29:32 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.7_Mon Sep 27 10:58:24 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.6_Mon Sep 27 10:32:14 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.5_Mon Sep 27 10:05:16 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.4_Mon Sep 27 09:42:27 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.3_Mon Sep 27 09:19:01 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.2_Mon Sep 27 08:57:04 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.1_Mon Sep 27 08:36:05 CDT 2021',
     ]
     calc_dist_dirs = [os.path.join(calc_dist_result_root, resdir) for resdir in calc_dist_dirs]
     calc_dist_dirs = [(resdir, (10-idx)*0.1*CALC_DIST_TRAINING_SIZE) for idx, resdir in enumerate(calc_dist_dirs)]
@@ -456,14 +695,6 @@ if __name__ == '__main__':
     calc_breast_density_lesion_dirs = [
         'r50_b32_e100_224x224_adam_wc_ws_Thu Apr  1 19:55:02 CDT 2021',
         'r50_b32_e100_224x224_adam_wc_ws_tr0.9_Mon Sep 27 16:30:47 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.8_Mon Sep 27 15:50:32 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.7_Mon Sep 27 15:15:26 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.6_Mon Sep 27 14:43:02 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.5_Mon Sep 27 14:12:58 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.4_Mon Sep 27 13:45:35 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.3_Mon Sep 27 13:20:13 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.2_Mon Sep 27 12:57:15 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.1_Mon Sep 27 12:34:29 CDT 2021'
     ]
     calc_breast_density_lesion_dirs = [os.path.join(calc_breast_density_lesion_result_root, resdir) for resdir in calc_breast_density_lesion_dirs]
     calc_breast_density_lesion_dirs = [(resdir, (10-idx)*0.1*CALC_BREAST_DENSITY_LESION_TRAINING_SIZE) for idx, resdir in enumerate(calc_breast_density_lesion_dirs)]
@@ -479,14 +710,6 @@ if __name__ == '__main__':
     calc_breast_density_image_dirs = [
         'r50_b32_e100_224x224_adam_wc_ws_Sun May 23 12:15:57 CDT 2021',
         'r50_b32_e100_224x224_adam_wc_ws_tr0.9_Tue Sep 28 00:47:02 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.8_Mon Sep 27 22:23:22 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.7_Mon Sep 27 20:05:56 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.6_Mon Sep 27 17:49:51 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.5_Mon Sep 27 15:48:54 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.4_Mon Sep 27 22:41:49 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.3_Mon Sep 27 20:42:58 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.2_Mon Sep 27 18:58:30 CDT 2021',
-        'r50_b32_e100_224x224_adam_wc_ws_tr0.1_Mon Sep 27 17:13:13 CDT 2021',
     ]
     calc_breast_density_image_dirs = [os.path.join(calc_breast_density_image_result_root, resdir) for resdir in calc_breast_density_image_dirs]
     calc_breast_density_image_dirs = [(resdir, (10-idx)*0.1*CALC_BREAST_DENSITY_IMAGE_TRAINING_SIZE) for idx, resdir in enumerate(calc_breast_density_image_dirs)]
