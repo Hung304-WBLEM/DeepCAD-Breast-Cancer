@@ -15,7 +15,6 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from utilities.detectutil import bbox_util
 from PIL import Image
 from scipy import stats
-from natsort import natsorted
 
 
 def convert_npz_to_png(data_path, preprocessing=None):
@@ -120,17 +119,13 @@ def convert_ddsm_to_coco(categories, out_file, data_root, annotation_filepath, e
             break
 
         filename = os.path.basename(dir_path)
-        if filename.split('_')[-1] not in ['CC', 'MLO']: # skip mask directories
-            continue
-
-        filename = os.path.basename(dir_path)
-
-        img_path = glob.glob(os.path.join(dir_path, '**', '**', '000000.png'))[0]
-
+        if rgb_img:
+            img_path = os.path.join(dir_path, 'rgb_' + filename + '.png')
+        else:
+            img_path = os.path.join(dir_path, filename + '.png')
         if not os.path.exists(img_path):
             continue
-        img = mmcv.imread(img_path)
-        height, width = img.shape[:2]
+        height, width = mmcv.imread(img_path).shape[:2]
 
         if rgb_img:
             images.append(dict(
@@ -149,42 +144,28 @@ def convert_ddsm_to_coco(categories, out_file, data_root, annotation_filepath, e
         labels = []
         masks = []
 
-        # for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
-        for mask_path in glob.glob(dir_path + '_*'):
-            roi_idx = mask_path.split('_')[-1]
+        for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+            while True:
+                roi_idx += 1
 
-            rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
+                rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
 
-            if len(rslt_df) == 0:
-                print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
-                continue
+                if len(rslt_df) == 0:
+                    print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
+                    continue
 
-            label = rslt_df['pathology'].to_numpy()[0]
-            if label == 'MALIGNANT':
-                cat_id = 0
-            elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
-                cat_id = 1
-            # else:
-            #     raise ValueError(
-            #         f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
+                label = rslt_df['pathology'].to_numpy()[0]
+                if label == 'MALIGNANT':
+                    cat_id = 0
+                elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
+                    cat_id = 1
+                else:
+                    raise ValueError(
+                        f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
 
+                break
 
-            # mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
-            mask_paths = glob.glob((os.path.join(mask_path, '**', '**', '000001.png')))
-            if len(mask_paths) != 0:
-                mask_arr = cv2.imread(mask_paths[0], cv2.IMREAD_GRAYSCALE)
-
-            if len(np.unique(mask_arr)) != 2:
-                mask_paths = glob.glob((os.path.join(mask_path, '**', '**', '000000.png')))
-                mask_arr = cv2.imread(mask_paths[0], cv2.IMREAD_GRAYSCALE)
-
-            if len(np.unique(mask_arr)) != 2:
-                mask_arr = cv2.imread(mask_paths[1], cv2.IMREAD_GRAYSCALE)
-
-            if img.shape[:2] != mask_arr.shape[:2]:
-                print('[+] Image and mask resolutions do not match')
-                continue
-
+            mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
             seg_poly = mask2polygon(mask_arr)
             seg_poly = [[el + 0.5 for el in poly] for poly in seg_poly]
             seg_area = area(mask_arr)
@@ -262,56 +243,41 @@ def get_lesions_feature(feat1_root, feat2_root, feat3_root, data_root,
 
     for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
         filename = os.path.basename(dir_path)
-        if filename.split('_')[-1] not in ['CC', 'MLO']: # skip mask directories
-            continue
-
-        img_path = glob.glob(os.path.join(dir_path, '**', '**', '000000.png'))[0]
+        img_path = os.path.join(dir_path, filename + '.png')
         if not os.path.exists(img_path):
             continue
 
         img = mmcv.imread(img_path)
         height, width = img.shape[:2]
 
-        # for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
-        for mask_path in glob.glob(dir_path + '_*'):
-            roi_idx = mask_path.split('_')[-1]
+        for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+            while True:
+                roi_idx += 1
+                if roi_idx == 100: # assume no mammamogram contains at most 100
+                    break
 
-            rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
+                rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
 
-            if len(rslt_df) == 0:
-                print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
-                continue
+                if len(rslt_df) == 0:
+                    print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
+                    continue
 
-            label = rslt_df['pathology'].to_numpy()[0]
-            if label == 'MALIGNANT':
-                cat_id = 0
-            elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
-                cat_id = 1
-            # else:
-            #     raise ValueError(
-            #         f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
+                label = rslt_df['pathology'].to_numpy()[0]
+                if label == 'MALIGNANT':
+                    cat_id = 0
+                elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
+                    cat_id = 1
+                else:
+                    raise ValueError(
+                        f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
 
+                break
 
-            # if roi_idx == 100:
-            #     print(f'ROI features contain NA or combined type: {filename}')
-            #     break
+            if roi_idx == 100:
+                print(f'ROI features contain NA or combined type: {filename}')
+                break
 
-            # mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
-            mask_paths = glob.glob((os.path.join(mask_path, '**', '**', '000001.png')))
-            if len(mask_paths) != 0:
-                mask_arr = cv2.imread(mask_paths[0], cv2.IMREAD_GRAYSCALE)
-
-            if len(np.unique(mask_arr)) != 2:
-                mask_paths = glob.glob((os.path.join(mask_path, '**', '**', '000000.png')))
-                mask_arr = cv2.imread(mask_paths[0], cv2.IMREAD_GRAYSCALE)
-
-            if len(np.unique(mask_arr)) != 2:
-                mask_arr = cv2.imread(mask_paths[1], cv2.IMREAD_GRAYSCALE)
-
-            if img.shape[:2] != mask_arr.shape[:2]:
-                print('[+] Image and mask resolutions do not match')
-                continue
-
+            mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
             seg_poly = mask2polygon(mask_arr)
             seg_area = area(mask_arr)
 
@@ -524,15 +490,12 @@ def stoa_get_lesions_pathology(save_root, data_root, annotation_filename, lesion
 
 
 def get_lesions_pathology(save_root, data_root, annotation_filepath, lesion_type,
-                          histeq=False, equalization_type='he', patch_ext='center',
-                          birads34_only=False):
+                          histeq=False, equalization_type='he', patch_ext='center'):
     df = pandas.read_csv(annotation_filepath)
 
     for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
         filename = os.path.basename(dir_path)
-        if filename.split('_')[-1] not in ['CC', 'MLO']: # skip mask directories
-            continue
-        img_path = glob.glob(os.path.join(dir_path, '**', '**', '000000.png'))[0]
+        img_path = os.path.join(dir_path, filename + '.png')
         if not os.path.exists(img_path):
             continue
 
@@ -547,52 +510,34 @@ def get_lesions_pathology(save_root, data_root, annotation_filepath, lesion_type
                 # "assert img.ndim == 2"
                 img = mmcv.image.photometric.clahe(img)
 
-        # for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
-        for mask_path in glob.glob(dir_path + '_*'):
-            roi_idx = mask_path.split('_')[-1]
+        for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+            while True:
+                if roi_idx == 100: # assume no mammamogram contains at most 100
+                    break
+                roi_idx += 1
 
-            rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
+                rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
 
-            if len(rslt_df) == 0:
-                print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
-                continue
-
-            label = rslt_df['pathology'].to_numpy()[0]
-            if label == 'MALIGNANT':
-                cat_id = 0
-            elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
-                cat_id = 1
-
-            if birads34_only:
-                birad = rslt_df['assessment'].to_numpy()[0]
-
-                if birad not in [3, 4]:
+                if len(rslt_df) == 0:
+                    print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
                     continue
-            # else:
-            #     raise ValueError(
-            #         f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
 
-            # if roi_idx == 100:
-            #     print(f'ROI features contain NA or combined type: {filename}')
-            #     break
+                label = rslt_df['pathology'].to_numpy()[0]
+                if label == 'MALIGNANT':
+                    cat_id = 0
+                elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
+                    cat_id = 1
+                else:
+                    raise ValueError(
+                        f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
 
-            # mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
+                break
 
-            mask_paths = glob.glob((os.path.join(mask_path, '**', '**', '000001.png')))
-            if len(mask_paths) != 0:
-                mask_arr = cv2.imread(mask_paths[0], cv2.IMREAD_GRAYSCALE)
+            if roi_idx == 100:
+                print(f'ROI features contain NA or combined type: {filename}')
+                break
 
-            if len(np.unique(mask_arr)) != 2:
-                mask_paths = glob.glob((os.path.join(mask_path, '**', '**', '000000.png')))
-                mask_arr = cv2.imread(mask_paths[0], cv2.IMREAD_GRAYSCALE)
-
-            if len(np.unique(mask_arr)) != 2:
-                mask_arr = cv2.imread(mask_paths[1], cv2.IMREAD_GRAYSCALE)
-
-            if img.shape[:2] != mask_arr.shape[:2]:
-                print('[+] Image and mask resolutions do not match')
-                continue
-
+            mask_arr = np.load(mask_path, allow_pickle=True)["mask"]
             seg_poly = mask2polygon(mask_arr)
             seg_area = area(mask_arr)
 
@@ -733,41 +678,30 @@ def split_train_val(train_save_root, val_save_root, categories, data_root, annot
 
     for idx, dir_path in enumerate(mmcv.track_iter_progress(glob.glob(os.path.join(data_root, '*')))):
         filename = os.path.basename(dir_path)
-
-        if filename.split('_')[-1] not in ['CC', 'MLO']: # skip mask directories
+        img_path = os.path.join(dir_path, filename + '.png')
+        if not os.path.exists(img_path):
             continue
 
-        # img_path = os.path.join(dir_path, filename + '.png')
-        # if not os.path.exists(img_path):
-        #     continue
+        for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+            while True:
+                roi_idx += 1
 
-        # for roi_idx, mask_path in enumerate(glob.glob(os.path.join(dir_path, 'mask*.npz'))):
+                rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
 
-        all_cat_ids = []
-        for mask_path in glob.glob(dir_path + '_*'):
-            roi_idx = mask_path.split('_')[-1]
+                if len(rslt_df) == 0:
+                    print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
+                    continue
 
-            rslt_df = get_info_lesion(df, f'{filename}_{roi_idx}')
+                label = rslt_df['pathology'].to_numpy()[0]
+                if label == 'MALIGNANT':
+                    cat_id = 0
+                elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
+                    cat_id = 1
+                else:
+                    raise ValueError(
+                        f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
 
-            if len(rslt_df) == 0:
-                print(f'No ROI was found for ROI_ID: {filename}_{roi_idx}')
-                continue
-
-            label = rslt_df['pathology'].to_numpy()[0]
-            if label == 'MALIGNANT':
-                cat_id = 0
-            elif label in ['BENIGN', 'BENIGN_WITHOUT_CALLBACK']:
-                cat_id = 1
-            # else:
-            #     raise ValueError(
-            #         f'Label: {label} is unrecognized for ROI_ID: {filename}_{roi_idx}')
-
-            all_cat_ids.append(cat_id)
-
-        if len(np.unique(np.array(all_cat_ids))) != 1:
-            # if different lesions have different pathologies
-            cat_id = 0 # a whole mamm should be considered malignant
-
+                break
 
         for cat in categories:
             if cat['id'] == cat_id:
@@ -782,11 +716,8 @@ def split_train_val(train_save_root, val_save_root, categories, data_root, annot
         strat_train_set = split_info_df.reindex(index=train_index)
         strat_test_set = split_info_df.reindex(index=test_index)
 
-    print('Pathology Original Train Ratio:')
     print(split_info_df['pathology'].value_counts()/len(split_info_df))
-    print('Pathology Split Train Ratio:')
     print(strat_train_set['pathology'].value_counts()/len(strat_train_set))
-    print('Pathology Split Validation Ratio:')
     print(strat_test_set['pathology'].value_counts()/len(strat_test_set))
 
     for dirname in strat_train_set['img_name']:
@@ -796,26 +727,12 @@ def split_train_val(train_save_root, val_save_root, categories, data_root, annot
         if not os.path.exists(destination):
             shutil.copytree(source, destination)
 
-        for mask_source in glob.glob(source + '_*'):
-            mask_dirname = os.path.basename(mask_source)
-            mask_destination = os.path.join(train_save_root, mask_dirname)
-
-            if not os.path.exists(mask_destination):
-                shutil.copytree(mask_source, mask_destination)
-
     for dirname in strat_test_set['img_name']:
         source = os.path.join(data_root, dirname)
         destination = os.path.join(val_save_root, dirname)
 
         if not os.path.exists(destination):
             shutil.copytree(source, destination)
-
-        for mask_source in glob.glob(source + '_*'):
-            mask_dirname = os.path.basename(mask_source)
-            mask_destination = os.path.join(val_save_root, mask_dirname)
-
-            if not os.path.exists(mask_destination):
-                shutil.copytree(mask_source, mask_destination)
 
 
 if __name__ == '__main__':
@@ -833,47 +750,46 @@ if __name__ == '__main__':
     mass_train_train_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'train_train')
     mass_train_val_root = os.path.join(processed_cbis_ddsm_root, 'mass', 'train_val')
 
-    # Deprecated: All original data have been converted to .png files
-    # convert_npz_to_png(data_path=mass_train_root)
-    # convert_npz_to_png(data_path=mass_test_root)
+    convert_npz_to_png(data_path=mass_train_root)
+    convert_npz_to_png(data_path=mass_test_root)
     # convert_npz_to_png(data_path=mass_test_root, preprocessing='mode_norm')
 
     categories = [{'id': 0, 'name': 'malignant-mass', 'supercategory': 'mass'},
                   {'id': 1, 'name': 'benign-mass', 'supercategory': 'mass'}]
 
-    # # Split train val
-    # split_train_val(train_save_root=mass_train_train_root, \
-    #                 val_save_root=mass_train_val_root, \
-    #                 categories=categories, \
-    #                 data_root=mass_train_root, \
-    #                 annotation_filepath=os.path.join(processed_cbis_ddsm_root,
-    #                                                  'mass_case_description_train_set.csv'),
-    #                 val_ratio=0.3)
+    # Split train val
+    split_train_val(train_save_root=mass_train_train_root, \
+                    val_save_root=mass_train_val_root, \
+                    categories=categories, \
+                    data_root=mass_train_root, \
+                    annotation_filepath=os.path.join(processed_cbis_ddsm_root,
+                                                     'mass_case_description_train_set.csv'),
+                    val_ratio=0.3)
 
-    # # Default bbox size
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes.json',
-    #                      data_root=mass_train_root,
-    #                      annotation_filepath=os.path.join(processed_cbis_ddsm_root,
-    #                                                       'mass_case_description_train_set.csv'))
+    # Default bbox size
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=mass_train_root,
+                         annotation_filepath=os.path.join(processed_cbis_ddsm_root,
+                                                          'mass_case_description_train_set.csv'))
 
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes.json',
-    #                      data_root=mass_test_root,
-    #                      annotation_filepath=os.path.join(processed_cbis_ddsm_root,
-    #                                                       'mass_case_description_test_set.csv'))
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=mass_test_root,
+                         annotation_filepath=os.path.join(processed_cbis_ddsm_root,
+                                                          'mass_case_description_test_set.csv'))
 
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes.json',
-    #                      data_root=mass_train_train_root,
-    #                      annotation_filepath=os.path.join(processed_cbis_ddsm_root,
-    #                                                       'mass_case_description_train_set.csv'))
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=mass_train_train_root,
+                         annotation_filepath=os.path.join(processed_cbis_ddsm_root,
+                                                          'mass_case_description_train_set.csv'))
 
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes.json',
-    #                      data_root=mass_train_val_root,
-    #                      annotation_filepath=os.path.join(processed_cbis_ddsm_root,
-    #                                                       'mass_case_description_train_set.csv'))
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=mass_train_val_root,
+                         annotation_filepath=os.path.join(processed_cbis_ddsm_root,
+                                                          'mass_case_description_train_set.csv'))
 
     # Default bbox size (For different sizes of train_train set)
     # for size in range(0, 100, 10):
@@ -887,9 +803,9 @@ if __name__ == '__main__':
 
     ############## Extract Lesion Patches ##############
     # split lesion patches based on: mass shape, mass margins, breast density
-    mass_shape_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_shape'])
-    mass_margins_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_margins'])
-    mass_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_image'])
+    # mass_shape_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_shape'])
+    # mass_margins_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_margins'])
+    # mass_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_breast_density_image'])
 
     # for split in ['train', 'val', 'test']:
     #     if split == 'train':
@@ -912,7 +828,7 @@ if __name__ == '__main__':
     #                         patch_ext='center')
 
 
-    # # split lesion patches based on pathology
+    # split lesion patches based on pathology
     # mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology'])
 
     # get_lesions_pathology(os.path.join(mass_pathology_root, 'train'),
@@ -930,25 +846,6 @@ if __name__ == '__main__':
     #                       annotation_filepath=os.path.join(processed_cbis_ddsm_root,
     #                                                        'mass_case_description_test_set.csv'),
     #                       lesion_type='mass', patch_ext='center')
-
-    # # split lesion patches based on pathology (birads 3&4 only for val/test set)
-    mass_pathology_birads34_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_birads34'])
-
-    # get_lesions_pathology(os.path.join(mass_pathology_birads34_root, 'train'),
-    #                       data_root=mass_train_train_root,
-    #                       annotation_filepath=os.path.join(processed_cbis_ddsm_root,
-    #                                                        'mass_case_description_train_set.csv'),
-    #                       lesion_type='mass', patch_ext='center')
-    get_lesions_pathology(os.path.join(mass_pathology_birads34_root, 'val'),
-                          data_root=mass_train_val_root,
-                          annotation_filepath=os.path.join(processed_cbis_ddsm_root,
-                                                           'mass_case_description_train_set.csv'),
-                          lesion_type='mass', patch_ext='center', birads34_only=True)
-    get_lesions_pathology(os.path.join(mass_pathology_birads34_root, 'test'),
-                          data_root=mass_test_root,
-                          annotation_filepath=os.path.join(processed_cbis_ddsm_root,
-                                                           'mass_case_description_test_set.csv'),
-                          lesion_type='mass', patch_ext='center', birads34_only=True)
 
     # stoa mass pathology
     # stoa_mass_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['stoa_mass_pathology'])
@@ -971,9 +868,8 @@ if __name__ == '__main__':
     calc_desc_test_path = os.path.join(processed_cbis_ddsm_root,
                                        'calc_case_description_test_set.csv')
 
-    # Deprecated: All original data have been converted to .png files
-    # convert_npz_to_png(data_path=calc_train_root)
-    # convert_npz_to_png(data_path=calc_test_root)
+    convert_npz_to_png(data_path=calc_train_root)
+    convert_npz_to_png(data_path=calc_test_root)
 
     categories = [{'id': 0, 'name': 'malignant-calc', 'supercategory': 'calcification'}, {'id': 1, 'name': 'benign-calc', 'supercategory': 'calcification'}]
 
@@ -983,26 +879,26 @@ if __name__ == '__main__':
                     categories=categories, \
                     data_root=calc_train_root, \
                     annotation_filepath=calc_desc_train_path,
-                    val_ratio=0.3)
+                    val_ratio=0.25)
 
 
-    # Default bbox size
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes.json',
-    #                      data_root=calc_train_root,
-    #                      annotation_filepath=calc_desc_train_path)
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes.json',
-    #                      data_root=calc_test_root,
-    #                      annotation_filepath=calc_desc_test_path)
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes.json',
-    #                      data_root=calc_train_train_root,
-    #                      annotation_filepath=calc_desc_train_path)
-    # convert_ddsm_to_coco(categories=categories,
-    #                      out_file='annotation_coco_with_classes.json',
-    #                      data_root=calc_train_val_root,
-    #                      annotation_filepath=calc_desc_train_path)
+    # # Default bbox size
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=calc_train_root,
+                         annotation_filepath=calc_desc_train_path)
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=calc_test_root,
+                         annotation_filepath=calc_desc_test_path)
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=calc_train_train_root,
+                         annotation_filepath=calc_desc_train_path)
+    convert_ddsm_to_coco(categories=categories,
+                         out_file='annotation_coco_with_classes.json',
+                         data_root=calc_train_val_root,
+                         annotation_filepath=calc_desc_train_path)
 
 
     # Default bbox size (For different sizes of train_train set)
@@ -1019,9 +915,9 @@ if __name__ == '__main__':
 
     ############ EXTRACT LESION PATCHES ##############
     # split lesion patches based on: mass shape, mass margins, breast density
-    calc_type_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_type'])
-    calc_dist_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_dist'])
-    calc_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_image'])
+    # calc_type_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_type'])
+    # calc_dist_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_dist'])
+    # calc_breast_density_image_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_breast_density_image'])
 
     # for split in ['train', 'val', 'test']:
     #     if split == 'train':
@@ -1042,19 +938,13 @@ if __name__ == '__main__':
     #                         patch_ext='center')
 
 
-    # # split lesion patches based on pathology
-    # calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
+    # split lesion patches based on pathology
+    calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology'])
 
-    # get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center')
-    # get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center')
-    # get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filepath=calc_desc_test_path, lesion_type='calc', patch_ext='center')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'val'), data_root=calc_train_val_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center')
+    get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filepath=calc_desc_test_path, lesion_type='calc', patch_ext='center')
 
-    # split lesion patches based on pathology (birads 3&4 only for val/test set)
-    calc_pathology_birads34_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_birads34'])
-
-    # get_lesions_pathology(os.path.join(calc_pathology_birads34_root, 'train'), data_root=calc_train_train_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center')
-    get_lesions_pathology(os.path.join(calc_pathology_birads34_root, 'val'), data_root=calc_train_val_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center', birads34_only=True)
-    get_lesions_pathology(os.path.join(calc_pathology_birads34_root, 'test'), data_root=calc_test_root, annotation_filepath=calc_desc_test_path, lesion_type='calc', patch_ext='center', birads34_only=True)
 
     # stoa_calc_pathology_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['stoa_calc_pathology'])
     # stoa_get_lesions_pathology(os.path.join(stoa_calc_pathology_root, 'train'), data_root=calc_train_train_root, annotation_filename='calc_case_description_train_set.csv', lesion_type='calc')

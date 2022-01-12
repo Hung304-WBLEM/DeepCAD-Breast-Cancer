@@ -4,15 +4,18 @@ import copy
 import logging
 import torch
 import numpy as np
+import transformers
 
 from features_classification.models.model_initializer import initialize_model, set_parameter_requires_grad
 from features_classification.eval.eval_funcs import evaluate
 from features_classification.eval.eval_utils import plot_classes_preds
 from features_classification.train.train_utils import compute_classes_weights_within_batch
 
+
 GLOBAL_EPOCH = 0
 
-def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, device, classes, dataset, num_epochs=25, weight_sample=True, is_inception=False):
+
+def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, device, classes, dataset, num_epochs=25, weight_sample=True, is_inception=False, lr_scheduler=None):
     since = time.time()
 
     train_acc_history = []
@@ -20,10 +23,10 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
     val_acc_history = []
     val_loss_history = []
 
-
+    best_ckpt_metric = options.best_ckpt_metric
     best_model_wts = copy.deepcopy(model.state_dict())
+    best_eval = 0.0
     best_acc = 0.0
-    best_loss = float('inf')
 
     for epoch in range(num_epochs):
         global GLOBAL_EPOCH
@@ -52,9 +55,12 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                 inputs = data_info['image']
                 labels = data_info['label']
 
-
                 inputs = inputs.to(device)
                 labels = labels.to(device)
+
+                if options.use_clinical_feats:
+                    input_vectors = data_info['feature_vector'].type(torch.FloatTensor)
+                    input_vectors = input_vectors.to(device)
 
                 if options.criterion == 'bce':
                     binarized_multilabels = data_info['binarized_multilabel']
@@ -67,17 +73,19 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
                     # Get model outputs and calculate loss
-                    # Special case for inception because in training it has an auxiliary output. In train
-                    #   mode we calculate the loss by summing the final output and the auxiliary output
-                    #   but in testing we only consider the final output.
                     if is_inception and phase == 'train':
-                        # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
                         outputs, aux_outputs = model(inputs)
                         loss1 = criterion(outputs, labels)
                         loss2 = criterion(aux_outputs, labels)
                         loss = loss1 + 0.4*loss2
                     else:
-                        outputs = model(inputs)
+                        if not options.use_clinical_feats:
+                            outputs = model(inputs)
+                        else:
+                            if phase == 'val':
+                                outputs = model(inputs, input_vectors, training=False)
+                            elif phase == 'train':
+                                outputs = model(inputs, input_vectors, training=True)
 
                         if options.criterion == 'ce':
                             loss = criterion(outputs, labels)
@@ -89,111 +97,136 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                         sample_weight = torch.from_numpy(np.array(sample_weight)).to(device)
                         loss = (loss * sample_weight / sample_weight.sum()).sum()
 
-                    # if options.criterion == 'ce':
-                    #     _, preds = torch.max(outputs, 1)
-                    # elif options.criterion == 'bce':
-                    #     preds = (torch.sigmoid(outputs) > 0.5).int()
-
-                    _, preds = torch.max(outputs, 1)
-
                     # backward + optimize only if in training phase
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
+                        lr_scheduler.step()
 
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
 
 
-                # ignore accuracy metric when training for multi-label classification
-                # if options.criterion == 'ce':
-                #     running_corrects += torch.sum(preds == labels.data)
-                # elif options.criterion == 'bce':
-                #     running_corrects += torch.sum(torch.sum(preds == binarized_multilabels.data, dim=1) == labels.data)
-
-                running_corrects += torch.sum(preds == labels.data)
-
                 if it == 0:
-                    writer.add_figure(f'{phase} predictions vs. actuals',
-                                    plot_classes_preds(model, inputs, labels,
-                                                       num_images=inputs.shape[0],
-                                                       multilabel_mode=(options.criterion=='bce'),
-                                                       dataset=dataset
-                                                       ),
-                                    global_step=GLOBAL_EPOCH)
-                #     
+                    if not options.use_clinical_feats:
+                        writer.add_figure(f'{phase} predictions vs. actuals',
+                                        plot_classes_preds(model, inputs, labels,
+                                                            num_images=inputs.shape[0],
+                                                            multilabel_mode=\
+                                                            (options.criterion=='bce'),
+                                                            dataset=dataset
+                                                            ),
+                                        global_step=GLOBAL_EPOCH)
+                    else:
+                        writer.add_figure(f'{phase} predictions vs. actuals',
+                                        plot_classes_preds(model, inputs, labels,
+                                                           num_images=inputs.shape[0],
+                                                           multilabel_mode=\
+                                                           (options.criterion=='bce'),
+                                                           dataset=dataset,
+                                                           input_vectors=input_vectors
+                                                           ),
+                                        global_step=GLOBAL_EPOCH)
 
 
+            # Calculate Epoch Loss
             epoch_loss = running_loss / len(dataloaders_dict[phase].dataset)
-            epoch_acc = running_corrects.double(
-            ) / len(dataloaders_dict[phase].dataset)
-
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
-            logging.info('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
-
-            # For tensorboard
             writer.add_scalar(f'{phase} loss', epoch_loss, GLOBAL_EPOCH)
-            writer.add_scalar(f'{phase} acc', epoch_acc, GLOBAL_EPOCH)
 
+            # Calculate other evaluation metrics (Acc, AP, AUC)
             if options.criterion == 'ce':
                 _multilabel_mode = False
             elif options.criterion == 'bce':
                 _multilabel_mode = True
 
+            # Evaluate on train/val set at each epoch
+            epoch_acc, epoch_macro_ap, epoch_micro_ap, \
+                epoch_macro_auc, epoch_micro_auc = \
+                    evaluate(model, classes, dataloaders_dict[phase],
+                             device, writer, epoch=GLOBAL_EPOCH,
+                             multilabel_mode=_multilabel_mode,
+                             dataset=dataset, eval_split=phase,
+                             use_clinical_feats=options.use_clinical_feats
+                             )
+
+            print('{:>5} Loss: {:.4f} Acc: {:.4f} \
+            Macro AP: {:.4f} Micro AP: {:.4f} \
+            Macro AUC: {:.4f} Micro AUC: {:.4f}'.format(
+                phase, epoch_loss, epoch_acc,
+                epoch_macro_ap, epoch_micro_ap,
+                epoch_macro_auc, epoch_micro_auc))
+
+            logging.info('{} Loss: {:.4f} Acc: {:.4f} \
+            Macro AP: {:.4f} Micro AP: {:.4f} \
+            Macro AUC: {:.4f} Micro AUC: {:.4f}'.format(
+                phase, epoch_loss, epoch_acc,
+                epoch_macro_ap, epoch_micro_ap,
+                epoch_macro_auc, epoch_micro_auc))
+
+            # Evaluate on test set at each epoch
             evaluate(model, classes, dataloaders_dict['test'],
                      device, writer, epoch=GLOBAL_EPOCH,
                      multilabel_mode=_multilabel_mode,
-                     dataset=dataset
+                     dataset=dataset, eval_split='test',
+                     use_clinical_feats=options.use_clinical_feats
                      )
 
+            epoch_info = {
+                'acc': epoch_acc,
+                'macro_ap': epoch_macro_ap,
+                'micro_ap': epoch_micro_ap,
+                'macro_auc': epoch_macro_auc,
+                'micro_auc': epoch_micro_auc
+            }
+
             # deep copy the model
-            if options.best_ckpt_metric == 'acc' and \
-               phase == 'val' and epoch_acc > best_acc:
-                best_loss = epoch_loss
-                best_acc = epoch_acc
-                best_model_wts = copy.deepcopy(model.state_dict())
-            if options.best_ckpt_metric == 'loss' and \
-               phase == 'val' and epoch_loss < best_loss:
-                best_loss = epoch_loss
-                best_acc = epoch_acc
-                best_model_wts = copy.deepcopy(model.state_dict())
+            if phase == 'val' and epoch_info[best_ckpt_metric] >= best_eval:
+                if best_ckpt_metric == 'macro_auc':
+                    if epoch_info['acc'] > best_acc:
+                        print('[+] Update best ckpt: ' + \
+                              'Old Macro AUC {}; Old Acc {}; '.format(best_eval,
+                                                                      round(best_acc, 2)) + \
+                              'New Macro AUC {}; New Acc {}'.format(epoch_info['macro_auc'],
+                                                                    round(epoch_info['acc'], 2)))
+                        best_loss = epoch_loss
+                        best_eval = epoch_info[best_ckpt_metric]
+                        best_model_wts = copy.deepcopy(model.state_dict())
+                        best_acc = epoch_info['acc']
+                else:
+                    best_loss = epoch_loss
+                    best_eval = epoch_info[best_ckpt_metric]
+                    best_model_wts = copy.deepcopy(model.state_dict())
                 
             if phase == 'val':
                 val_loss_history.append(epoch_loss)
-                val_acc_history.append(epoch_acc.cpu())
+                val_acc_history.append(epoch_acc)
             if phase == 'train':
                 train_loss_history.append(epoch_loss)
-                train_acc_history.append(epoch_acc.cpu())
+                train_acc_history.append(epoch_acc)
 
         print()
 
     time_elapsed = time.time() - since
+
     print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
     print('Best val Loss: {:4f}'.format(best_loss))
-    print('Best val Acc: {:4f}'.format(best_acc))
+    print('Best val {}: {:4f}'.format(best_ckpt_metric, best_eval))
+
     logging.info('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
-    logging.info('Best val Acc: {:4f}'.format(best_acc))
+    logging.info('Best val Loss: {:4f}'.format(best_loss))
+    logging.info('Best val {}: {:4f}'.format(best_ckpt_metric, best_eval))
 
     # load best model weights
     model.load_state_dict(best_model_wts)
 
-    print(type(train_loss_history), type(train_acc_history),
-          type(val_loss_history), type(val_acc_history))
     return model, train_loss_history, train_acc_history, val_loss_history, val_acc_history
 
 
 def train_stage(options, model_ft, model_name, criterion, optimizer_type, last_frozen_layer, learning_rate, weight_decay, dataset, num_epochs, dataloaders_dict, weighted_samples, writer, device, classes):
     set_parameter_requires_grad(model_ft, model_name, last_frozen_layer)
     
-    # Gather the parameters to be optimized/updated in this run. If we are
-    #  finetuning we will be updating all parameters. However, if we are
-    #  doing feature extract method, we will only update the parameters
-    #  that we have just initialized, i.e. the parameters with requires_grad
-    #  is True.
     print("Params to learn:")
     params_to_update = []
     for name, param in model_ft.named_parameters():
@@ -212,11 +245,23 @@ def train_stage(options, model_ft, model_name, criterion, optimizer_type, last_f
                                   lr=learning_rate,
                                   weight_decay=weight_decay)
 
+    if options.use_lr_scheduler:
+        total_samples = len(dataloaders_dict['train'].dataset)
+        bs = options.batch_size 
+
+        num_warmup_steps = (total_samples // bs) * 2
+        num_total_steps = (total_samples // bs) * num_epochs
+        lr_scheduler = \
+            transformers.get_cosine_schedule_with_warmup(optimizer_ft, 
+                                                         num_warmup_steps=num_warmup_steps, 
+                                                         num_training_steps=num_total_steps)
+
     # Train and evaluate
     model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = \
         train_model(options, model_ft, dataloaders_dict,
                     criterion, optimizer_ft, writer, device, classes,
                     dataset=dataset,
                     num_epochs=num_epochs, weight_sample=weighted_samples,
-                    is_inception=(model_name == "inception"))
+                    is_inception=(model_name == "inception"),
+                    lr_scheduler=lr_scheduler)
     return model_ft, train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist

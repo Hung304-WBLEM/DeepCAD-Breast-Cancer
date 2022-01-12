@@ -74,6 +74,7 @@ if __name__ == '__main__':
     dataset, image_datasets, classes = cbis_ddsm.initialize(options, data_transforms)
     classes_weights = image_datasets['train'].get_classes_weights()
 
+
     # Fix random seed
     set_seed()
 
@@ -101,7 +102,7 @@ if __name__ == '__main__':
 
     # Initialize the model for this run
     model = initialize_model(
-        options, model_name, num_classes, use_pretrained=True, ckpt_path=options.ckpt_path)
+        model_name, num_classes, use_pretrained=True, ckpt_path=options.ckpt_path)
 
     print("Initializing Datasets and Dataloaders...")
 
@@ -111,9 +112,7 @@ if __name__ == '__main__':
         'train': torch.utils.data.DataLoader(
             image_datasets['train'], batch_size=batch_size,
             worker_init_fn=np.random.seed(42),
-            shuffle=True, num_workers=options.num_workers,
-            drop_last=True
-        ),
+            shuffle=True, num_workers=options.num_workers),
         'val': torch.utils.data.DataLoader(
             image_datasets['val'], batch_size=batch_size,
             worker_init_fn=np.random.seed(42),
@@ -126,12 +125,8 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         samples = next(iter(dataloaders_dict['train']))
+        writer.add_graph(model, samples['image'])
 
-        if not options.use_clinical_feats:
-            writer.add_graph(model, samples['image'])
-        elif options.use_clinical_feats:
-            writer.add_graph(model, (samples['image'], samples['feature_vector'],
-                                     torch.tensor([1], dtype=torch.bool)))
 
     # Detect if we have a GPU available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -283,15 +278,13 @@ if __name__ == '__main__':
     with torch.no_grad():
         preds, labels, _ = get_all_preds(model, dataloaders_dict['test'], device, writer,
                                          multilabel_mode=(options.criterion=='bce'),
-                                         dataset=dataset,
-                                         use_clinical_feats=options.use_clinical_feats)
+                                         dataset=dataset)
 
 
     # my roc curve
     final_evaluate(model, classes, dataloaders_dict['test'], device, writer,
                    multilabel_mode=(options.criterion=='bce'),
-                   dataset=dataset,
-                   use_clinical_feats=options.use_clinical_feats)
+                   dataset=dataset)
     
     # evaluation
     accuracy, macro_ap, micro_ap, classes_aps, \

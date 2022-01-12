@@ -33,17 +33,30 @@ parser.add_option("--wd", "--weights_decay", dest="weights_decay", type=float, d
                     help="Weights decay")
 parser.add_option("--opt", "--optimizer", dest="optimizer", type=str,
                     help="Choose optimizer: sgd, adam")
+parser.add_option("--use_lr_scheduler", dest="use_lr_scheduler",
+                    default=False, action='store_true',
+                    help="activate if you want to use learning rate scheduler")
+parser.add_option("--use_clinical_feats", dest="use_clinical_feats",
+                  default=False, action='store_true')
+parser.add_option("--fuse", default='concat',
+                  help="Choose fusion methods. Available options include: 'concat', 'coatt', 'crossatt'", dest="fusion_type")
+
 parser.add_option("--crt", "--criterion", dest="criterion", type=str, default="ce",
                   help="Choose criterion: ce, bce")
 parser.add_option("--aug_type", dest="augmentation_type", type=str,
                   default="torch", help="Choose augmentation type. Available augmentation types include: torch, albumentations, augmix")
 parser.add_option("--best_ckpt_metric", dest="best_ckpt_metric", 
-                  default="loss", choices=['loss', 'acc'],
+                  default="acc", choices=['acc', 'macro_ap', 'micro_ap', 'macro_auc', 'micro_auc'],
                   help="Choose metric to select best model for ckpt")
 parser.add_option("--ckpt", dest="ckpt_path",
                   default=None, help="Path to load the model checkpoint")
 parser.add_option("--njobs", dest="num_workers", type=int,
                   default=0)
+
+# Train one stage
+parser.add_option("--one_stage_training", dest="one_stage_training",
+                    default=False, action='store_true',
+                    help="enable if you want to use conventional one-stage training")
 
 # Three-stages training hyperparams
 ## 1st stage

@@ -3,6 +3,8 @@ import torch.nn as nn
 
 from torchvision import datasets, models, transforms
 from features_classification.models.dino_pretrained import ViT_DINO
+from features_classification.models.fusion_models.clinical_feats_models import Clinical_Concat_Model, Clinical_Attentive_Model
+
 
 def set_parameter_requires_grad(model, model_name, last_frozen_layer):
     '''
@@ -20,7 +22,7 @@ def set_parameter_requires_grad(model, model_name, last_frozen_layer):
             param.requires_grad = False
 
 
-def initialize_model(model_name, num_classes, use_pretrained=True, ckpt_path=None):
+def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt_path=None):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
     model_ft = None
@@ -127,6 +129,10 @@ def initialize_model(model_name, num_classes, use_pretrained=True, ckpt_path=Non
     elif 'dino' in model_name:
         if model_name == 'dino_vit_base_patch16_224':
             model_ft = ViT_DINO(ckpt_path, 'vit_base', 16, num_classes)
+        elif model_name == 'dino_vit_tiny_patch16_224':
+            model_ft = ViT_DINO(ckpt_path, 'vit_tiny', 16, num_classes)
+        elif model_name == 'dino_vit_small_patch16_224':
+            model_ft = ViT_DINO(ckpt_path, 'vit_small', 16, num_classes)
 
     elif model_name == "alexnet":
         """ Alexnet
@@ -175,6 +181,25 @@ def initialize_model(model_name, num_classes, use_pretrained=True, ckpt_path=Non
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
 
+    elif 'fusion' in model_name:
+        if model_name == 'fusion_resnet50':
+            if options.dataset in ['four_classes_features_pathology']:
+                breast_density_cats = 4
+                mass_shape_cats= 8
+                mass_margins_cats = 5
+                calc_type_cats = 14
+                calc_dist_cats = 5
+
+                if options.fusion_type == 'concat':
+                    model_ft = \
+                        Clinical_Concat_Model(
+                            model_name, 
+                            input_vector_dim=\
+                            breast_density_cats+\
+                            mass_shape_cats+\
+                            mass_margins_cats+\
+                            calc_type_cats+\
+                            calc_dist_cats, num_classes=num_classes)
     else:
         print("Invalid model name, exiting...")
         exit()

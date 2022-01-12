@@ -1,4 +1,5 @@
 cd ..
+export CUDA_VISIBLE_DEVICES=0,1
 
 # python run.py \
 #        --exp_name calc_dist \
@@ -99,13 +100,75 @@ cd ..
 #        --first_stage_freeze 149 \
 #        --second_stage_freeze 99
 
+# python run.py \
+#        --exp_name calc_dist \
+#        -d calc_dist \
+#        --njobs 5 \
+#        -m 'dino_vit_base_patch16_224'\
+#        --ckpt '/home/hqvo2/Projects/Breast_Cancer/libs/dino/experiments/vit_base_dim8192_five_classes_mass_calc_pathology/checkpoint.pth' \
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99
+
+# python run.py \
+#        --exp_name calc_dist \
+#        -d calc_dist_tfds \
+#        --njobs 5 \
+#        -m 'vit_base_patch16_224'\
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99
+
+# python run.py \
+#        --exp_name calc_dist \
+#        -d calc_dist_tfds \
+#        --njobs 5 \
+#        -m 'dino_vit_base_patch16_224'\
+#        --ckpt '/home/hqvo2/Projects/Breast_Cancer/libs/dino/experiments/vit_base_dim8192_five_classes_mass_calc_pathology/checkpoint.pth' \
+#        -b 32 \
+#        -e 100 -i 224 --opt adam --wc --ws --crt bce\
+#        --first_stage_freeze 149 \
+#        --second_stage_freeze 99
+
 python run.py \
        --exp_name calc_dist \
        -d calc_dist \
+       --one_stage_training \
        --njobs 5 \
-       -m 'dino_vit_base_patch16_224'\
-       --ckpt '/home/hqvo2/Projects/Breast_Cancer/libs/dino/experiments/vit_base_dim8192_five_classes_mass_calc_pathology/checkpoint.pth' \
+       -m 'vit_tiny_patch16_224'\
        -b 32 \
        -e 100 -i 224 --opt adam --wc --ws --crt bce\
-       --first_stage_freeze 149 \
-       --second_stage_freeze 99
+       --use_lr_scheduler \
+       --first_stage_freeze -1 \
+       --first_stage_lr 0.0001 \
+       --best_ckpt_metric macro_auc
+
+python run.py \
+       --exp_name calc_dist \
+       -d calc_dist \
+       --one_stage_training \
+       --njobs 5 \
+       -m 'dino_vit_tiny_patch16_224'\
+       --ckpt '/home/hqvo2/Projects/Breast_Cancer/libs/dino/experiments/vit_tiny_dim8192_five_classes_mass_calc_pathology/checkpoint0500.pth' \
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --use_lr_scheduler \
+       --first_stage_freeze -1 \
+       --first_stage_lr 0.0001 \
+       --best_ckpt_metric macro_auc
+
+python run.py \
+       --exp_name calc_dist \
+       -d calc_dist \
+       --one_stage_training \
+       --njobs 5 \
+       -m 'dino_vit_tiny_patch16_224'\
+       --ckpt '/home/hqvo2/Projects/Breast_Cancer/libs/dino/experiments/vit_tiny_dim8192_combined_datasets/checkpoint0500.pth' \
+       -b 32 \
+       -e 100 -i 224 --opt adam --wc --ws --crt bce\
+       --use_lr_scheduler \
+       --first_stage_freeze -1 \
+       --first_stage_lr 0.0001 \
+       --best_ckpt_metric macro_auc

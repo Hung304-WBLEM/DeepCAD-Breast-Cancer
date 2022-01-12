@@ -448,12 +448,16 @@ def show_score_bars(ax, all_classes_prob, classes, ignore_label=True):
 
 
 @torch.no_grad()
-def images_to_probs(net, images, multilabel_mode):
+def images_to_probs(net, images, multilabel_mode, input_vectors=None):
     '''
     Generates predictions and corresponding probabilities from a trained
     network and a list of images
     '''
-    output = net(images)
+
+    if input_vectors is None:
+        output = net(images)
+    else:
+        output = net(images, input_vectors, training=False)
     
     # convert output probabilities to predicted class
     if not multilabel_mode:
@@ -478,7 +482,7 @@ def images_to_probs(net, images, multilabel_mode):
 
 
 def plot_classes_preds(net, images, labels, num_images,
-                       multilabel_mode, dataset):
+                       multilabel_mode, dataset, input_vectors=None):
     '''
     Generates matplotlib Figure using a trained network, along with images
     and labels from a batch, that shows the network's top prediction along
@@ -493,7 +497,10 @@ def plot_classes_preds(net, images, labels, num_images,
 
     classes = list(map(lambda x: x.lower(), classes))
 
-    preds, all_classes_probs = images_to_probs(net, images, multilabel_mode)
+    if input_vectors is None:
+        preds, all_classes_probs = images_to_probs(net, images, multilabel_mode)
+    else:
+        preds, all_classes_probs = images_to_probs(net, images, multilabel_mode, input_vectors)
 
     width_ratios = [el for _ in range(6) for el in [2, 1]]
     fig, a = plt.subplots(6, 12, figsize=(14, 8),

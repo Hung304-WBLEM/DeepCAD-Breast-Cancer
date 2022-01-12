@@ -7,17 +7,23 @@ from features_classification.eval.eval_utils import eval_all, evalplot_precision
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import confusion_matrix, accuracy_score
 
+
 @torch.no_grad()
-def evaluate(model, classes, test_dataloader, device, writer, epoch,
-             multilabel_mode, dataset):
+def evaluate(model, classes, dataloader, device, writer, epoch,
+             multilabel_mode, dataset, eval_split, use_clinical_feats=False):
     model.eval()
 
     num_classes = len(classes)
 
     # with torch.no_grad():
-    preds, labels, _ = get_all_preds(model, test_dataloader, device, writer,
-                                        multilabel_mode,
-                                        dataset)
+    if not use_clinical_feats:
+        preds, labels, _ = get_all_preds(model, dataloader, device, writer,
+                                            multilabel_mode,
+                                            dataset)
+    else:
+        preds, labels, _ = get_all_preds(model, dataloader, device, writer,
+                                            multilabel_mode,
+                                            dataset, use_clinical_feats=use_clinical_feats)
 
     if not multilabel_mode:
         y_proba_pred = torch.softmax(preds, dim=-1)
@@ -39,9 +45,22 @@ def evaluate(model, classes, test_dataloader, device, writer, epoch,
         acc = accuracy_score(y_true, y_pred)
 
         # ... Need to add something for other metrics like AUC
+    _, _, _, pr_log_info = \
+        evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes)
+    _, _, _, roc_log_info = \
+        evalplot_roc_curve(binarized_y_true, y_proba_pred, classes)
+
+    macro_ap = pr_log_info['macro_average_precision']
+    micro_ap = pr_log_info['micro_average_precision']
+    macro_auc = roc_log_info['macro_roc_auc']
+    micro_auc = roc_log_info['micro_roc_auc']
 
     # accuracy
-    writer.add_scalar(f'test acc', acc, epoch)
+    writer.add_scalar(f'{eval_split} acc', acc, epoch)
+    writer.add_scalar(f'{eval_split} macro ap', macro_ap, epoch)
+    writer.add_scalar(f'{eval_split} micro ap', micro_ap, epoch)
+    writer.add_scalar(f'{eval_split} macro auc', macro_auc, epoch)
+    writer.add_scalar(f'{eval_split} micro auc', micro_auc, epoch)
 
     # AUCs
     # _, _, pr_aucs = evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes)
@@ -56,20 +75,26 @@ def evaluate(model, classes, test_dataloader, device, writer, epoch,
 
     model.train()
 
+    return acc, macro_ap, micro_ap, macro_auc, micro_auc
+
 
 @torch.no_grad()
 def final_evaluate(model, classes, test_dataloader, device, writer,
-                   multilabel_mode, dataset):
+                   multilabel_mode, dataset, use_clinical_feats=False):
     model.eval()
 
     num_classes = len(classes)
 
     with torch.no_grad():
-        preds, labels, _ = get_all_preds(model, test_dataloader,
-                                         device, writer,
-                                         multilabel_mode,
-                                         dataset,
-                                         plot_test_images=True)
+        if not use_clinical_feats:
+            preds, labels, _ = get_all_preds(model, test_dataloader, device, writer,
+                                                multilabel_mode,
+                                                dataset, plot_test_images=True)
+        else:
+            preds, labels, _ = get_all_preds(model, test_dataloader, device, writer,
+                                             multilabel_mode,
+                                             dataset, plot_test_images=True,
+                                             use_clinical_feats=True)
 
         if not multilabel_mode:
             y_proba_pred = torch.softmax(preds, dim=-1)

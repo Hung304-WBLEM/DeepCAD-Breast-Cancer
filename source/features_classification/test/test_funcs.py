@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from features_classification.eval.eval_utils import plot_classes_preds
 
 @torch.no_grad()
-def get_all_preds(model, loader, device, writer, multilabel_mode, dataset, plot_test_images=False):
+def get_all_preds(model, loader, device, writer, multilabel_mode, dataset,
+                  plot_test_images=False, use_clinical_feats=False):
     all_preds = torch.tensor([])
     all_preds = all_preds.to(device)
 
@@ -22,17 +23,27 @@ def get_all_preds(model, loader, device, writer, multilabel_mode, dataset, plot_
         images = images.to(device)
         labels = labels.to(device)
 
+        if use_clinical_feats:
+            input_vectors = data_info['feature_vector'].type(torch.FloatTensor)
+            input_vectors = input_vectors.to(device)
+
         if plot_test_images:
             writer.add_figure(f'test predictions vs. actuals',
-                              plot_classes_preds(model, images, labels,
-                                                 num_images=images.shape[0],
-                                                 multilabel_mode=multilabel_mode,
-                                                 dataset=dataset),
-                              global_step=idx)
+                            plot_classes_preds(model, images, labels,
+                                               num_images=images.shape[0],
+                                               multilabel_mode=multilabel_mode,
+                                               dataset=dataset,
+                                               input_vectors=input_vectors),
+                            global_step=idx)
+
 
         all_labels = torch.cat((all_labels, labels), dim=0)
 
-        preds = model(images)
+        if not use_clinical_feats:
+            preds = model(images)
+        elif use_clinical_feats:
+            preds = model(images, input_vectors, False)
+
         all_preds = torch.cat(
             (all_preds, preds), dim=0
         )

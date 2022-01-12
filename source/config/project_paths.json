@@ -1,36 +1,159 @@
 {
     "DATA": {
 	"root": "/home/hqvo2/Projects/Breast_Cancer/data",
-	"processed_CBIS_DDSM": "CBIS_DDSM",
+	"processed_CBIS_DDSM": "CBIS_DDSM_pngs",
 	"CBIS_DDSM_lesions": {
 	    "mass_feats": {
+		"annotations_file": {
+		    "train": "mass_case_description_train_set.csv",
+		    "test": "mass_case_description_test_set.csv"
+		},
+		
 		"mass_shape": "mass/cls/mass_shape",
 		"mass_margins": "mass/cls/mass_margins",
-		"mass_breast_density_image": "mass/cls/mass_breast_density_image",
-
 		"mass_pathology": "mass/cls/mass_pathology",
+		"mass_pathology_birads34": "mass/cls/mass_pathology_birads34",
+		"stoa_mass_pathology": "mass/cls/stoa_mass_pathology",
+
+		"mass_shape_tfds": "mass/cls/mass_shape_tfds",
+		"mass_margins_tfds": "mass/cls/mass_margins_tfds",
                 "mass_pathology_tfds": "mass/cls/mass_pathology_tfds",
-		"stoa_mass_pathology": "mass/cls/stoa_mass_pathology"
+		"mass_breast_density_image": "mass/cls/mass_breast_density_image"
 	    },
 	    "calc_feats": {
+		"annotations_file": {
+		    "train": "calc_case_description_train_set.csv",
+		    "test": "calc_case_description_test_set.csv"
+		},
+
 		"calc_type": "calc/cls/calc_type",
 		"calc_dist": "calc/cls/calc_dist",
-		"calc_breast_density_image": "calc/cls/calc_breast_density_image",
-
-
 		"calc_pathology": "calc/cls/calc_pathology",
+		"calc_pathology_birads34": "calc/cls/calc_pathology_birads34",
+		"stoa_calc_pathology": "calc/cls/stoa_calc_pathology",
+
+		"calc_type_tfds": "calc/cls/calc_type_tfds",
+		"calc_dist_tfds": "calc/cls/calc_dist_tfds",
                 "calc_pathology_tfds": "calc/cls/calc_pathology_tfds",
-		"stoa_calc_pathology": "calc/cls/stoa_calc_pathology"
+
+		"calc_breast_density_image": "calc/cls/calc_breast_density_image"
 	    },
             "background": {
                 "bg_tfds": "background/cls/background_tfds"
             }
 	},
+	"CBIS_DDSM_tfds": {
+	    "root": "CBIS_DDSM_tfds"
+	},
         "methodist_data": {
             "root": "methodist_data",
             "Deidentified_Positive_JPEG": "Deidentified_Positive_JPEG",
             "Deidentified_Negative_JPEG": "Deidentified_Negative_JPEG"
-        }
+        },
+	"INbreast": {
+	    "root": "INbreast/INbreast Release 1.0",
+	    "mass_feats": {
+		"mass_pathology": "cls/mass/pathology",
+		"aug_mass_pathology": "cls/mass/aug_pathology"
+	    },
+	    "calc_feats": {
+		"calc_pathology": "cls/calc/pathology",
+		"aug_calc_pathology": "cls/calc/aug_pathology"
+	    },
+	    "cluster_feats": {
+		"cluster_pathology": "cls/cluster/pathology",
+		"aug_cluster_pathology": "cls/cluster/aug_pathology"
+	    },
+	    "distortion_feats": {
+		"distortion_pathology": "cls/distortion/pathology",
+		"aug_distortion_pathology": "cls/distortion/aug_pathology"
+	    },
+	    "spiculated_feats": {
+		"spiculated_pathology": "cls/spiculated/pathology",
+		"aug_spiculated_pathology": "cls/spiculated/aug_pathology"
+	    },
+	    "asymetry_feats": {
+		"asymetry_pathology": "cls/asymetry/pathology",
+		"aug_asymetry_pathology": "cls/asymetry/aug_pathology"
+	    },
+	    "background": {
+		"bg_tfds": "cls/background/background_tfds"
+	    }
+	},
+	"BCDR": {
+	    "root": "BCDR",
+	    "film": {
+		"root": "film",
+
+		"mass_pathology": "cls/mass/pathology",
+		"calc_pathology": "cls/calc/pathology",
+		"microcalc_pathology": "cls/microcalc/pathology",
+		"mass_calc_pathology": "cls/mass_calc/pathology",
+		"mass_microcalc_pathology": "cls/mass_microcalc/pathology",
+		"calc_microcalc_pathology": "cls/calc_microcalc/pathology",
+
+		"aug_mass_pathology": "cls/mass/aug_pathology",
+		"aug_calc_pathology": "cls/calc/aug_pathology",
+		"aug_microcalc_pathology": "cls/microcalc/aug_pathology",
+		"aug_mass_calc_pathology": "cls/mass_calc/aug_pathology",
+		"aug_mass_microcalc_pathology": "cls/mass_microcalc/aug_pathology",
+		"aug_calc_microcalc_pathology": "cls/calc_microcalc/aug_pathology",
+
+		"background": {
+		    "bg_tfds": "cls/background/background_tfds"
+		}
+	    },
+	    "digital": {
+		"root": "digital",
+		
+		"mass_pathology": "cls/mass/pathology",
+		"calc_pathology": "cls/calc/pathology",
+		"microcalc_pathology": "cls/microcalc/pathology",
+		"mass_calc_pathology": "cls/mass_calc/pathology",
+		"mass_microcalc_pathology": "cls/mass_microcalc/pathology",
+		"calc_microcalc_pathology": "cls/calc_microcalc/pathology",
+
+		"aug_mass_pathology": "cls/mass/aug_pathology",
+		"aug_calc_pathology": "cls/calc/aug_pathology",
+		"aug_microcalc_pathology": "cls/microcalc/aug_pathology",
+		"aug_mass_calc_pathology": "cls/mass_calc/aug_pathology",
+		"aug_mass_microcalc_pathology": "cls/mass_microcalc/aug_pathology",
+		"aug_calc_microcalc_pathology": "cls/calc_microcalc/aug_pathology",
+
+		"background": {
+		    "bg_tfds": "cls/background/background_tfds"
+		}
+	    }
+	},
+	"CSAW-S": {
+	    "root": "CSAW-S",
+
+	    "axillary_lymph_nodes": "cls/axillary_lymph_nodes",
+	    "calcifications": "cls/calcifications",
+	    "cancer": "cls/cancer",
+
+	    "aug_axillary_lymph_nodes": "cls/aug_axillary_lymph_nodes",
+	    "aug_calcifications": "cls/aug_calcifications",
+	    "aug_cancer": "cls/aug_cancer",
+
+	    "background": {
+		"bg_tfds": "cls/background/background_tfds"
+	    }
+	},
+	"CSAW-M": {
+	    "root": "CSAW-M",
+
+	    "background": {
+		"bg_tfds": "cls/background/background_tfds"
+	    }
+	},
+	"CMMD": {
+	    "root": "CMMD",
+
+	    "background": {
+		"bg_tfds": "cls/background/background_tfds"
+	    }
+	}
     },
     "LIB": {
 	"mmdet": "/home/hqvo2/Projects/Breast_Cancer/libs/mmdetection"
