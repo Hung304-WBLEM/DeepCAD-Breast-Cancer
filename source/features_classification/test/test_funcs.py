@@ -23,6 +23,7 @@ def get_all_preds(model, loader, device, writer, multilabel_mode, dataset,
         images = images.to(device)
         labels = labels.to(device)
 
+        input_vectors = None
         if use_clinical_feats:
             input_vectors = data_info['feature_vector'].type(torch.FloatTensor)
             input_vectors = input_vectors.to(device)
@@ -42,7 +43,7 @@ def get_all_preds(model, loader, device, writer, multilabel_mode, dataset,
         if not use_clinical_feats:
             preds = model(images)
         elif use_clinical_feats:
-            preds = model(images, input_vectors, False)
+            preds = model(images, input_vectors)
 
         all_preds = torch.cat(
             (all_preds, preds), dim=0

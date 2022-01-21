@@ -25,6 +25,8 @@ class Clinical_Concat_Model(nn.Module):
             self.fc2 = nn.Linear(200, num_classes)
             #############################################################
 
+            self.dropout_layer = nn.Dropout(p=0.5)
+
         elif model_name == 'fusion_vgg16':
             self.cnn = models.vgg16_bn(pretrained=use_pretrained)
             self.cnn.classifier = nn.Sequential(*list(self.cnn.classifier.children())[:-3])
@@ -33,7 +35,7 @@ class Clinical_Concat_Model(nn.Module):
             self.fc2 = nn.Linear(512, num_classes)
 
 
-    def forward(self, image, vector_data, training):
+    def forward(self, image, vector_data):
         x1 = self.cnn(image)
         x2 = vector_data.float()
 
@@ -52,10 +54,11 @@ class Clinical_Concat_Model(nn.Module):
         x = torch.cat((x1, x2), dim=1)
         x = F.relu(self.fc1(x))
 
-        if isinstance(training, torch.Tensor):
-            x = F.dropout(x, p=0.5, training=training.item())
-        else:
-            x = F.dropout(x, p=0.5, training=training)
+        # if isinstance(training, torch.Tensor):
+        #     x = F.dropout(x, p=0.5, training=training.item())
+        # else:
+        #     x = F.dropout(x, p=0.5, training=training)
+        x = self.dropout_layer(x)
         x = self.fc2(x)
 
         return x

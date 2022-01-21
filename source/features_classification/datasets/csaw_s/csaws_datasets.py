@@ -10,7 +10,6 @@ import albumentations
 
 from torch.utils.data import Dataset
 from PIL import Image
-# from dataprocessing.process_cbis_ddsm import get_info_lesion
 from sklearn.preprocessing import label_binarize
 from natsort import natsorted
 

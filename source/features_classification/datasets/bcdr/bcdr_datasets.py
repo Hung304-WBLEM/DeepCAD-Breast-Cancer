@@ -147,6 +147,62 @@ class BCDR_Pathology_Dataset(Dataset):
         return {'image': image, 'label': label, 'img_path': img_path}
 
 
+class BCDR_Pathology_RandomCrops_Dataset(Dataset):
+    classes = np.array(['BACKGROUND'])
+
+        
+    def __init__(self, bg_root_dir, transform=None):
+        self.transform = transform
+
+        self.bg_root_dir = bg_root_dir
+
+        self.images_list = []
+        self.labels = []
+
+        for idx, class_name in enumerate(BCDR_Pathology_RandomCrops_Dataset.classes):
+            if class_name == 'BACKGROUND':
+                bg_images = glob.glob(os.path.join(bg_root_dir, '*.png'))
+                self.images_list += bg_images
+                self.labels += [idx] * len(bg_images)
+
+                if len(bg_images) == 0:
+                    print(bg_root_dir)
+                    raise ValueError
+
+    def get_images_list(self):
+        return self.images_list
+
+    def get_labels(self):
+        return self.labels
+
+    def __len__(self):
+        return len(self.images_list)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        img_path = self.images_list[idx]
+        img_name, _ = os.path.splitext(os.path.basename(img_path))
+        image = Image.open(img_path)
+
+        if image.mode == 'L':
+            image = image.convert("RGB")
+
+        label = self.labels[idx]
+
+        if self.transform:
+            if isinstance(self.transform, albumentations.core.composition.Compose):
+                res = self.transform(image=np.array(image))
+                image = res['image'].astype(np.float32)
+                image = image.transpose(2, 0, 1)
+            else:
+                image = self.transform(image)
+
+
+        return {'image': image, 'label': label, 'img_path': img_path}
+
+
 class All_BCDR_Pathology_Dataset(Dataset):
     classes = np.array(['BACKGROUND',
                         'BENIGN_MASS', 'MALIGNANT_MASS',
@@ -158,7 +214,8 @@ class All_BCDR_Pathology_Dataset(Dataset):
                         ])
 
         
-    def __init__(self, film_root, digital_root, data_type='pathology', transform=None):
+    def __init__(self, film_root, digital_root, data_type='pathology',
+                 transform=None, use_dn01=False):
         self.transform = transform
 
         F01_cls_root = os.path.join(film_root, 'BCDR-F01_dataset', 'cls')
@@ -245,6 +302,17 @@ class All_BCDR_Pathology_Dataset(Dataset):
             F03_dataset.get_labels() + \
             D01_dataset.get_labels() + \
             D02_dataset.get_labels()
+
+        if use_dn01:
+            DN01_cls_root = os.path.join(digital_root, 'BCDR-DN01_dataset', 'cls')
+            DN01_dataset = BCDR_Pathology_RandomCrops_Dataset(
+                os.path.join(DN01_cls_root, 'background', 'background_tfds')
+            )
+            if len(DN01_dataset.get_images_list()) == 0:
+                raise ValueError
+
+            self.images_list = self.images_list + DN01_dataset.get_images_list()
+            self.labels = self.labels + DN01_dataset.get_labels()
 
     def get_images_list(self):
         return self.images_list

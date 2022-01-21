@@ -1,4 +1,3 @@
-import argparse
 import torch.nn as nn
 import torch
 
@@ -6,8 +5,9 @@ from dino.utils import load_pretrained_weights, init_distributed_mode, bool_flag
 from dino import vision_transformer as vits
 
 
-def load_dino_pretrained_model(ckpt_path, arch='vit_small', patch_size=16):
-    model = vits.__dict__[arch](patch_size=patch_size, num_classes=0)
+def load_dino_pretrained_model(ckpt_path, arch='vit_small', img_size=224, patch_size=16):
+    model = vits.__dict__[arch](patch_size=patch_size, num_classes=0,
+                                img_size=[img_size])
 
     if arch in ['vit_small', 'vit_tiny']:
         n_last_blocks = 4
@@ -24,10 +24,10 @@ def load_dino_pretrained_model(ckpt_path, arch='vit_small', patch_size=16):
 
 
 class ViT_DINO(nn.Module):
-    def __init__(self, ckpt_path, arch, patch_size, num_labels):
+    def __init__(self, ckpt_path, arch, img_size, patch_size, num_labels):
         super(ViT_DINO, self).__init__()
 
-        self.model, embed_dim, self.n_last_blocks, self.avgpool_patchtokens = load_dino_pretrained_model(ckpt_path, arch, patch_size)
+        self.model, embed_dim, self.n_last_blocks, self.avgpool_patchtokens = load_dino_pretrained_model(ckpt_path, arch, img_size, patch_size)
 
         self.linear = nn.Linear(embed_dim, num_labels)
         self.linear.weight.data.normal_(mean=0.0, std=0.01)

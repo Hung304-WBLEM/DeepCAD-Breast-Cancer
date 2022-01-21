@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from torchvision import datasets, models, transforms
 from features_classification.models.dino_pretrained import ViT_DINO
+from features_classification.models.mae_pretrained import ViT_MAE
 from features_classification.models.fusion_models.clinical_feats_models import Clinical_Concat_Model, Clinical_Attentive_Model
 
 
@@ -109,7 +110,9 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
                                                      num_classes=num_classes)  
 
         
-    elif ('dino' not in model_name) and \
+    elif ('dino' not in model_name
+          and 'mae' not in model_name) \
+          and \
          ('vit' in model_name \
          or 'twins' in model_name \
          or 'bit' in model_name \
@@ -127,13 +130,29 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
                                      num_classes=num_classes)
 
     elif 'dino' in model_name:
-        if model_name == 'dino_vit_base_patch16_224':
-            model_ft = ViT_DINO(ckpt_path, 'vit_base', 16, num_classes)
-        elif model_name == 'dino_vit_tiny_patch16_224':
-            model_ft = ViT_DINO(ckpt_path, 'vit_tiny', 16, num_classes)
-        elif model_name == 'dino_vit_small_patch16_224':
-            model_ft = ViT_DINO(ckpt_path, 'vit_small', 16, num_classes)
+        if model_name in ['dino_vit_tiny_patch16']:
+            model_ft = ViT_DINO(ckpt_path, 'vit_tiny', options.input_size, 16, num_classes)
+        elif model_name == 'dino_vit_small_patch16':
+            model_ft = ViT_DINO(ckpt_path, 'vit_small', options.input_size, 16, num_classes)
+        elif model_name == 'dino_vit_base_patch16':
+            model_ft = ViT_DINO(ckpt_path, 'vit_base', options.input_size, 16, num_classes)
 
+    elif 'mae' in model_name:
+        if 'linprobe' not in model_name:
+            if model_name in ['mae_vit_base_patch16']:
+                model_ft = ViT_MAE(ckpt_path, 'vit_base_patch16', options.input_size,
+                                num_classes, global_pool=True)
+            elif model_name in ['mae_vit_large_patch16']:
+                model_ft = ViT_MAE(ckpt_path, 'vit_large_patch16', options.input_size,
+                                num_classes, global_pool=True)
+        elif 'linprobe' in model_name:
+            if model_name in ['mae_vit_base_patch16_linprobe']:
+                model_ft = ViT_MAE(ckpt_path, 'vit_base_patch16', options.input_size,
+                                   num_classes, global_pool=True, linprobe=True)
+            elif model_name in ['mae_vit_large_patch16_linprobe']:
+                model_ft = ViT_MAE(ckpt_path, 'vit_large_patch16', options.input_size,
+                                   num_classes, global_pool=True, linprobe=True)
+        
     elif model_name == "alexnet":
         """ Alexnet
         """

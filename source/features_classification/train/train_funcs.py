@@ -82,10 +82,11 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                         if not options.use_clinical_feats:
                             outputs = model(inputs)
                         else:
-                            if phase == 'val':
-                                outputs = model(inputs, input_vectors, training=False)
-                            elif phase == 'train':
-                                outputs = model(inputs, input_vectors, training=True)
+                            # if phase == 'val':
+                            #     outputs = model(inputs, input_vectors, training=False)
+                            # elif phase == 'train':
+                            #     outputs = model(inputs, input_vectors, training=True)
+                            outputs = model(inputs, input_vectors)
 
                         if options.criterion == 'ce':
                             loss = criterion(outputs, labels)
@@ -225,7 +226,7 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
 
 
 def train_stage(options, model_ft, model_name, criterion, optimizer_type, last_frozen_layer, learning_rate, weight_decay, dataset, num_epochs, dataloaders_dict, weighted_samples, writer, device, classes):
-    set_parameter_requires_grad(model_ft, model_name, last_frozen_layer)
+    # set_parameter_requires_grad(model_ft, model_name, last_frozen_layer)
     
     print("Params to learn:")
     params_to_update = []

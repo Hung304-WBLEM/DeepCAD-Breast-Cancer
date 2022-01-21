@@ -457,7 +457,7 @@ def images_to_probs(net, images, multilabel_mode, input_vectors=None):
     if input_vectors is None:
         output = net(images)
     else:
-        output = net(images, input_vectors, training=False)
+        output = net(images, input_vectors)
     
     # convert output probabilities to predicted class
     if not multilabel_mode:

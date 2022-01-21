@@ -7,7 +7,7 @@ from features_classification.augmentation.augmentation_funcs import torch_aug, a
 
 
 def initialize(options, data_transforms):
-    if options.dataset in ['combined_datasets']:
+    if options.dataset in ['combined_datasets', 'image_lesion_combined_datasets']:
         from features_classification.datasets.combined_datasets.all_datasets import All_Pathology_Datasets as data
 
     # Get classes
@@ -59,6 +59,18 @@ def initialize(options, data_transforms):
     csaws_axillary_data_dir = os.path.join(csaws_root, proj_paths_json['DATA']['CSAW-S']['axillary_lymph_nodes'])
     csaws_bg_data_dir = os.path.join(csaws_root, proj_paths_json['DATA']['CSAW-S']['background']['bg_tfds'])
 
+    # CSAWM
+    csawm_root = os.path.join(
+        data_root, proj_paths_json['DATA']['CSAW-M']['root']
+    )
+    csawm_bg_data_dir = os.path.join(csawm_root, proj_paths_json['DATA']['CSAW-M']['background']['bg_tfds'])
+
+    # CMMD
+    cmmd_root = os.path.join(
+        data_root, proj_paths_json['DATA']['CMMD']['root']
+    )
+    cmmd_bg_data_dir = os.path.join(cmmd_root, proj_paths_json['DATA']['CMMD']['background']['bg_tfds'])
+
     # Create dataset
     if options.dataset in ['combined_datasets']:
         image_datasets = {'train': data(os.path.join(ddsm_mass_data_dir, 'train'),
@@ -80,6 +92,31 @@ def initialize(options, data_transforms):
                                         csaws_bg_data_dir,
 
                                         transform=data_transforms['train'])}
+    elif options.dataset in ['image_lesion_combined_datasets']:
+        image_datasets = {'train': data(os.path.join(ddsm_mass_data_dir, 'train'),
+                                        os.path.join(ddsm_calc_data_dir, 'train'),
+                                        os.path.join(ddsm_bg_data_dir, 'train'),
+                                        inbreast_mass_data_dir, inbreast_calc_data_dir,
+                                        inbreast_spiculated_data_dir,
+                                        inbreast_asymetry_data_dir,
+                                        inbreast_distortion_data_dir,
+                                        inbreast_cluster_data_dir,
+                                        inbreast_bg_data_dir,
+
+                                        bcdr_film_data_dir, bcdr_digital_data_dir,
+                                        bcdr_data_type,
+
+                                        csaws_cancer_data_dir,
+                                        csaws_calc_data_dir,
+                                        csaws_axillary_data_dir,
+                                        csaws_bg_data_dir,
+
+                                        os.path.join(csawm_bg_data_dir, 'train'),
+                                        cmmd_bg_data_dir,
+
+                                        transform=data_transforms['train'],
+                                        use_bcdr_dn01=True
+                                        )}
 
     return data, image_datasets, classes
 

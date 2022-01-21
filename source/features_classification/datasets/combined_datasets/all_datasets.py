@@ -13,6 +13,8 @@ from features_classification.datasets.cbis_ddsm.cbis_ddsm_datasets import Five_C
 from features_classification.datasets.inbreast.inbreast_datasets import INBreast_Pathology_Dataset
 from features_classification.datasets.bcdr.bcdr_datasets import All_BCDR_Pathology_Dataset
 from features_classification.datasets.csaw_s.csaws_datasets import CSAWS_Dataset
+from features_classification.datasets.csaw_m.csawm_datasets import CSAWM_Dataset
+from features_classification.datasets.cmmd.cmmd_datasets import CMMD_Dataset
 
 
 class All_Pathology_Datasets(Dataset):
@@ -20,7 +22,8 @@ class All_Pathology_Datasets(Dataset):
         list(map(lambda x: 'DDSM_' + x, Five_Classes_Mass_Calc_Pathology_Dataset.classes.tolist())) \
         + list(map(lambda x: 'INbreast_' + x, INBreast_Pathology_Dataset.classes.tolist())) \
         + list(map(lambda x: 'BCDR_' + x, All_BCDR_Pathology_Dataset.classes.tolist())) \
-        + list(map(lambda x: 'CSAWS_' + x, CSAWS_Dataset.classes.tolist()))
+        + list(map(lambda x: 'CSAWS_' + x, CSAWS_Dataset.classes.tolist())) \
+        + list(map(lambda x: 'CSAWM_' + x, CSAWM_Dataset.classes.tolist()))
    )
 
     def __init__(self,
@@ -35,7 +38,12 @@ class All_Pathology_Datasets(Dataset):
                  csaws_cancer_root, csaws_calc_root, csaws_axillary_root,
                  csaws_bg_root,
 
-                 transform = None
+                 csawm_bg_root=None,
+
+                 cmmd_bg_root=None,
+
+                 transform = None,
+                 use_bcdr_dn01=False
                  ):
 
         self.transform = transform
@@ -55,7 +63,8 @@ class All_Pathology_Datasets(Dataset):
         bcdr_dataset = All_BCDR_Pathology_Dataset(bcdr_film_root,
                                                   bcdr_digital_root,
                                                   bcdr_data_type,
-                                                  transform=transform
+                                                  transform=transform,
+                                                  use_dn01=use_bcdr_dn01
                                                   )
         csaws_dataset = CSAWS_Dataset(csaws_cancer_root,
                                       csaws_calc_root,
@@ -80,6 +89,35 @@ class All_Pathology_Datasets(Dataset):
             list(map(lambda x: x + ddsm_num_classes + inbreast_num_classes, bcdr_dataset.get_labels())) + \
             list(map(lambda x: x + ddsm_num_classes +
                      inbreast_num_classes + bcdr_num_classes, csaws_dataset.get_labels()))
+
+        if csawm_bg_root is not None:
+            csawm_dataset = CSAWM_Dataset(csawm_bg_root,
+                                          transform=transform)
+            self.images_list = self.images_list + csawm_dataset.get_images_list()
+            csawm_num_classes = len(CSAWM_Dataset.classes)
+
+            self.labels = self.labels + list(map(lambda x: x +
+                                                 ddsm_num_classes +
+                                                 inbreast_num_classes +
+                                                 bcdr_num_classes +
+                                                 csaws_num_classes,
+                                                 csawm_dataset.get_labels()
+                                                 ))
+
+        if cmmd_bg_root is not None:
+            cmmd_dataset = CMMD_Dataset(cmmd_bg_root,
+                                        transform=transform) 
+            self.images_list = self.images_list + cmmd_dataset.get_images_list()
+            cmmd_num_classes = len(CMMD_Dataset.classes)
+
+            self.labels = self.labels + list(map(lambda x: x +
+                                                 ddsm_num_classes +
+                                                 inbreast_num_classes +
+                                                 bcdr_num_classes +
+                                                 csaws_num_classes +
+                                                 csawm_num_classes,
+                                                 cmmd_dataset.get_labels()
+                                                 ))
 
     def __len__(self):
         return len(self.images_list)

@@ -15,6 +15,9 @@ parser.add_option("--tr", "--train_rate", dest="train_rate", type=float, default
                   help="Part of the dataset that you want to train")
 parser.add_option("-m", "--model_name",
                     help="Select the backbone for training. Available backbones include: 'resnet', 'resnet50', 'alexnet', 'vgg', 'squeezenet', 'densenet', 'inception'")
+parser.add_option("--use_pretrained", dest="use_pretrained",
+                  default=False, action='store_true',
+                  help="Select if you want to use pretrained weights (random weights, otherwise)")
 parser.add_option("-b", "--batch_size", type=int, default=32,
                     help="Batch size for training")
 parser.add_option("-e", "--epochs", type=int, default=100,

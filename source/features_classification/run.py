@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
     # Initialize the model for this run
     model = initialize_model(
-        options, model_name, num_classes, use_pretrained=True, ckpt_path=options.ckpt_path)
+        options, model_name, num_classes, use_pretrained=options.use_pretrained, ckpt_path=options.ckpt_path)
 
     print("Initializing Datasets and Dataloaders...")
 
@@ -112,7 +112,7 @@ if __name__ == '__main__':
             image_datasets['train'], batch_size=batch_size,
             worker_init_fn=np.random.seed(42),
             shuffle=True, num_workers=options.num_workers,
-            drop_last=True
+            drop_last=True # this could cause decrease in performance
         ),
         'val': torch.utils.data.DataLoader(
             image_datasets['val'], batch_size=batch_size,
@@ -130,8 +130,7 @@ if __name__ == '__main__':
         if not options.use_clinical_feats:
             writer.add_graph(model, samples['image'])
         elif options.use_clinical_feats:
-            writer.add_graph(model, (samples['image'], samples['feature_vector'],
-                                     torch.tensor([1], dtype=torch.bool)))
+            writer.add_graph(model, (samples['image'], samples['feature_vector']))
 
     # Detect if we have a GPU available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
