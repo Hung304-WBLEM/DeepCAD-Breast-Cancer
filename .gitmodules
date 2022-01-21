@@ -19,3 +19,9 @@
 [submodule "libs/dino"]
 	path = libs/dino
 	url = https://github.com/Hung304-WBLEM/dino.git
+[submodule "mae"]
+	path = mae
+	url = https://github.com/Hung304-WBLEM/mae.git
+[submodule "libs/mae"]
+	path = libs/mae
+	url = https://github.com/Hung304-WBLEM/mae.git
