@@ -10,6 +10,7 @@ from pycocotools import mask as coco_api_mask
 from dataprocessing.random_patches_sampling import _sample_positive_patches
 from dataprocessing.random_patches_sampling import _sample_negative_patches
 from dataprocessing.cbis_ddsm.remove_blank_background import remove_background_images
+from dataprocessing.inbreast.process_inbreast import increase_constrast_by_clip
 
 def area(_mask):
     rle = coco_api_mask.encode(np.asfortranarray(_mask))
@@ -44,7 +45,9 @@ def get_bcdr_lesion_pathology(data_root,
                               mass_microcalc_pathology_save_root,
                               calc_microcalc_pathology_save_root,
                               background_save_root=None,
-                              patch_ext='center'):
+                              patch_ext='center',
+                              use_norm=False
+                              ):
     
     outline_csv_path = glob.glob(os.path.join(data_root, '*outlines.csv'))[0]
     outline_csv = pd.read_csv(outline_csv_path)
@@ -61,6 +64,11 @@ def get_bcdr_lesion_pathology(data_root,
 
         img_name = os.path.join(data_root, filename.strip())
         mamm_img = mmcv.imread(os.path.join(data_root, 'AllPNGs', img_name))
+        if use_norm:
+            mamm_img = increase_constrast_by_clip(mamm_img,
+                                                  lowerbound_clip_rate=0.03,
+                                                  upperbound_clip_rate=0.003)
+
         resized_mamm_img = cv2.resize(mamm_img, (896, 1152))
         height, width = mamm_img.shape[:2]
 
@@ -213,9 +221,9 @@ if __name__ == '__main__':
     bcdr_root = os.path.join(
         data_root, proj_paths_json['DATA']['BCDR']['root'])
 
-    film_data = proj_paths_json['DATA']['BCDR']['film']
+    film_data = proj_paths_json['DATA']['BCDR']['norm_film']
     film_data_root = os.path.join(bcdr_root, film_data['root'])
-    digital_data = proj_paths_json['DATA']['BCDR']['digital']
+    digital_data = proj_paths_json['DATA']['BCDR']['norm_digital']
     digital_data_root = os.path.join(bcdr_root, digital_data['root'])
 
 
@@ -232,24 +240,25 @@ if __name__ == '__main__':
             save_data = digital_data
         
         get_bcdr_lesion_pathology(os.path.join(bcdr_root, data_name),
-                                mass_pathology_save_root=\
-                                os.path.join(save_root, data_name,
-                                            save_data['mass_pathology']),
-                                calc_pathology_save_root=\
-                                os.path.join(save_root, data_name,
-                                            save_data['calc_pathology']),
-                                microcalc_pathology_save_root=\
-                                os.path.join(save_root, data_name,
-                                            save_data['microcalc_pathology']),
-                                mass_calc_pathology_save_root=\
-                                os.path.join(save_root, data_name,
-                                            save_data['mass_calc_pathology']),
-                                mass_microcalc_pathology_save_root=\
-                                os.path.join(save_root, data_name,
-                                            save_data['mass_microcalc_pathology']),
-                                calc_microcalc_pathology_save_root=\
-                                os.path.join(save_root, data_name,
-                                            save_data['calc_microcalc_pathology'])
+                                  mass_pathology_save_root=\
+                                  os.path.join(save_root, data_name,
+                                               save_data['mass_pathology']),
+                                  calc_pathology_save_root=\
+                                  os.path.join(save_root, data_name,
+                                               save_data['calc_pathology']),
+                                  microcalc_pathology_save_root=\
+                                  os.path.join(save_root, data_name,
+                                               save_data['microcalc_pathology']),
+                                  mass_calc_pathology_save_root=\
+                                  os.path.join(save_root, data_name,
+                                               save_data['mass_calc_pathology']),
+                                  mass_microcalc_pathology_save_root=\
+                                  os.path.join(save_root, data_name,
+                                               save_data['mass_microcalc_pathology']),
+                                  calc_microcalc_pathology_save_root=\
+                                  os.path.join(save_root, data_name,
+                                               save_data['calc_microcalc_pathology']),
+                                  use_norm=(data_type=='D')
                                 )
 
 
@@ -275,7 +284,8 @@ if __name__ == '__main__':
                                   background_save_root=\
                                   os.path.join(save_root, data_name,
                                                save_data['background']['bg_tfds']),
-                                  patch_ext='random'
+                                  patch_ext='random',
+                                  use_norm=(data_type=='D')
                                   )
 
         remove_background_images(os.path.join(save_root, data_name,

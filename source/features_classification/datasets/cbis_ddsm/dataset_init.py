@@ -9,6 +9,7 @@ def initialize(options, data_transforms):
         from features_classification.datasets.cbis_ddsm.cbis_ddsm_datasets import Mass_Calc_Pathology_Dataset as data
     elif options.dataset in ['four_classes_mass_calc_pathology',
                              'four_classes_mass_calc_pathology_birads34',
+                             'four_classes_mass_calc_pathology_birads34_valtest',
                              'four_classes_mass_calc_pathology_tfds']:
         from features_classification.datasets.cbis_ddsm.cbis_ddsm_datasets import Four_Classes_Mass_Calc_Pathology_Dataset as data
     elif options.dataset in ['four_classes_features_pathology']:
@@ -119,6 +120,15 @@ def initialize(options, data_transforms):
             data_root, processed_cbis_ddsm_root,
             proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_birads34'])
 
+    elif options.dataset in ['four_classes_mass_calc_pathology_birads34_valtest']:
+        
+        mass_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_birads34_valtest'])
+        calc_data_dir = os.path.join(
+            data_root, processed_cbis_ddsm_root,
+            proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_birads34_valtest'])
+
     elif options.dataset in ['four_classes_mass_calc_pathology_tfds']:
         
         mass_data_dir = os.path.join(
@@ -154,6 +164,7 @@ def initialize(options, data_transforms):
                            'mass_calc_pathology',
                            'four_classes_mass_calc_pathology',
                            'four_classes_mass_calc_pathology_birads34',
+                           'four_classes_mass_calc_pathology_birads34_valtest',
                            'four_classes_mass_calc_pathology_tfds',
                            'stoa_mass_calc_pathology']:
         train_image_datasets = {'train': data(os.path.join(mass_data_dir, 'train'),

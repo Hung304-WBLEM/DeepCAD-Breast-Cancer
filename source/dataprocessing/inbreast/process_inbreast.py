@@ -22,6 +22,47 @@ def area(_mask):
     return area
 
 
+def increase_constrast_by_clip(mamm_img, lowerbound_clip_rate, upperbound_clip_rate):
+    flat_img = mamm_img.flatten()
+    flat_img = flat_img[flat_img != 0]
+    mode = stats.mode(flat_img).mode # ignore background value 0
+    
+    hist, _ = np.histogram(mamm_img.ravel(),256,[0,256])
+    
+    lowerbound_total_px = 0
+    lowerbound_mode_total_px = np.sum(hist[1:mode[0]]) # ignore background px
+    selected_lowerbound_color = None
+    for i in range(1, mode[0]): # ignore background px
+        lowerbound_total_px = np.sum(hist[1:(i+1)])      
+        if lowerbound_total_px / lowerbound_mode_total_px >= lowerbound_clip_rate:
+            selected_lowerbound_color = i
+            break
+        
+    upperbound_total_px = 0
+    upperbound_mode_total_px = np.sum(hist[(mode[0]+1):])
+    selected_upperbound_color = None
+    for i in range(255, mode[0]+1, -1):
+        upperbound_total_px = np.sum(hist[i:256])
+        if upperbound_total_px / upperbound_mode_total_px >= upperbound_clip_rate:
+            selected_upperbound_color = i
+            break
+            
+    # if pmin > mode:
+    #   print('pmin is larger than mode')
+    #   pmin = mode
+    # if pmax > 255 - mode:
+    #   print('pmax is larger than 255-mode')
+    #   pmax = 255 - mode
+
+    mamm_img = np.clip(mamm_img, selected_lowerbound_color, selected_upperbound_color)
+
+    out = np.zeros(mamm_img.shape, np.double)
+    normalized = cv2.normalize(mamm_img, out, 1.0, 0.0, cv2.NORM_MINMAX, dtype=cv2.CV_64F) * 255
+    normalized = normalized.astype(np.uint8)
+
+    return normalized
+
+
 def convert_dicom_to_png(data_root):
     os.makedirs(os.path.join(data_root, 'AllPNGs'), exist_ok=True)
     os.makedirs(os.path.join(data_root, 'AllNormPNGs'), exist_ok=True)

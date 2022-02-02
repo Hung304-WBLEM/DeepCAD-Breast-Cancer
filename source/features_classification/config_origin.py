@@ -49,7 +49,7 @@ parser.add_option("--crt", "--criterion", dest="criterion", type=str, default="c
 parser.add_option("--aug_type", dest="augmentation_type", type=str,
                   default="torch", help="Choose augmentation type. Available augmentation types include: torch, albumentations, augmix")
 parser.add_option("--best_ckpt_metric", dest="best_ckpt_metric", 
-                  default="acc", choices=['acc', 'macro_ap', 'micro_ap', 'macro_auc', 'micro_auc'],
+                  default="acc", choices=['acc', 'macro_ap', 'micro_ap', 'macro_auc', 'micro_auc', 'macro_auc_only'],
                   help="Choose metric to select best model for ckpt")
 parser.add_option("--ckpt", dest="ckpt_path",
                   default=None, help="Path to load the model checkpoint")

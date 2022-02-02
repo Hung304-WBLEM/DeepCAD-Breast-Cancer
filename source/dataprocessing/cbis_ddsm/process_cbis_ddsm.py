@@ -932,13 +932,32 @@ if __name__ == '__main__':
     #                       lesion_type='mass', patch_ext='center')
 
     # # split lesion patches based on pathology (birads 3&4 only for val/test set)
-    mass_pathology_birads34_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_birads34'])
+    # mass_pathology_birads34_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_birads34_valtest'])
 
     # get_lesions_pathology(os.path.join(mass_pathology_birads34_root, 'train'),
     #                       data_root=mass_train_train_root,
     #                       annotation_filepath=os.path.join(processed_cbis_ddsm_root,
     #                                                        'mass_case_description_train_set.csv'),
     #                       lesion_type='mass', patch_ext='center')
+    # get_lesions_pathology(os.path.join(mass_pathology_birads34_root, 'val'),
+    #                       data_root=mass_train_val_root,
+    #                       annotation_filepath=os.path.join(processed_cbis_ddsm_root,
+    #                                                        'mass_case_description_train_set.csv'),
+    #                       lesion_type='mass', patch_ext='center', birads34_only=True)
+    # get_lesions_pathology(os.path.join(mass_pathology_birads34_root, 'test'),
+    #                       data_root=mass_test_root,
+    #                       annotation_filepath=os.path.join(processed_cbis_ddsm_root,
+    #                                                        'mass_case_description_test_set.csv'),
+    #                       lesion_type='mass', patch_ext='center', birads34_only=True)
+
+    # split lesion patches based on pathology (birads 3&4 only for train/val/test)
+    mass_pathology_birads34_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['mass_feats']['mass_pathology_birads34'])
+
+    get_lesions_pathology(os.path.join(mass_pathology_birads34_root, 'train'),
+                          data_root=mass_train_train_root,
+                          annotation_filepath=os.path.join(processed_cbis_ddsm_root,
+                                                           'mass_case_description_train_set.csv'),
+                          lesion_type='mass', patch_ext='center', birads34_only=True)
     get_lesions_pathology(os.path.join(mass_pathology_birads34_root, 'val'),
                           data_root=mass_train_val_root,
                           annotation_filepath=os.path.join(processed_cbis_ddsm_root,
@@ -1050,9 +1069,16 @@ if __name__ == '__main__':
     # get_lesions_pathology(os.path.join(calc_pathology_root, 'test'), data_root=calc_test_root, annotation_filepath=calc_desc_test_path, lesion_type='calc', patch_ext='center')
 
     # split lesion patches based on pathology (birads 3&4 only for val/test set)
-    calc_pathology_birads34_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_birads34'])
+    # calc_pathology_birads34_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_birads34_valtest'])
 
     # get_lesions_pathology(os.path.join(calc_pathology_birads34_root, 'train'), data_root=calc_train_train_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center')
+    # get_lesions_pathology(os.path.join(calc_pathology_birads34_root, 'val'), data_root=calc_train_val_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center', birads34_only=True)
+    # get_lesions_pathology(os.path.join(calc_pathology_birads34_root, 'test'), data_root=calc_test_root, annotation_filepath=calc_desc_test_path, lesion_type='calc', patch_ext='center', birads34_only=True)
+
+    # split lesion patches based on pathology (birads 3&4 only for train/val/test)
+    calc_pathology_birads34_root = os.path.join(processed_cbis_ddsm_root, proj_paths_json['DATA']['CBIS_DDSM_lesions']['calc_feats']['calc_pathology_birads34'])
+
+    get_lesions_pathology(os.path.join(calc_pathology_birads34_root, 'train'), data_root=calc_train_train_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center', birads34_only=True)
     get_lesions_pathology(os.path.join(calc_pathology_birads34_root, 'val'), data_root=calc_train_val_root, annotation_filepath=calc_desc_train_path, lesion_type='calc', patch_ext='center', birads34_only=True)
     get_lesions_pathology(os.path.join(calc_pathology_birads34_root, 'test'), data_root=calc_test_root, annotation_filepath=calc_desc_test_path, lesion_type='calc', patch_ext='center', birads34_only=True)
 

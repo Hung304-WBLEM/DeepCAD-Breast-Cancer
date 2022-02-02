@@ -177,6 +177,7 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                 'macro_ap': epoch_macro_ap,
                 'micro_ap': epoch_micro_ap,
                 'macro_auc': epoch_macro_auc,
+                'macro_auc_only': epoch_macro_auc,
                 'micro_auc': epoch_micro_auc
             }
 

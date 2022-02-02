@@ -148,6 +148,7 @@ class BCDR_Pathology_Dataset(Dataset):
 
 
 class BCDR_Pathology_RandomCrops_Dataset(Dataset):
+    # For BCDR DN01 set
     classes = np.array(['BACKGROUND'])
 
         

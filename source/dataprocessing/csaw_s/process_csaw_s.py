@@ -9,6 +9,7 @@ from pycocotools import mask as coco_api_mask
 from dataprocessing.random_patches_sampling import _sample_positive_patches
 from dataprocessing.random_patches_sampling import _sample_negative_patches
 from dataprocessing.cbis_ddsm.remove_blank_background import remove_background_images
+from dataprocessing.inbreast.process_inbreast import increase_constrast_by_clip
 
 
 def mask2polygon(_mask):
@@ -33,7 +34,8 @@ def get_csaws_features(data_root,
                        calcifications_save_root,
                        cancer_save_root,
                        background_save_root=None,
-                       patch_ext='center'):
+                       patch_ext='center',
+                       use_norm=False):
     for patient_dirpath in mmcv.track_iter_progress(glob.glob(os.path.join(data_root, 'CsawS', 'anonymized_dataset', '*'))):
         patient_id = os.path.basename(patient_dirpath)
 
@@ -45,6 +47,11 @@ def get_csaws_features(data_root,
                 break
 
             img = mmcv.imread(img_path)
+            if use_norm:
+                mamm_img = increase_constrast_by_clip(img,
+                                                      lowerbound_clip_rate=0.03,
+                                                      upperbound_clip_rate=0.003)
+
             resized_img = cv2.resize(img, (896, 1152))
             height, width = img.shape[:2]
 
@@ -158,27 +165,29 @@ if __name__ == '__main__':
     csaws = proj_paths_json['DATA']['CSAW-S']
     data_root = os.path.join(proj_paths_json['DATA']['root'], csaws['root'])
 
-    axillary_lymph_nodes_save_root = os.path.join(data_root, csaws['axillary_lymph_nodes'])
-    calcifications_save_root = os.path.join(data_root, csaws['calcifications'])
-    cancer_save_root = os.path.join(data_root, csaws['cancer'])
+    axillary_lymph_nodes_save_root = os.path.join(data_root, csaws['norm_axillary_lymph_nodes'])
+    calcifications_save_root = os.path.join(data_root, csaws['norm_calcifications'])
+    cancer_save_root = os.path.join(data_root, csaws['norm_cancer'])
 
     get_csaws_features(data_root,
                        axillary_lymph_nodes_save_root,
                        calcifications_save_root,
-                       cancer_save_root)
+                       cancer_save_root,
+                       use_norm=True)
 
     aug_axillary_lymph_nodes_save_root = os.path.join(data_root,
-                                                      csaws['aug_axillary_lymph_nodes'])
+                                                      csaws['norm_aug_axillary_lymph_nodes'])
     aug_calcifications_save_root = os.path.join(data_root,
-                                                csaws['aug_calcifications'])
+                                                csaws['norm_aug_calcifications'])
     aug_cancer_save_root = os.path.join(data_root,
-                                        csaws['aug_cancer'])
+                                        csaws['norm_aug_cancer'])
     background_save_root = os.path.join(data_root,
-                                        csaws['background']['bg_tfds'])
+                                        csaws['norm_background']['norm_bg_tfds'])
     get_csaws_features(data_root,
                        aug_axillary_lymph_nodes_save_root,
                        aug_calcifications_save_root,
                        aug_cancer_save_root,
                        background_save_root,
-                       patch_ext='random')
+                       patch_ext='random',
+                       use_norm=True)
     remove_background_images(background_save_root)

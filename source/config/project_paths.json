@@ -13,6 +13,7 @@
 		"mass_margins": "mass/cls/mass_margins",
 		"mass_pathology": "mass/cls/mass_pathology",
 		"mass_pathology_birads34": "mass/cls/mass_pathology_birads34",
+		"mass_pathology_birads34_valtest": "mass/cls/mass_pathology_birads34_valtest",
 		"stoa_mass_pathology": "mass/cls/stoa_mass_pathology",
 
 		"mass_shape_tfds": "mass/cls/mass_shape_tfds",
@@ -30,6 +31,7 @@
 		"calc_dist": "calc/cls/calc_dist",
 		"calc_pathology": "calc/cls/calc_pathology",
 		"calc_pathology_birads34": "calc/cls/calc_pathology_birads34",
+		"calc_pathology_birads34_valtest": "calc/cls/calc_pathology_birads34_valtest",
 		"stoa_calc_pathology": "calc/cls/stoa_calc_pathology",
 
 		"calc_type_tfds": "calc/cls/calc_type_tfds",
@@ -123,6 +125,48 @@
 		"background": {
 		    "bg_tfds": "cls/background/background_tfds"
 		}
+	    },
+	    "norm_film": {
+		"root": "norm_film",
+
+		"mass_pathology": "cls/mass/pathology",
+		"calc_pathology": "cls/calc/pathology",
+		"microcalc_pathology": "cls/microcalc/pathology",
+		"mass_calc_pathology": "cls/mass_calc/pathology",
+		"mass_microcalc_pathology": "cls/mass_microcalc/pathology",
+		"calc_microcalc_pathology": "cls/calc_microcalc/pathology",
+
+		"aug_mass_pathology": "cls/mass/aug_pathology",
+		"aug_calc_pathology": "cls/calc/aug_pathology",
+		"aug_microcalc_pathology": "cls/microcalc/aug_pathology",
+		"aug_mass_calc_pathology": "cls/mass_calc/aug_pathology",
+		"aug_mass_microcalc_pathology": "cls/mass_microcalc/aug_pathology",
+		"aug_calc_microcalc_pathology": "cls/calc_microcalc/aug_pathology",
+
+		"background": {
+		    "bg_tfds": "cls/background/background_tfds"
+		}
+	    },
+	    "norm_digital": {
+		"root": "norm_digital",
+		
+		"mass_pathology": "cls/mass/pathology",
+		"calc_pathology": "cls/calc/pathology",
+		"microcalc_pathology": "cls/microcalc/pathology",
+		"mass_calc_pathology": "cls/mass_calc/pathology",
+		"mass_microcalc_pathology": "cls/mass_microcalc/pathology",
+		"calc_microcalc_pathology": "cls/calc_microcalc/pathology",
+
+		"aug_mass_pathology": "cls/mass/aug_pathology",
+		"aug_calc_pathology": "cls/calc/aug_pathology",
+		"aug_microcalc_pathology": "cls/microcalc/aug_pathology",
+		"aug_mass_calc_pathology": "cls/mass_calc/aug_pathology",
+		"aug_mass_microcalc_pathology": "cls/mass_microcalc/aug_pathology",
+		"aug_calc_microcalc_pathology": "cls/calc_microcalc/aug_pathology",
+
+		"background": {
+		    "bg_tfds": "cls/background/background_tfds"
+		}
 	    }
 	},
 	"CSAW-S": {
@@ -138,6 +182,18 @@
 
 	    "background": {
 		"bg_tfds": "cls/background/background_tfds"
+	    },
+	    
+	    "norm_axillary_lymph_nodes": "cls/norm_axillary_lymph_nodes",
+	    "norm_calcifications": "cls/norm_calcifications",
+	    "norm_cancer": "cls/norm_cancer",
+
+	    "norm_aug_axillary_lymph_nodes": "cls/norm_aug_axillary_lymph_nodes",
+	    "norm_aug_calcifications": "cls/norm_aug_calcifications",
+	    "norm_aug_cancer": "cls/norm_aug_cancer",
+
+	    "norm_background": {
+		"norm_bg_tfds": "cls/background/norm_background_tfds"
 	    }
 	},
 	"CSAW-M": {
