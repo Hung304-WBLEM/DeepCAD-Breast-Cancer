@@ -25,3 +25,6 @@
 [submodule "libs/mae"]
 	path = libs/mae
 	url = https://github.com/Hung304-WBLEM/mae.git
+[submodule "libs/moco-v3"]
+	path = libs/moco-v3
+	url = https://github.com/Hung304-WBLEM/moco-v3.git
