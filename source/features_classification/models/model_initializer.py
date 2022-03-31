@@ -4,6 +4,7 @@ import torch.nn as nn
 from torchvision import datasets, models, transforms
 from features_classification.models.dino_pretrained import ViT_DINO
 from features_classification.models.mae_pretrained import ViT_MAE
+from features_classification.models.mocov3_pretrained import ViT_Mocov3 
 from features_classification.models.fusion_models.clinical_feats_models import Clinical_Concat_Model, Clinical_Attentive_Model
 
 
@@ -111,7 +112,9 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
 
         
     elif ('dino' not in model_name
-          and 'mae' not in model_name) \
+          and 'mae' not in model_name
+          and 'mocov3' not in model_name
+          ) \
           and \
          ('vit' in model_name \
          or 'twins' in model_name \
@@ -125,9 +128,19 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
          or 'swin' in model_name \
          or 'xcit' in model_name):
 
-        model_ft = timm.create_model(model_name,
-                                     pretrained=use_pretrained,
-                                     num_classes=num_classes)
+        if model_name == 'vit_tiny_patch8':
+            from mae import models_vit
+
+            model_ft = models_vit.__dict__['vit_tiny_patch8'](
+                num_classes=num_classes,
+                drop_path_rate=0.1,
+                global_pool=True,
+                img_size=options.input_size
+            )
+        else:
+            model_ft = timm.create_model(model_name,
+                                         pretrained=use_pretrained,
+                                         num_classes=num_classes)
 
     elif 'dino' in model_name:
         if model_name in ['dino_vit_tiny_patch16']:
@@ -152,6 +165,11 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
             elif model_name in ['mae_vit_large_patch16_linprobe']:
                 model_ft = ViT_MAE(ckpt_path, 'vit_large_patch16', options.input_size,
                                    num_classes, global_pool=True, linprobe=True)
+
+    elif 'mocov3' in model_name:
+        if model_name in ['mocov3_vit_base_patch16']:
+            model_ft = ViT_Mocov3(ckpt_path, 'vit_base', options.input_size,
+                                num_classes)
         
     elif model_name == "alexnet":
         """ Alexnet

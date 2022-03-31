@@ -48,7 +48,8 @@ t2t_vit_utils = importlib.import_module('T2T-ViT.utils')
 if __name__ == '__main__':
     
 
-    experiment_root = '/home/hqvo2/Projects/Breast_Cancer/experiments/classification/cbis_ddsm'
+    # experiment_root = '/home/hqvo2/Projects/Breast_Cancer/experiments/classification/cbis_ddsm'
+    experiment_root = '/home/hqvo2/Projects/Breast_Cancer/experiments/classification/cub_200_2011'
     mlflow.set_tracking_uri("file://" + experiment_root)
     mlflow.set_experiment(options.experiment_name)
     experiment = mlflow.get_experiment_by_name(options.experiment_name)
@@ -71,7 +72,8 @@ if __name__ == '__main__':
         
 
     # Create Training, Validation and Test datasets
-    dataset, image_datasets, classes = cbis_ddsm.initialize(options, data_transforms)
+    # dataset, image_datasets, classes = cbis_ddsm.initialize(options, data_transforms)
+    dataset, image_datasets, classes = cub_200_2011.initialize(options, data_transforms)
 
     # Fix random seed
     set_seed()

@@ -209,7 +209,10 @@
 	    "background": {
 		"bg_tfds": "cls/background/background_tfds"
 	    }
-	}
+	},
+        "CUB-200-2011": {
+            "root": "CUB_200_2011"
+        }
     },
     "LIB": {
 	"mmdet": "/home/hqvo2/Projects/Breast_Cancer/libs/mmdetection"

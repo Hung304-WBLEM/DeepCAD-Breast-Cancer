@@ -509,6 +509,8 @@ def plot_classes_preds(net, images, labels, num_images,
     fig.tight_layout()
 
     for k in range(num_images):
+        if k > 32:
+            break
         img = images[k].mean(dim=0) # for one-chanel image
 
         img = img / 2 + 0.5

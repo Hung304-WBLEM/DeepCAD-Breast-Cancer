@@ -8,6 +8,8 @@ from features_classification.augmentation.augmentation_funcs import torch_aug, a
 def initialize(options, data_transforms):
     if options.dataset in ['inbreast_pathology']:
         from features_classification.datasets.inbreast.inbreast_datasets import INBreast_Pathology_Dataset as data
+    elif options.dataset in ['inbreast_pathology_wo_bg']:
+        from features_classification.datasets.inbreast.inbreast_datasets import INBreast_Pathology_Without_Background_Dataset as data
 
     # Get classes
     classes = data.classes
@@ -17,7 +19,7 @@ def initialize(options, data_transforms):
     inbreast_root = os.path.join(
         data_root, proj_paths_json['DATA']['INbreast']['root'])
 
-    if options.dataset in ['inbreast_pathology']:
+    if options.dataset in ['inbreast_pathology', 'inbreast_pathology_wo_bg']:
        mass_data_dir = os.path.join(inbreast_root, proj_paths_json['DATA']['INbreast']['mass_feats']['mass_pathology']) 
        calc_data_dir = os.path.join(inbreast_root, proj_paths_json['DATA']['INbreast']['calc_feats']['calc_pathology'])
        cluster_data_dir = os.path.join(inbreast_root, proj_paths_json['DATA']['INbreast']['cluster_feats']['cluster_pathology'])
@@ -35,6 +37,16 @@ def initialize(options, data_transforms):
                                         distortion_data_dir,
                                         cluster_data_dir,
                                         bg_data_dir,
+                                        transform=data_transforms['train']
+                                        )
+                          }
+    elif options.dataset in ['inbreast_pathology_wo_bg']:
+        image_datasets = {'train': data(mass_data_dir,
+                                        calc_data_dir,
+                                        spiculated_data_dir,
+                                        asymetry_data_dir,
+                                        distortion_data_dir,
+                                        cluster_data_dir,
                                         transform=data_transforms['train']
                                         )
                           }
