@@ -31,3 +31,6 @@
 [submodule "libs/Cl-InfoNCE"]
 	path = libs/Cl-InfoNCE
 	url = https://github.com/Hung304-WBLEM/Cl-InfoNCE.git
+[submodule "libs/SimMIM"]
+	path = libs/SimMIM
+	url = https://github.com/Hung304-WBLEM/SimMIM.git
