@@ -5,7 +5,9 @@ from torchvision import datasets, models, transforms
 from features_classification.models.dino_pretrained import ViT_DINO
 from features_classification.models.mae_pretrained import ViT_MAE
 from features_classification.models.mocov3_pretrained import ViT_Mocov3 
+from features_classification.models.simmim_pretrained import Swin_SimMIM
 from features_classification.models.fusion_models.clinical_feats_models import Clinical_Concat_Model, Clinical_Attentive_Model
+from features_classification.models.clinical_models.clinical_models import Clinical_Model
 
 
 def set_parameter_requires_grad(model, model_name, last_frozen_layer):
@@ -114,6 +116,7 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
     elif ('dino' not in model_name
           and 'mae' not in model_name
           and 'mocov3' not in model_name
+          and 'simmim' not in model_name
           ) \
           and \
          ('vit' in model_name \
@@ -170,6 +173,11 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
         if model_name in ['mocov3_vit_base_patch16']:
             model_ft = ViT_Mocov3(ckpt_path, 'vit_base', options.input_size,
                                 num_classes)
+
+    elif 'simmim' in model_name:
+        if model_name in ['simmim_swin_base_maskpatch32_patch16']:
+            model_ft = Swin_SimMIM(ckpt_path, 'swin_base_patch4_window7',
+                                   options.input_size, num_classes)
         
     elif model_name == "alexnet":
         """ Alexnet
@@ -237,6 +245,23 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
                             mass_margins_cats+\
                             calc_type_cats+\
                             calc_dist_cats, num_classes=num_classes)
+    elif 'clinical' in model_name:
+        if model_name == 'clinical_default':
+            if options.dataset in ['four_classes_features_pathology']:
+                breast_density_cats = 4
+                mass_shape_cats= 8
+                mass_margins_cats = 5
+                calc_type_cats = 14
+                calc_dist_cats = 5
+
+                model_ft = Clinical_Model(model_name,
+                                        input_vector_dim=\
+                                        breast_density_cats+\
+                                        mass_shape_cats+\
+                                        mass_margins_cats+\
+                                        calc_type_cats+\
+                                        calc_dist_cats,
+                                        num_classes=num_classes)
     else:
         print("Invalid model name, exiting...")
         exit()

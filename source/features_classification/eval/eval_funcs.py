@@ -10,16 +10,22 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 
 @torch.no_grad()
 def evaluate(model, classes, dataloader, device, writer, epoch,
-             multilabel_mode, dataset, eval_split, use_clinical_feats=False):
+             multilabel_mode, dataset, eval_split, use_clinical_feats=False,
+             use_clinical_feats_only=False):
     model.eval()
 
     num_classes = len(classes)
 
     # with torch.no_grad():
-    if not use_clinical_feats:
+    if not (use_clinical_feats or use_clinical_feats_only):
         preds, labels, _ = get_all_preds(model, dataloader, device, writer,
                                             multilabel_mode,
                                             dataset)
+    elif use_clinical_feats_only:
+        preds, labels, _ = get_all_preds(model, dataloader, device, writer,
+                                         multilabel_mode,
+                                         dataset, use_clinical_feats=use_clinical_feats,
+                                         use_clinical_feats_only=use_clinical_feats_only)
     else:
         preds, labels, _ = get_all_preds(model, dataloader, device, writer,
                                             multilabel_mode,
@@ -80,16 +86,22 @@ def evaluate(model, classes, dataloader, device, writer, epoch,
 
 @torch.no_grad()
 def final_evaluate(model, classes, test_dataloader, device, writer,
-                   multilabel_mode, dataset, use_clinical_feats=False):
+                   multilabel_mode, dataset, use_clinical_feats=False,
+                   use_clinical_feats_only=False):
     model.eval()
 
     num_classes = len(classes)
 
     with torch.no_grad():
-        if not use_clinical_feats:
+        if not (use_clinical_feats or use_clinical_feats_only):
             preds, labels, _ = get_all_preds(model, test_dataloader, device, writer,
                                                 multilabel_mode,
                                                 dataset, plot_test_images=True)
+        elif use_clinical_feats_only:
+            preds, labels, _ = get_all_preds(model, test_dataloader, device, writer,
+                                             multilabel_mode,
+                                             dataset, plot_test_images=True,
+                                             use_clinical_feats_only=use_clinical_feats_only)
         else:
             preds, labels, _ = get_all_preds(model, test_dataloader, device, writer,
                                              multilabel_mode,

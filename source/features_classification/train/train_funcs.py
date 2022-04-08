@@ -53,12 +53,12 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                 # enumerate is used here to reset data loader
 
                 inputs = data_info['image']
-                labels = data_info['label']
-
                 inputs = inputs.to(device)
+
+                labels = data_info['label']
                 labels = labels.to(device)
 
-                if options.use_clinical_feats:
+                if options.use_clinical_feats or options.use_clinical_feats_only:
                     input_vectors = data_info['feature_vector'].type(torch.FloatTensor)
                     input_vectors = input_vectors.to(device)
 
@@ -73,25 +73,27 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
                     # Get model outputs and calculate loss
-                    if is_inception and phase == 'train':
-                        outputs, aux_outputs = model(inputs)
-                        loss1 = criterion(outputs, labels)
-                        loss2 = criterion(aux_outputs, labels)
-                        loss = loss1 + 0.4*loss2
+                    # if is_inception and phase == 'train':
+                    #     outputs, aux_outputs = model(inputs)
+                    #     loss1 = criterion(outputs, labels)
+                    #     loss2 = criterion(aux_outputs, labels)
+                    #     loss = loss1 + 0.4*loss2
+                    # else:
+                    if options.use_clinical_feats_only:
+                        outputs = model(input_vectors)
+                    elif not options.use_clinical_feats:
+                        outputs = model(inputs)
                     else:
-                        if not options.use_clinical_feats:
-                            outputs = model(inputs)
-                        else:
-                            # if phase == 'val':
-                            #     outputs = model(inputs, input_vectors, training=False)
-                            # elif phase == 'train':
-                            #     outputs = model(inputs, input_vectors, training=True)
-                            outputs = model(inputs, input_vectors)
+                        # if phase == 'val':
+                        #     outputs = model(inputs, input_vectors, training=False)
+                        # elif phase == 'train':
+                        #     outputs = model(inputs, input_vectors, training=True)
+                        outputs = model(inputs, input_vectors)
 
-                        if options.criterion == 'ce':
-                            loss = criterion(outputs, labels)
-                        elif options.criterion == 'bce':
-                            loss = criterion(outputs, binarized_multilabels)
+                    if options.criterion == 'ce':
+                        loss = criterion(outputs, labels)
+                    elif options.criterion == 'bce':
+                        loss = criterion(outputs, binarized_multilabels)
 
                     if weight_sample and phase == 'train':
                         sample_weight = compute_classes_weights_within_batch(labels)
@@ -109,7 +111,7 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
 
 
                 if it == 0:
-                    if not options.use_clinical_feats:
+                    if not (options.use_clinical_feats or options.use_clinical_feats_only):
                         writer.add_figure(f'{phase} predictions vs. actuals',
                                         plot_classes_preds(model, inputs, labels,
                                                             num_images=inputs.shape[0],
@@ -118,7 +120,7 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                                                             dataset=dataset
                                                             ),
                                         global_step=GLOBAL_EPOCH)
-                    else:
+                    elif options.use_clinical_feats:
                         writer.add_figure(f'{phase} predictions vs. actuals',
                                         plot_classes_preds(model, inputs, labels,
                                                            num_images=inputs.shape[0],
@@ -126,6 +128,17 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                                                            (options.criterion=='bce'),
                                                            dataset=dataset,
                                                            input_vectors=input_vectors
+                                                           ),
+                                        global_step=GLOBAL_EPOCH)
+                    elif options.use_clinical_feats_only:
+                        writer.add_figure(f'{phase} predictions vs. actuals',
+                                        plot_classes_preds(model, inputs, labels,
+                                                           num_images=inputs.shape[0],
+                                                           multilabel_mode=\
+                                                           (options.criterion=='bce'),
+                                                           dataset=dataset,
+                                                           input_vectors=input_vectors,
+                                                           input_vectors_only=True
                                                            ),
                                         global_step=GLOBAL_EPOCH)
 
@@ -147,7 +160,8 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                              device, writer, epoch=GLOBAL_EPOCH,
                              multilabel_mode=_multilabel_mode,
                              dataset=dataset, eval_split=phase,
-                             use_clinical_feats=options.use_clinical_feats
+                             use_clinical_feats=options.use_clinical_feats,
+                             use_clinical_feats_only=options.use_clinical_feats_only
                              )
 
             print('{:>5} Loss: {:.4f} Acc: {:.4f} \
@@ -169,7 +183,8 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                      device, writer, epoch=GLOBAL_EPOCH,
                      multilabel_mode=_multilabel_mode,
                      dataset=dataset, eval_split='test',
-                     use_clinical_feats=options.use_clinical_feats
+                     use_clinical_feats=options.use_clinical_feats,
+                     use_clinical_feats_only=options.use_clinical_feats_only
                      )
 
             epoch_info = {

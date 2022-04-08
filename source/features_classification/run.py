@@ -126,8 +126,10 @@ if __name__ == '__main__':
     with torch.no_grad():
         samples = next(iter(dataloaders_dict['train']))
 
-        if not options.use_clinical_feats:
+        if not (options.use_clinical_feats or options.use_clinical_feats_only):
             writer.add_graph(model, samples['image'])
+        elif options.use_clinical_feats_only:
+            writer.add_graph(model, (samples['feature_vector']))
         elif options.use_clinical_feats:
             writer.add_graph(model, (samples['image'], samples['feature_vector']))
 
@@ -283,14 +285,16 @@ if __name__ == '__main__':
         preds, labels, _ = get_all_preds(model, dataloaders_dict['test'], device, writer,
                                          multilabel_mode=(options.criterion=='bce'),
                                          dataset=dataset,
-                                         use_clinical_feats=options.use_clinical_feats)
+                                         use_clinical_feats=options.use_clinical_feats,
+                                         use_clinical_feats_only=options.use_clinical_feats_only)
 
 
     # my roc curve
     final_evaluate(model, classes, dataloaders_dict['test'], device, writer,
                    multilabel_mode=(options.criterion=='bce'),
                    dataset=dataset,
-                   use_clinical_feats=options.use_clinical_feats)
+                   use_clinical_feats=options.use_clinical_feats,
+                   use_clinical_feats_only=options.use_clinical_feats_only)
     
     # evaluation
     accuracy, macro_ap, micro_ap, classes_aps, \

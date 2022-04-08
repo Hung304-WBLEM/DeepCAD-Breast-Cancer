@@ -448,7 +448,7 @@ def show_score_bars(ax, all_classes_prob, classes, ignore_label=True):
 
 
 @torch.no_grad()
-def images_to_probs(net, images, multilabel_mode, input_vectors=None):
+def images_to_probs(net, images, multilabel_mode, input_vectors=None, input_vectors_only=False):
     '''
     Generates predictions and corresponding probabilities from a trained
     network and a list of images
@@ -456,6 +456,8 @@ def images_to_probs(net, images, multilabel_mode, input_vectors=None):
 
     if input_vectors is None:
         output = net(images)
+    elif input_vectors_only:
+        output = net(input_vectors)
     else:
         output = net(images, input_vectors)
     
@@ -482,7 +484,7 @@ def images_to_probs(net, images, multilabel_mode, input_vectors=None):
 
 
 def plot_classes_preds(net, images, labels, num_images,
-                       multilabel_mode, dataset, input_vectors=None):
+                       multilabel_mode, dataset, input_vectors=None, input_vectors_only=False):
     '''
     Generates matplotlib Figure using a trained network, along with images
     and labels from a batch, that shows the network's top prediction along
@@ -499,6 +501,10 @@ def plot_classes_preds(net, images, labels, num_images,
 
     if input_vectors is None:
         preds, all_classes_probs = images_to_probs(net, images, multilabel_mode)
+    elif input_vectors_only:
+        preds, all_classes_probs = images_to_probs(net, images, multilabel_mode,
+                                                   input_vectors,
+                                                   input_vectors_only)
     else:
         preds, all_classes_probs = images_to_probs(net, images, multilabel_mode, input_vectors)
 

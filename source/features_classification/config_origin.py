@@ -41,6 +41,8 @@ parser.add_option("--use_lr_scheduler", dest="use_lr_scheduler",
                     help="activate if you want to use learning rate scheduler")
 parser.add_option("--use_clinical_feats", dest="use_clinical_feats",
                   default=False, action='store_true')
+parser.add_option("--use_clinical_feats_only", dest="use_clinical_feats_only",
+                  default=False, action='store_true')
 parser.add_option("--fuse", default='concat',
                   help="Choose fusion methods. Available options include: 'concat', 'coatt', 'crossatt'", dest="fusion_type")
 

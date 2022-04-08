@@ -28,3 +28,9 @@
 [submodule "libs/moco-v3"]
 	path = libs/moco-v3
 	url = https://github.com/Hung304-WBLEM/moco-v3.git
+[submodule "libs/SimMIM"]
+	path = libs/SimMIM
+	url = https://github.com/microsoft/SimMIM.git
+[submodule "libs/Cl-InfoNCE"]
+	path = libs/Cl-InfoNCE
+	url = https://github.com/Hung304-WBLEM/Cl-InfoNCE.git
