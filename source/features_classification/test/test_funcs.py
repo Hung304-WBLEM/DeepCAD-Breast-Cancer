@@ -7,7 +7,8 @@ from features_classification.eval.eval_utils import plot_classes_preds
 @torch.no_grad()
 def get_all_preds(model, loader, device, writer, multilabel_mode, dataset,
                   plot_test_images=False, use_clinical_feats=False,
-                  use_clinical_feats_only=False):
+                  use_clinical_feats_only=False,
+                  parallel_output=False):
     all_preds = torch.tensor([])
     all_preds = all_preds.to(device)
 
@@ -36,7 +37,8 @@ def get_all_preds(model, loader, device, writer, multilabel_mode, dataset,
                                                multilabel_mode=multilabel_mode,
                                                dataset=dataset,
                                                input_vectors=input_vectors,
-                                               input_vectors_only=use_clinical_feats_only),
+                                               input_vectors_only=use_clinical_feats_only,
+                                               parallel_output=parallel_output),
                             global_step=idx)
 
 
@@ -48,6 +50,9 @@ def get_all_preds(model, loader, device, writer, multilabel_mode, dataset,
             preds = model(input_vectors)
         elif use_clinical_feats:
             preds = model(images, input_vectors)
+
+        if parallel_output:
+            preds = preds[1]
 
         all_preds = torch.cat(
             (all_preds, preds), dim=0

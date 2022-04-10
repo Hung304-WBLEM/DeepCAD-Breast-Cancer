@@ -6,7 +6,7 @@ from features_classification.models.dino_pretrained import ViT_DINO
 from features_classification.models.mae_pretrained import ViT_MAE
 from features_classification.models.mocov3_pretrained import ViT_Mocov3 
 from features_classification.models.simmim_pretrained import Swin_SimMIM
-from features_classification.models.fusion_models.clinical_feats_models import Clinical_Concat_Model, Clinical_Attentive_Model
+from features_classification.models.fusion_models.clinical_feats_models import Clinical_Concat_Model, Clinical_Attentive_Model, Clinical_Parallel_Model
 from features_classification.models.clinical_models.clinical_models import Clinical_Model
 
 
@@ -227,14 +227,14 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
 
     elif 'fusion' in model_name:
+        breast_density_cats = 4
+        mass_shape_cats= 8
+        mass_margins_cats = 5
+        calc_type_cats = 14
+        calc_dist_cats = 5
+
         if model_name == 'fusion_resnet50':
             if options.dataset in ['four_classes_features_pathology']:
-                breast_density_cats = 4
-                mass_shape_cats= 8
-                mass_margins_cats = 5
-                calc_type_cats = 14
-                calc_dist_cats = 5
-
                 if options.fusion_type == 'concat':
                     model_ft = \
                         Clinical_Concat_Model(
@@ -245,6 +245,20 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
                             mass_margins_cats+\
                             calc_type_cats+\
                             calc_dist_cats, num_classes=num_classes)
+
+        elif model_name == 'fusion_parallel_resnet50':
+            if options.dataset in ['four_classes_features_pathology']:
+                if options.fusion_type == 'concat':
+                    model_ft = \
+                        Clinical_Parallel_Model(
+                            model_name, 
+                            input_vector_dim=\
+                            breast_density_cats+\
+                            mass_shape_cats+\
+                            mass_margins_cats+\
+                            calc_type_cats+\
+                            calc_dist_cats, num_classes=num_classes)
+                    
     elif 'clinical' in model_name:
         if model_name == 'clinical_default':
             if options.dataset in ['four_classes_features_pathology']:
@@ -262,6 +276,7 @@ def initialize_model(options, model_name, num_classes, use_pretrained=True, ckpt
                                         calc_type_cats+\
                                         calc_dist_cats,
                                         num_classes=num_classes)
+            
     else:
         print("Invalid model name, exiting...")
         exit()

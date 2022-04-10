@@ -448,7 +448,9 @@ def show_score_bars(ax, all_classes_prob, classes, ignore_label=True):
 
 
 @torch.no_grad()
-def images_to_probs(net, images, multilabel_mode, input_vectors=None, input_vectors_only=False):
+def images_to_probs(net, images, multilabel_mode, input_vectors=None,
+                    input_vectors_only=False,
+                    parallel_output=False):
     '''
     Generates predictions and corresponding probabilities from a trained
     network and a list of images
@@ -463,6 +465,8 @@ def images_to_probs(net, images, multilabel_mode, input_vectors=None, input_vect
     
     # convert output probabilities to predicted class
     if not multilabel_mode:
+        if parallel_output:
+            output = output[1] # img_logits
         _, preds_tensor = torch.max(output, 1)
         preds_tensor = preds_tensor.cpu().numpy()
     else:
@@ -484,7 +488,9 @@ def images_to_probs(net, images, multilabel_mode, input_vectors=None, input_vect
 
 
 def plot_classes_preds(net, images, labels, num_images,
-                       multilabel_mode, dataset, input_vectors=None, input_vectors_only=False):
+                       multilabel_mode, dataset, input_vectors=None,
+                       input_vectors_only=False,
+                       parallel_output=False):
     '''
     Generates matplotlib Figure using a trained network, along with images
     and labels from a batch, that shows the network's top prediction along
@@ -506,7 +512,8 @@ def plot_classes_preds(net, images, labels, num_images,
                                                    input_vectors,
                                                    input_vectors_only)
     else:
-        preds, all_classes_probs = images_to_probs(net, images, multilabel_mode, input_vectors)
+        preds, all_classes_probs = images_to_probs(net, images, multilabel_mode, input_vectors,
+                                                   parallel_output=parallel_output)
 
     width_ratios = [el for _ in range(6) for el in [2, 1]]
     fig, a = plt.subplots(6, 12, figsize=(14, 8),

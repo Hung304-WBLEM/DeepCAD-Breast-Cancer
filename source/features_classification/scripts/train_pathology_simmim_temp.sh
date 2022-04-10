@@ -25,12 +25,12 @@ python run.py \
        --one_stage_training \
        --njobs 10 \
        -m 'simmim_swin_base_maskpatch32_patch16' \
-       --ckpt '/home/hqvo2/Projects/Breast_Cancer/libs/SimMIM/outdir/simmim_pretrain/new_simmim_pretrain__swin_base__maskpatch32_075__img192_window6__500ep/ckpt_epoch_499.pth' \
+       --ckpt '/home/hqvo2/Projects/Breast_Cancer/libs/SimMIM/outdir/simmim_pretrain/new_simmim_pretrain__swin_base__maskpatch8_075__img192_window6__500ep/ckpt_epoch_499.pth' \
        -b 32 \
        -e 100 -i 224 --opt adam --wc --ws --crt ce\
        --use_lr_scheduler \
        --first_stage_freeze -1 \
-       --first_stage_lr 0.000001 \
+       --first_stage_lr 0.00001 \
        --best_ckpt_metric macro_auc
 
 # python run.py \
@@ -39,7 +39,7 @@ python run.py \
 #        --one_stage_training \
 #        --njobs 10 \
 #        -m 'simmim_swin_base_maskpatch32_patch16' \
-#        --ckpt '/home/hqvo2/Projects/Breast_Cancer/libs/SimMIM/outdir/simmim_pretrain/simmim_pretrain__swin_base__maskpatch16_075__img192_window6__500ep/ckpt_epoch_499.pth' \
+#        --ckpt '/home/hqvo2/Projects/Breast_Cancer/libs/SimMIM/outdir/simmim_pretrain/simmim_pretrain__swin_base__maskpatch4_075__img192_window6__500ep/ckpt_epoch_499.pth' \
 #        -b 32 \
 #        -e 100 -i 224 --opt adam --wc --ws --crt ce\
 #        --use_lr_scheduler \

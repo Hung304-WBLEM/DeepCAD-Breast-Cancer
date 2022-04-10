@@ -95,6 +95,18 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                     elif options.criterion == 'bce':
                         loss = criterion(outputs, binarized_multilabels)
 
+                    if options.criterion == 'ce_rank':
+                        ce_criterion, rank_criterion = criterion
+
+                        img_emb, img_logits, vec_emb, vec_logits = outputs
+
+                        img_loss = ce_criterion(img_logits, labels)
+                        vec_loss = ce_criterion(vec_logits, labels)
+
+                        joint_loss = rank_criterion(img_emb, vec_emb, labels)
+
+                        loss = img_loss + vec_loss + joint_loss
+
                     if weight_sample and phase == 'train':
                         sample_weight = compute_classes_weights_within_batch(labels)
                         sample_weight = torch.from_numpy(np.array(sample_weight)).to(device)
@@ -127,7 +139,9 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                                                            multilabel_mode=\
                                                            (options.criterion=='bce'),
                                                            dataset=dataset,
-                                                           input_vectors=input_vectors
+                                                           input_vectors=input_vectors,
+                                                           parallel_output=\
+                                                           (options.criterion=='ce_rank')
                                                            ),
                                         global_step=GLOBAL_EPOCH)
                     elif options.use_clinical_feats_only:
@@ -148,7 +162,7 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
             writer.add_scalar(f'{phase} loss', epoch_loss, GLOBAL_EPOCH)
 
             # Calculate other evaluation metrics (Acc, AP, AUC)
-            if options.criterion == 'ce':
+            if options.criterion in ['ce', 'ce_rank']:
                 _multilabel_mode = False
             elif options.criterion == 'bce':
                 _multilabel_mode = True
@@ -161,7 +175,8 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                              multilabel_mode=_multilabel_mode,
                              dataset=dataset, eval_split=phase,
                              use_clinical_feats=options.use_clinical_feats,
-                             use_clinical_feats_only=options.use_clinical_feats_only
+                             use_clinical_feats_only=options.use_clinical_feats_only,
+                             parallel_output=(options.criterion == 'ce_rank')
                              )
 
             print('{:>5} Loss: {:.4f} Acc: {:.4f} \
@@ -184,7 +199,8 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                      multilabel_mode=_multilabel_mode,
                      dataset=dataset, eval_split='test',
                      use_clinical_feats=options.use_clinical_feats,
-                     use_clinical_feats_only=options.use_clinical_feats_only
+                     use_clinical_feats_only=options.use_clinical_feats_only,
+                     parallel_output=(options.criterion == 'ce_rank')
                      )
 
             epoch_info = {

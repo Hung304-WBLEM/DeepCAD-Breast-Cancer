@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 
 from torchvision import models
+from features_classification.models.clinical_models.clinical_models import Clinical_Model
 
 
 class Clinical_Concat_Model(nn.Module):
@@ -132,3 +133,36 @@ class Clinical_Attentive_Model(nn.Module):
         x = aug_x
 
         return x
+
+
+class Clinical_Parallel_Model(nn.Module):
+    def __init__(self, model_name, input_vector_dim, num_classes, use_pretrained=True):
+        super(Clinical_Parallel_Model, self).__init__()
+
+        self.model_name = model_name
+        if model_name == "fusion_parallel_resnet50":
+            self.img_model = models.resnet50(pretrained=use_pretrained)
+            self.img_model = nn.Sequential(*list(self.img_model.children())[:-1])
+            self.img_fc1 = nn.Linear(2048, 100)
+            self.img_fc2 = nn.Linear(100, num_classes)
+            self.dropout1 = nn.Dropout(p=0.5)
+            self.dropout2 = nn.Dropout(p=0.5)
+
+            self.vec_model = Clinical_Model(model_name,
+                                            input_vector_dim, num_classes)
+
+
+    def forward(self, image, vector_data):
+        x = self.img_model(image)
+        if self.model_name == 'fusion_parallel_resnet50':
+            x = x.squeeze()
+
+        x = self.dropout1(x)
+        img_emb = self.img_fc1(F.relu(x))
+        x = self.dropout2(F.relu(img_emb))
+        img_logits = self.img_fc2(x)
+
+        vec_emb, vec_logits = self.vec_model(vector_data, get_feats=True)
+
+        return img_emb, img_logits, vec_emb, vec_logits 
+

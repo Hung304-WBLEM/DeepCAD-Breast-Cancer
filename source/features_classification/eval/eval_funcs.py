@@ -11,7 +11,8 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 @torch.no_grad()
 def evaluate(model, classes, dataloader, device, writer, epoch,
              multilabel_mode, dataset, eval_split, use_clinical_feats=False,
-             use_clinical_feats_only=False):
+             use_clinical_feats_only=False,
+             parallel_output=False):
     model.eval()
 
     num_classes = len(classes)
@@ -28,8 +29,9 @@ def evaluate(model, classes, dataloader, device, writer, epoch,
                                          use_clinical_feats_only=use_clinical_feats_only)
     else:
         preds, labels, _ = get_all_preds(model, dataloader, device, writer,
-                                            multilabel_mode,
-                                            dataset, use_clinical_feats=use_clinical_feats)
+                                         multilabel_mode,
+                                         dataset, use_clinical_feats=use_clinical_feats,
+                                         parallel_output=parallel_output)
 
     if not multilabel_mode:
         y_proba_pred = torch.softmax(preds, dim=-1)
@@ -87,7 +89,8 @@ def evaluate(model, classes, dataloader, device, writer, epoch,
 @torch.no_grad()
 def final_evaluate(model, classes, test_dataloader, device, writer,
                    multilabel_mode, dataset, use_clinical_feats=False,
-                   use_clinical_feats_only=False):
+                   use_clinical_feats_only=False,
+                   parallel_output=False):
     model.eval()
 
     num_classes = len(classes)
@@ -106,7 +109,8 @@ def final_evaluate(model, classes, test_dataloader, device, writer,
             preds, labels, _ = get_all_preds(model, test_dataloader, device, writer,
                                              multilabel_mode,
                                              dataset, plot_test_images=True,
-                                             use_clinical_feats=True)
+                                             use_clinical_feats=True,
+                                             parallel_output=parallel_output)
 
         if not multilabel_mode:
             y_proba_pred = torch.softmax(preds, dim=-1)

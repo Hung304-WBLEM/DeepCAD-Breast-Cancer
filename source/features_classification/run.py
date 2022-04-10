@@ -36,6 +36,7 @@ from features_classification.train.train_funcs import train_stage
 from features_classification.train.train_utils import set_seed
 from features_classification.eval.eval_utils import images_to_probs
 from features_classification.test.test_funcs import get_all_preds
+from features_classification.loss.custom_loss import ranking_loss
 
 from config_origin import options
 from utilities.fileio import json
@@ -156,12 +157,17 @@ if __name__ == '__main__':
             criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
         elif options.criterion == 'bce':
             criterion = nn.BCEWithLogitsLoss(pos_weight=classes_weights.to(device))
+        elif options.criterion == 'ce_rank':
+            ce_criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
+            criterion = [ce_criterion, ranking_loss]
     else:
         print('Optimization without classes weighting')
         if options.criterion == 'ce':
             criterion = nn.CrossEntropyLoss()
         elif options.criterion == 'bce':
             criterion = nn.BCEWithLogitsLoss()
+        elif options.criterion == 'ce_rank':
+            criterion = [nn.CrossEntropyLoss(), ranking_loss]
 
     all_train_losses = []
     all_val_losses = []
@@ -286,7 +292,9 @@ if __name__ == '__main__':
                                          multilabel_mode=(options.criterion=='bce'),
                                          dataset=dataset,
                                          use_clinical_feats=options.use_clinical_feats,
-                                         use_clinical_feats_only=options.use_clinical_feats_only)
+                                         use_clinical_feats_only=options.use_clinical_feats_only,
+                                         parallel_output=(options.criterion=='ce_rank')
+                                         )
 
 
     # my roc curve
@@ -294,7 +302,9 @@ if __name__ == '__main__':
                    multilabel_mode=(options.criterion=='bce'),
                    dataset=dataset,
                    use_clinical_feats=options.use_clinical_feats,
-                   use_clinical_feats_only=options.use_clinical_feats_only)
+                   use_clinical_feats_only=options.use_clinical_feats_only,
+                   parallel_output=(options.criterion=='ce_rank')
+                   )
     
     # evaluation
     accuracy, macro_ap, micro_ap, classes_aps, \

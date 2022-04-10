@@ -17,13 +17,16 @@ class Clinical_Model(nn.Module):
         self.dropout_layer = nn.Dropout(p=0.5)
 
 
-    def forward(self, vector_data):
+    def forward(self, vector_data, get_feats=False):
         x = vector_data.float()
 
         x = F.relu(self.vec_emb_proj(x))
-        x = F.relu(self.fc1(x))
+        feats = self.fc1(x)
+        x = F.relu(feats)
         x = self.dropout_layer(x)
-        x = self.fc2(x)
+        logits = self.fc2(x)
 
-        return x
+        if get_feats:
+            return feats, logits 
+        return logits
 
