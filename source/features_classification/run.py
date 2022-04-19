@@ -37,6 +37,7 @@ from features_classification.train.train_utils import set_seed
 from features_classification.eval.eval_utils import images_to_probs
 from features_classification.test.test_funcs import get_all_preds
 from features_classification.loss.custom_loss import ranking_loss
+from SupContrast.losses import SupConLoss
 
 from config_origin import options
 from utilities.fileio import json
@@ -160,6 +161,13 @@ if __name__ == '__main__':
         elif options.criterion == 'ce_rank':
             ce_criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
             criterion = [ce_criterion, ranking_loss]
+        elif options.criterion in ['ce_supcon', 'ce_simclr']:
+            ce_criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
+            criterion = [ce_criterion, SupConLoss(temperature=0.1)]
+        elif options.criterion in ['ce_rank_supcon', 'ce_rank_simclr']:
+            ce_criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
+            criterion = [ce_criterion, ranking_loss, SupConLoss(temperature=0.1)]
+            
     else:
         print('Optimization without classes weighting')
         if options.criterion == 'ce':
@@ -168,6 +176,11 @@ if __name__ == '__main__':
             criterion = nn.BCEWithLogitsLoss()
         elif options.criterion == 'ce_rank':
             criterion = [nn.CrossEntropyLoss(), ranking_loss]
+        elif options.criterion in ['ce_supcon', 'ce_simclr']:
+            criterion = [nn.CrossEntropyLoss(), SupConLoss(temperature=0.1)]
+        elif options.criterion in ['ce_rank_supcon', 'ce_rank_simclr']:
+            ce_criterion = nn.CrossEntropyLoss(weight=classes_weights.to(device))
+            criterion = [ce_criterion, ranking_loss, SupConLoss(temperature=0.1)]
 
     all_train_losses = []
     all_val_losses = []
@@ -293,7 +306,11 @@ if __name__ == '__main__':
                                          dataset=dataset,
                                          use_clinical_feats=options.use_clinical_feats,
                                          use_clinical_feats_only=options.use_clinical_feats_only,
-                                         parallel_output=(options.criterion=='ce_rank')
+                                         parallel_output=(options.criterion=='ce_rank' \
+                                                          or options.criterion=='ce_supcon' \
+                                                          or options.criterion=='ce_simclr' \
+                                                          or options.criterion=='ce_rank_supcon' \
+                                                          or options.criterion=='ce_rank_simclr')
                                          )
 
 
@@ -303,7 +320,11 @@ if __name__ == '__main__':
                    dataset=dataset,
                    use_clinical_feats=options.use_clinical_feats,
                    use_clinical_feats_only=options.use_clinical_feats_only,
-                   parallel_output=(options.criterion=='ce_rank')
+                   parallel_output=(options.criterion=='ce_rank' \
+                                    or options.criterion=='ce_supcon' \
+                                    or options.criterion=='ce_simclr' \
+                                    or options.criterion=='ce_rank_supcon' \
+                                    or options.criterion=='ce_rank_simclr')
                    )
     
     # evaluation

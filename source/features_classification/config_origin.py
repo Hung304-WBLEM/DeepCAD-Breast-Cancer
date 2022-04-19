@@ -110,6 +110,14 @@ parser.add_option("--rnet_dil_4th",
                   default=False, action='store_true',
                   help="enable if you want to dilate layer4 in the torchvision resnet model")
 
+# Ranking Hinge Loss hyperparams
+parser.add_option("--sim_func",
+                  dest="sim_func", choices=['dot', 'cosine', 'l2'],
+                  default='dot', help="Choose Similarity Function")
+parser.add_option("--margin",
+                  dest="margin", type=float, default=3,
+                  help="Hinge margin")
+
 options, _ = parser.parse_args()
 # config['hyperparams'] = {}
 # for opt in vars(options):

@@ -5,6 +5,7 @@ import logging
 import torch
 import numpy as np
 import transformers
+import torch.nn.functional as F
 
 from features_classification.models.model_initializer import initialize_model, set_parameter_requires_grad
 from features_classification.eval.eval_funcs import evaluate
@@ -95,7 +96,7 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                     elif options.criterion == 'bce':
                         loss = criterion(outputs, binarized_multilabels)
 
-                    if options.criterion == 'ce_rank':
+                    elif options.criterion == 'ce_rank':
                         ce_criterion, rank_criterion = criterion
 
                         img_emb, img_logits, vec_emb, vec_logits = outputs
@@ -103,9 +104,80 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                         img_loss = ce_criterion(img_logits, labels)
                         vec_loss = ce_criterion(vec_logits, labels)
 
-                        joint_loss = rank_criterion(img_emb, vec_emb, labels)
+                        joint_loss = rank_criterion(img_emb, vec_emb, labels,
+                                                    options.sim_func, options.margin)
 
                         loss = img_loss + vec_loss + joint_loss
+                    elif options.criterion == 'ce_supcon':
+                        ce_criterion, supcon_criterion = criterion
+
+                        img_emb, img_logits, vec_emb, vec_logits = outputs
+
+                        features = torch.cat((img_emb, vec_emb), 1)
+                        features = features.view(inputs.shape[0], 2, -1)
+
+                        img_loss = ce_criterion(img_logits, labels)
+                        vec_loss = ce_criterion(vec_logits, labels)
+
+                        joint_loss = supcon_criterion(F.normalize(features, dim=2), labels)
+                        loss = img_loss + vec_loss + joint_loss
+                    elif options.criterion == 'ce_simclr':
+                        ce_criterion, supcon_criterion = criterion
+
+                        img_emb, img_logits, vec_emb, vec_logits = outputs
+
+                        features = torch.cat((img_emb, vec_emb), 1)
+                        features = features.view(inputs.shape[0], 2, -1)
+
+                        img_loss = ce_criterion(img_logits, labels)
+                        vec_loss = ce_criterion(vec_logits, labels)
+
+                        joint_loss = supcon_criterion(F.normalize(features, dim=2))
+                        loss = img_loss + vec_loss + joint_loss
+                        
+                    elif options.criterion == 'ce_rank_supcon':
+                        ce_criterion, rank_criterion, supcon_criterion = criterion
+
+                        img_emb, img_logits, vec_emb, vec_logits = outputs
+
+                        img_loss = ce_criterion(img_logits, labels)
+                        vec_loss = ce_criterion(vec_logits, labels)
+
+                        # rank loss
+                        rank_loss = rank_criterion(img_emb, vec_emb, labels)
+
+                        # supervised contrastive loss
+                        img_features = img_emb[:, None, :]
+                        vec_features = vec_emb[:, None, :]
+
+                        img_supcon_loss = supcon_criterion(F.normalize(img_features, dim=2), labels)
+                        vec_supcon_loss = supcon_criterion(F.normalize(vec_features, dim=2), labels)
+
+
+                        # total loss
+                        loss = img_loss + vec_loss + rank_loss + img_supcon_loss + vec_supcon_loss
+
+                    elif options.criterion == 'ce_rank_simclr':
+                        ce_criterion, rank_criterion, supcon_criterion = criterion
+
+                        img_emb, img_logits, vec_emb, vec_logits = outputs
+
+                        img_loss = ce_criterion(img_logits, labels)
+                        vec_loss = ce_criterion(vec_logits, labels)
+
+                        # rank loss
+                        rank_loss = rank_criterion(img_emb, vec_emb, labels)
+
+                        # simclr contrastive loss
+                        features = torch.cat((img_emb, vec_emb), 1)
+                        features = features.view(inputs.shape[0], 2, -1)
+
+                        simclr_loss = supcon_criterion(F.normalize(features, dim=2))
+
+                        # total loss
+                        loss = img_loss + vec_loss + rank_loss + simclr_loss
+
+
 
                     if weight_sample and phase == 'train':
                         sample_weight = compute_classes_weights_within_batch(labels)
@@ -141,7 +213,11 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                                                            dataset=dataset,
                                                            input_vectors=input_vectors,
                                                            parallel_output=\
-                                                           (options.criterion=='ce_rank')
+                                                           (options.criterion=='ce_rank' \
+                                                            or options.criterion=='ce_supcon' \
+                                                            or options.criterion=='ce_rank_supcon' \
+                                                            or options.criterion=='ce_simclr' \
+                                                            or options.criterion=='ce_rank_simclr')
                                                            ),
                                         global_step=GLOBAL_EPOCH)
                     elif options.use_clinical_feats_only:
@@ -162,7 +238,8 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
             writer.add_scalar(f'{phase} loss', epoch_loss, GLOBAL_EPOCH)
 
             # Calculate other evaluation metrics (Acc, AP, AUC)
-            if options.criterion in ['ce', 'ce_rank']:
+            if options.criterion in ['ce', 'ce_rank', 'ce_supcon', 'ce_simclr',
+                                     'ce_rank_supcon', 'ce_rank_simclr']:
                 _multilabel_mode = False
             elif options.criterion == 'bce':
                 _multilabel_mode = True
@@ -176,7 +253,11 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                              dataset=dataset, eval_split=phase,
                              use_clinical_feats=options.use_clinical_feats,
                              use_clinical_feats_only=options.use_clinical_feats_only,
-                             parallel_output=(options.criterion == 'ce_rank')
+                             parallel_output=(options.criterion == 'ce_rank' \
+                                              or options.criterion == 'ce_supcon' \
+                                              or options.criterion == 'ce_rank_supcon' \
+                                              or options.criterion == 'ce_simclr' \
+                                              or options.criterion == 'ce_rank_simclr')
                              )
 
             print('{:>5} Loss: {:.4f} Acc: {:.4f} \
@@ -200,7 +281,11 @@ def train_model(options, model, dataloaders_dict, criterion, optimizer, writer, 
                      dataset=dataset, eval_split='test',
                      use_clinical_feats=options.use_clinical_feats,
                      use_clinical_feats_only=options.use_clinical_feats_only,
-                     parallel_output=(options.criterion == 'ce_rank')
+                     parallel_output=(options.criterion == 'ce_rank' \
+                                      or options.criterion == 'ce_supcon' \
+                                      or options.criterion == 'ce_simclr' \
+                                      or options.criterion == 'ce_rank_supcon' \
+                                      or options.criterion == 'ce_rank_simclr')
                      )
 
             epoch_info = {

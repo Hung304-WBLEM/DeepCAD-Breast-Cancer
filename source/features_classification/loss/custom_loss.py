@@ -11,7 +11,7 @@ from torch.nn import CosineSimilarity, MarginRankingLoss
 
 
 def ranking_loss(z_image, z_text, y,
-                 similarity_function='dot'):
+                 similarity_function='dot', margin=3):
     """
     A custom ranking-based loss function
     Args:
@@ -19,11 +19,11 @@ def ranking_loss(z_image, z_text, y,
         z_text: a mini-batch of text embedding features
         y: a 1D mini-batch of image-text labels 
     """
-    return imposter_img_loss(z_image, z_text, y, similarity_function) + \
-           imposter_txt_loss(z_image, z_text, y, similarity_function)
+    return imposter_img_loss(z_image, z_text, y, similarity_function, margin) + \
+           imposter_txt_loss(z_image, z_text, y, similarity_function, margin)
 
 
-def imposter_img_loss(z_image, z_text, y, similarity_function):
+def imposter_img_loss(z_image, z_text, y, similarity_function, margin):
     """
     A custom loss function for computing the hinge difference 
     between the similarity of an image-text pair and 
@@ -46,10 +46,11 @@ def imposter_img_loss(z_image, z_text, y, similarity_function):
         # compute the maximum margin based on the image label difference
         j = i+1 if i < batch_size - 1 else 0
 
-        if y[i].item() == -1 or y[j].item() == -1: # '-1' means unlabeled 
-            margin = 0.5
-        else:
-            margin = max(0.5, (y[i] - y[j]).abs().item())
+        # margin = 3 
+        # if y[i].item() == -1 or y[j].item() == -1: # '-1' means unlabeled 
+        #     margin = 0.5
+        # else:
+        #     margin = max(0.5, (y[i] - y[j]).abs().item())
 
         if similarity_function == 'dot':
             imposter_similarity = torch.dot(z_image[j], z_text[i])
@@ -65,7 +66,7 @@ def imposter_img_loss(z_image, z_text, y, similarity_function):
 
     return loss / batch_size # 'mean' reduction
 
-def imposter_txt_loss(z_image, z_text, y, similarity_function):
+def imposter_txt_loss(z_image, z_text, y, similarity_function, margin):
     """
     A custom loss function for computing the hinge difference 
     between the similarity of an image-text pair and 
@@ -87,10 +88,10 @@ def imposter_txt_loss(z_image, z_text, y, similarity_function):
         # Select an imposter text index and 
         # compute the maximum margin based on the image label difference
         j = i+1 if i < batch_size - 1 else 0
-        if y[i].item() == -1 or y[j].item() == -1: # '-1' means unlabeled
-            margin = 0.5
-        else:
-            margin = max(0.5, (y[i] - y[j]).abs().item())
+        # if y[i].item() == -1 or y[j].item() == -1: # '-1' means unlabeled
+        #     margin = 0.5
+        # else:
+        #     margin = max(0.5, (y[i] - y[j]).abs().item())
 
         if similarity_function == 'dot':
             imposter_similarity = torch.dot(z_text[j], z_image[i])
