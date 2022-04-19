@@ -34,3 +34,6 @@
 [submodule "libs/SimMIM"]
 	path = libs/SimMIM
 	url = https://github.com/Hung304-WBLEM/SimMIM.git
+[submodule "libs/SupContrast"]
+	path = libs/SupContrast
+	url = https://github.com/Hung304-WBLEM/SupContrast.git
