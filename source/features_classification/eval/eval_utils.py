@@ -91,7 +91,7 @@ def evalplot_confusion_matrix(y_true, y_pred, classes, save_root=None, fig_only=
     return cm
 
 
-def plot_precision_recall_curve(binarized_y_true, y_proba_pred, class_name, color):
+def plot_precision_recall_curve(binarized_y_true, y_proba_pred, class_name, color='b'):
     precisions, recalls, thresholds = precision_recall_curve(
         binarized_y_true, y_proba_pred)
     ap = average_precision_score(binarized_y_true, y_proba_pred)
@@ -168,7 +168,7 @@ def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, sav
     # Calculate macro-average AP
     macro_average_precision = round(average_precision_score(binarized_y_true,
                                                             y_proba_pred, average="macro"), 2)
-    # --------------------------------------------------------------------------
+    --------------------------------------------------------------------------
 
     plt.xlabel("Recall")
     plt.ylabel("Precision")
@@ -196,7 +196,7 @@ def evalplot_precision_recall_curve(binarized_y_true, y_proba_pred, classes, sav
     return precisions_list, recalls_list, average_precisions_list, log_info
 
 
-def plot_roc_curve(binarized_y_true, y_proba_pred, class_name, color):
+def plot_roc_curve(binarized_y_true, y_proba_pred, class_name, color='b'):
     fpr, tpr, thresholds = roc_curve(binarized_y_true, y_proba_pred)
     auc = roc_auc_score(binarized_y_true, y_proba_pred)
     auc = round(auc, 2)

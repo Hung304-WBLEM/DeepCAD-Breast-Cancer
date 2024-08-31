@@ -600,7 +600,7 @@ class Pathology_Dataset(Dataset):
 class Mass_Calc_Pathology_Dataset(Dataset):
     classes = np.array(['BENIGN', 'MALIGNANT'])
 
-    def __init__(self, mass_root_dir, calc_root_dir, transform=None):
+    def __init__(self, mass_root_dir, calc_root_dir, transform=None, train_rate=1):
         self.transform = transform
         self.mass_root_dir = mass_root_dir
         self.calc_root_dir = calc_root_dir
@@ -619,7 +619,7 @@ class Mass_Calc_Pathology_Dataset(Dataset):
             self.images_list += calc_images
             self.labels += [idx] * len(calc_images)
 
-    def get_weights(self):
+    def get_classes_weights(self):
         classes_weights = compute_classes_weights_mass_calc(
             mass_root=self.mass_root_dir,
             calc_root=self.calc_root_dir,
